@@ -1,11 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, ChevronRight, Download } from 'lucide-react';
+import { Star, ChevronRight, Download, ArrowDown } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 import bookCoverImg from '../../assets/cover.png';
 
 export const Hero = ({ onOrderClick }) => {
+
+  // This state acts as our "VIP Checker"
+  const [hasReferral, setHasReferral] = useState(false);
+
+  useEffect(() => {
+    // When the page loads, we check the web address for our special stamp
+    // If the address looks like "yourwebsite.com/?ref=friend", it turns on the premium button.
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('ref')) {
+      setHasReferral(true);
+    }
+  }, []);
+
+  // This acts as the host pointing the guest down the hallway
+  const scrollToNext = () => {
+    const nextSection = document.getElementById('features');
+    if (nextSection) {
+      nextSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <section className="min-h-[100svh] flex items-center pt-28 pb-16 bg-gradient-to-br from-orange-50 to-white dark:from-slate-900 dark:to-slate-950 relative overflow-hidden">
       {/* Background blobs */}
@@ -39,8 +60,33 @@ export const Hero = ({ onOrderClick }) => {
               The definitive guide to building habits that stick. Written specifically for the modern Marathi entrepreneur and thinker.
             </motion.p>
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4 pt-4">
-              <Button variant="primary" icon={ChevronRight} className="w-full sm:w-auto" onClick={onOrderClick}>Order Now</Button>
+            {/* --- THE BUTTON LOGIC HAPPENS HERE --- */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-6">
+              
+              {hasReferral ? (
+                /* The Premium VIP Button */
+                <button 
+                  onClick={onOrderClick}
+                  className="relative overflow-hidden group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-orange-500 to-[#FF5A36] text-white rounded-full font-bold text-lg shadow-[0_10px_30px_rgba(255,90,54,0.3)] hover:shadow-[0_15px_40px_rgba(255,90,54,0.5)] transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-3 border border-orange-400/50"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Order Hardcopy <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />
+                  </span>
+                  {/* The glossy sweep effect that slides across the button on hover */}
+                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+                </button>
+              ) : (
+                /* The Welcoming Arrow for general guests */
+                <motion.button 
+                  onClick={scrollToNext}
+                  animate={{ y: [0, 10, 0] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                  className="flex items-center justify-center w-14 h-14 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 shadow-lg text-[#FF5A36] hover:text-white hover:bg-[#FF5A36] hover:border-[#FF5A36] transition-colors duration-300"
+                  aria-label="Scroll to next section"
+                >
+                  <ArrowDown size={28} />
+                </motion.button>
+              )}
             </motion.div>
           </div>
 

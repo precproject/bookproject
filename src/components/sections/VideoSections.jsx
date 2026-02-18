@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Play, Feather, BookOpen } from 'lucide-react';
 
 export const VideoSections = () => (
-      <section className="py-24 bg-orange-50 dark:bg-slate-900/50">
+      <section id="video" className="py-24 bg-orange-50 dark:bg-slate-900/50">
         <div className="container mx-auto px-6 text-center">
           <SectionHeading title="Watch the Trailer" subtitle="Sneak Peek" />
           

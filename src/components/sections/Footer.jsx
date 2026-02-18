@@ -13,7 +13,7 @@ export const Footer = () => (
             <div className="col-span-1 md:col-span-2">
               <div className="text-3xl font-serif font-bold flex items-center gap-2 mb-6">
                 <BookOpen className="text-orange-600" />
-                <span>Booki.</span>
+                <span>चिंतनातून चिंतामुक्तीकडे.</span>
               </div>
               <p className="text-slate-400 max-w-sm mb-8 leading-relaxed">
                 Empowering the next generation of thinkers and doers in Maharashtra through the power of native language.
