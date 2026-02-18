@@ -216,6 +216,7 @@ export const Navbar = ({ theme, setTheme }) => {
           </motion.div>
         )}
       </AnimatePresence>
+      
     </nav>
   );
 };
