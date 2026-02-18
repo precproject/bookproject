@@ -2,16 +2,24 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, ArrowLeft, ShoppingBag, MapPin, 
-  CreditCard, CheckCircle2, ShieldCheck, Smartphone
+  CreditCard, CheckCircle2, ShieldCheck, 
+  Smartphone, UserCircle, Mail, Lock
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 
-// You can use your actual book cover image here
+// Adjust path as needed
 import bookCoverImg from '../../assets/cover.png'; 
 
 export const Checkout = ({ isOpen, onClose }) => {
+  // Navigation State
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Auth State (Simulating Login)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authStage, setAuthStage] = useState('email'); // 'email' or 'otp'
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
 
   // Form State
   const [address, setAddress] = useState({
@@ -23,38 +31,94 @@ export const Checkout = ({ isOpen, onClose }) => {
   const shipping = 50;
   const total = price + shipping;
 
-  // Handle Payment Simulation
-  const handlePayment = () => {
+  // --- Handlers ---
+
+  // Handle proceeding from Cart
+  const handleProceedFromCart = () => {
+    if (isLoggedIn) {
+      setStep(3); // Skip straight to Address if logged in
+    } else {
+      setStep(2); // Go to Account/Auth step
+    }
+  };
+
+  // Handle sending OTP (Passwordless Login)
+  const handleSendOtp = () => {
+    if (!email) return;
     setIsProcessing(true);
-    // Simulate a 2-second payment processing delay
+    // Simulate network delay for sending email
     setTimeout(() => {
       setIsProcessing(false);
-      setStep(4); // Go to success step
+      setAuthStage('otp');
+    }, 1500);
+  };
+
+  // Handle verifying OTP
+  const handleVerifyOtp = () => {
+    if (!otp) return;
+    setIsProcessing(true);
+    // Simulate network delay for verifying code
+    setTimeout(() => {
+      setIsProcessing(false);
+      setIsLoggedIn(true);
+      setStep(3); // Move to Address step
+    }, 1500);
+  };
+
+  // Handle Payment
+  const handlePayment = () => {
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      setStep(5); // Go to success step
     }, 2000);
   };
 
-  const nextStep = () => setStep(prev => prev + 1);
-  const prevStep = () => setStep(prev => prev - 1);
+  // Handle Back Button
+  const handleBack = () => {
+    if (step === 3 && isLoggedIn) {
+      setStep(1); // If logged in, back from Address goes to Cart
+    } else if (step === 2 && authStage === 'otp') {
+      setAuthStage('email'); // Back from OTP goes to Email input
+    } else {
+      setStep(prev => prev - 1);
+    }
+  };
+
+  // Dynamic Progress Bar based on Login Status
+  const visualSteps = isLoggedIn 
+    ? [
+        { num: 1, icon: ShoppingBag, label: "Cart" },
+        { num: 3, icon: MapPin, label: "Address" },
+        { num: 4, icon: CreditCard, label: "Payment" }
+      ]
+    : [
+        { num: 1, icon: ShoppingBag, label: "Cart" },
+        { num: 2, icon: UserCircle, label: "Account" },
+        { num: 3, icon: MapPin, label: "Address" },
+        { num: 4, icon: CreditCard, label: "Payment" }
+      ];
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-100 dark:bg-slate-950">
-      <div className="w-full h-full max-w-3xl mx-auto bg-white dark:bg-slate-900 shadow-2xl md:h-auto md:min-h-[600px] md:rounded-2xl flex flex-col overflow-hidden relative">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-sm">
+      <div className="w-full h-full max-w-3xl mx-auto bg-white dark:bg-slate-900 shadow-2xl md:h-[90vh] md:rounded-2xl flex flex-col overflow-hidden relative">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-10">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-10 shrink-0">
           <div className="flex items-center gap-4">
-            {step > 1 && step < 4 && (
-              <button onClick={prevStep} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300">
+            {step > 1 && step < 5 && (
+              <button onClick={handleBack} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300">
                 <ArrowLeft size={20} />
               </button>
             )}
             <h2 className="text-xl font-bold font-serif text-slate-900 dark:text-white">
               {step === 1 && "Order Summary"}
-              {step === 2 && "Delivery Address"}
-              {step === 3 && "Payment"}
-              {step === 4 && "Order Confirmed"}
+              {step === 2 && "Account Setup"}
+              {step === 3 && "Delivery Address"}
+              {step === 4 && "Payment"}
+              {step === 5 && "Order Confirmed"}
             </h2>
           </div>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 hover:text-red-500">
@@ -63,16 +127,12 @@ export const Checkout = ({ isOpen, onClose }) => {
         </div>
 
         {/* Progress Bar (Hidden on Success step) */}
-        {step < 4 && (
-          <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between relative">
+        {step < 5 && (
+          <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between relative shrink-0">
             <div className="absolute top-1/2 left-10 right-10 h-0.5 bg-slate-200 dark:bg-slate-700 -translate-y-1/2 z-0" />
             
-            {[
-              { num: 1, icon: ShoppingBag, label: "Cart" },
-              { num: 2, icon: MapPin, label: "Address" },
-              { num: 3, icon: CreditCard, label: "Payment" }
-            ].map((s) => (
-              <div key={s.num} className="relative z-10 flex flex-col items-center gap-2">
+            {visualSteps.map((s) => (
+              <div key={s.num} className="relative z-10 flex flex-col items-center gap-2 bg-slate-50 dark:bg-transparent px-2">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors duration-300 ${
                   step >= s.num 
                     ? 'bg-orange-600 border-orange-600 text-white' 
@@ -94,13 +154,13 @@ export const Checkout = ({ isOpen, onClose }) => {
             
             {/* STEP 1: ORDER SUMMARY */}
             {step === 1 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 max-w-xl mx-auto">
                 <div className="flex gap-6 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <img src={bookCoverImg} alt="Book" className="w-24 h-36 object-cover rounded-lg shadow-md" />
                   <div className="flex flex-col justify-center">
                     <span className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Hardcopy</span>
                     <h3 className="text-xl font-serif font-bold text-slate-900 dark:text-white">चिंतामुक्ती (Chintamukti)</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Author: Santosh Kulkarni</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">कैलासराव तुकाराम तुरकणे पाटील</p>
                     <p className="text-lg font-bold text-slate-900 dark:text-white mt-4">₹{price}</p>
                   </div>
                 </div>
@@ -122,15 +182,73 @@ export const Checkout = ({ isOpen, onClose }) => {
                   </div>
                 </div>
                 
-                <Button variant="primary" className="w-full text-lg py-4" onClick={nextStep}>
-                  Proceed to Address
+                <Button variant="primary" className="w-full text-lg py-4" onClick={handleProceedFromCart}>
+                  {isLoggedIn ? "Proceed to Address" : "Continue Checkout"}
                 </Button>
               </motion.div>
             )}
 
-            {/* STEP 2: DELIVERY ADDRESS */}
+            {/* STEP 2: PASSWORDLESS ACCOUNT SETUP */}
             {step === 2 && (
-              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col items-center justify-center h-full max-w-md mx-auto py-8">
+                
+                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-full flex items-center justify-center mb-6">
+                  <UserCircle size={32} />
+                </div>
+
+                <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white mb-2 text-center">
+                  {authStage === 'email' ? "What's your email?" : "Check your email"}
+                </h3>
+                <p className="text-slate-600 dark:text-slate-400 text-center mb-8">
+                  {authStage === 'email' 
+                    ? "We'll send you a quick code to save your order details. No password needed." 
+                    : `We sent a 4-digit code to ${email}`
+                  }
+                </p>
+
+                {authStage === 'email' ? (
+                  <div className="w-full space-y-4">
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                      <input 
+                        type="email" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your email address" 
+                        className="w-full pl-12 pr-4 py-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" 
+                      />
+                    </div>
+                    <Button variant="primary" className="w-full py-4" onClick={handleSendOtp} disabled={isProcessing || !email}>
+                      {isProcessing ? "Sending Code..." : "Send Verification Code"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="w-full space-y-4">
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                      <input 
+                        type="text" 
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        placeholder="Enter 4-digit code" 
+                        maxLength={4}
+                        className="w-full pl-12 pr-4 py-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-center tracking-[0.5em] font-bold text-lg" 
+                      />
+                    </div>
+                    <Button variant="primary" className="w-full py-4" onClick={handleVerifyOtp} disabled={isProcessing || otp.length < 4}>
+                      {isProcessing ? "Verifying..." : "Verify & Continue"}
+                    </Button>
+                    <button onClick={() => setAuthStage('email')} className="w-full text-center text-sm text-slate-500 hover:text-orange-600 mt-4">
+                      Entered the wrong email?
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* STEP 3: DELIVERY ADDRESS */}
+            {step === 3 && (
+              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4 max-w-xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Full Name</label>
@@ -141,8 +259,8 @@ export const Checkout = ({ isOpen, onClose }) => {
                     <input type="tel" placeholder="+91" className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" />
                   </div>
                   <div className="space-y-1 md:col-span-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Detailed Address (House No, Building, Street)</label>
-                    <textarea rows="3" placeholder="Enter your full address here..." className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" />
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Detailed Address</label>
+                    <textarea rows="3" placeholder="House No, Building, Street..." className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Pincode</label>
@@ -155,25 +273,23 @@ export const Checkout = ({ isOpen, onClose }) => {
                 </div>
                 
                 <div className="pt-4">
-                  <Button variant="primary" className="w-full text-lg py-4" onClick={nextStep}>
+                  <Button variant="primary" className="w-full text-lg py-4" onClick={() => setStep(4)}>
                     Proceed to Payment
                   </Button>
                 </div>
               </motion.div>
             )}
 
-            {/* STEP 3: PAYMENT (PHONEPE) */}
-            {step === 3 && (
-              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+            {/* STEP 4: PAYMENT (PHONEPE) */}
+            {step === 4 && (
+              <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 max-w-md mx-auto">
                 
-                {/* Secure Badge */}
                 <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-500 bg-green-50 dark:bg-green-900/20 py-3 rounded-lg">
                   <ShieldCheck size={20} />
                   <span className="font-medium text-sm">100% Secure Payments</span>
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 border-2 border-[#5f259f] rounded-2xl overflow-hidden shadow-md relative">
-                   {/* PhonePe Header */}
                    <div className="bg-[#5f259f] text-white p-4 flex items-center gap-3">
                      <Smartphone size={24} />
                      <span className="font-bold text-lg tracking-wide">PhonePe</span>
@@ -183,9 +299,8 @@ export const Checkout = ({ isOpen, onClose }) => {
                      <p className="text-slate-600 dark:text-slate-300">Pay securely using your PhonePe app.</p>
                      <h2 className="text-3xl font-bold text-slate-900 dark:text-white">₹{total}</h2>
                      
-                     {/* Fake UPI Input */}
                      <div className="w-full max-w-sm pt-4">
-                        <label className="text-sm text-slate-500 text-left block mb-2">Enter UPI ID (e.g., number@ybl)</label>
+                        <label className="text-sm text-slate-500 text-left block mb-2">Enter UPI ID</label>
                         <input type="text" placeholder="yournumber@ybl" className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#5f259f] outline-none transition-all text-center" />
                      </div>
                    </div>
@@ -196,24 +311,14 @@ export const Checkout = ({ isOpen, onClose }) => {
                   disabled={isProcessing}
                   className="w-full bg-[#5f259f] hover:bg-[#4a1c7d] text-white font-bold text-lg py-4 rounded-full transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-[#5f259f]/30"
                 >
-                  {isProcessing ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Processing Payment...
-                    </span>
-                  ) : (
-                    "Pay ₹" + total
-                  )}
+                  {isProcessing ? "Processing Payment..." : "Pay ₹" + total}
                 </button>
               </motion.div>
             )}
 
-            {/* STEP 4: SUCCESS CONFIRMATION */}
-            {step === 4 && (
-              <motion.div key="step4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center text-center py-10 space-y-6">
+            {/* STEP 5: SUCCESS CONFIRMATION */}
+            {step === 5 && (
+              <motion.div key="step5" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center text-center py-10 space-y-6 max-w-md mx-auto">
                 <motion.div 
                   initial={{ scale: 0 }} 
                   animate={{ scale: 1 }} 
@@ -224,19 +329,23 @@ export const Checkout = ({ isOpen, onClose }) => {
                 </motion.div>
                 
                 <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white">Order Confirmed!</h2>
-                <p className="text-slate-600 dark:text-slate-300 max-w-md">
-                  Thank you for your purchase. Your book <span className="font-bold">चिंतामुक्ती (Chintamukti)</span> is being packed and will be shipped soon.
+                <p className="text-slate-600 dark:text-slate-300">
+                  Thank you for your purchase. Your book <span className="font-bold">चिंतामुक्ती</span> is being packed.
                 </p>
 
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm mt-4">
-                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-2">Order ID</div>
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 w-full mt-4 text-left">
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Receipt emailed to</div>
+                  <div className="font-medium text-slate-900 dark:text-white mb-4">{email || "your email address"}</div>
+                  
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Order ID</div>
                   <div className="font-mono font-bold text-lg text-slate-900 dark:text-white tracking-wider">#BK-{Math.floor(100000 + Math.random() * 900000)}</div>
+                  
                   <div className="h-px bg-slate-200 dark:bg-slate-700 my-4" />
                   <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Estimated Delivery</div>
                   <div className="font-bold text-slate-900 dark:text-white">3-5 Business Days</div>
                 </div>
 
-                <Button variant="primary" className="w-full max-w-sm mt-6" onClick={onClose}>
+                <Button variant="primary" className="w-full mt-6" onClick={onClose}>
                   Return to Home
                 </Button>
               </motion.div>
