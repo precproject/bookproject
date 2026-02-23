@@ -50,7 +50,7 @@ export const Footer = () => (
           </div>
           
           <div className="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center text-slate-500 text-sm">
-            <p>&copy; {new Date().getFullYear()} Book. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Book. All rights reserved. V1.0</p>
             <div className="flex gap-6 mt-4 md:mt-0">
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
