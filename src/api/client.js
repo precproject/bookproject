@@ -3,7 +3,7 @@ import axios from 'axios';
 const baseURL =
   window.location.hostname === 'localhost'
     ? 'http://localhost:5001/api'
-    : `${window.location.origin}/api`;
+    : `https://api.sahakarstree.com/api`;
 
 const apiClient = axios.create({
   baseURL,
