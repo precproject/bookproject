@@ -1,45 +1,63 @@
 import React, { useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import OrdersTab from '../components/customer/OrdersTab';
-import ReferralTab from '../components/customer/ReferralTab';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { Package, Award } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
+import { Navbar } from '../sections/Navbar';
+import OrdersTab from './OrdersTab';
+import ReferralTab from './ReferralTab';
 
-const CustomerDashboard = () => {
-  const { user } = useContext(AuthContext);
-
+export const CustomerDashboard = ({ theme, setTheme }) => {
+  const { user, loading } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('orders');
 
+  // Protect the route
+  if (!loading && !user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading dashboard...</div>;
+  }
+
   return (
-    <div className="max-w-6xl mx-auto p-6 mt-6">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Welcome, {user.name}</h1>
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <Navbar theme={theme} setTheme={setTheme} />
 
-      {/* Tabs */}
-      <div className="flex border-b mb-6 gap-8">
-        <button 
-          className={`pb-3 font-semibold text-lg ${activeTab === 'orders' ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('orders')}
-        >
-          My Orders
-        </button>
-        {user.referralCode && (
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 pt-40 md:pt-32">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Welcome, {user.name}</h1>
+            <p className="text-slate-500 mt-1">Manage your orders, track deliveries, and view your earnings.</p>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-200 mb-8 overflow-x-auto hide-scrollbar">
           <button 
-            className={`pb-3 font-semibold text-lg ${activeTab === 'referrals' ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('referrals')}
+            onClick={() => setActiveTab('orders')}
+            className={`flex items-center gap-2 pb-4 px-4 font-semibold text-sm sm:text-base whitespace-nowrap transition-colors border-b-2 ${
+              activeTab === 'orders' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
           >
-            Referral Earnings
+            <Package size={20} /> My Orders
           </button>
-        )}
-      </div>
+          
+          <button 
+            onClick={() => setActiveTab('referrals')}
+            className={`flex items-center gap-2 pb-4 px-4 font-semibold text-sm sm:text-base whitespace-nowrap transition-colors border-b-2 ${
+              activeTab === 'referrals' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Award size={20} /> Referral Earnings
+          </button>
+        </div>
 
-      {/* Content */}
-      <div className="bg-white rounded-lg shadow-sm p-6 border">
-        {activeTab === 'orders' && <OrdersTab />}
-        {activeTab === 'referrals' && <ReferralTab />}
+        {/* Tab Content */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 sm:p-8 min-h-[500px]">
+          {activeTab === 'orders' && <OrdersTab />}
+          {activeTab === 'referrals' && <ReferralTab />}
+        </div>
       </div>
     </div>
   );
 };
-
-export default CustomerDashboard;

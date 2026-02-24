@@ -169,7 +169,7 @@ export const CheckoutPage = ({ theme, setTheme }) => {
       <Navbar theme={theme} setTheme={setTheme} />
 
       {/* Main Content (Blurred if payment overlay is active) */}
-      <div className={`max-w-6xl mx-auto p-4 sm:p-6 pt-32 transition-all duration-300 ${paymentOverlay.active ? 'blur-md pointer-events-none opacity-50' : ''}`}>
+      <div className={`max-w-6xl mx-auto p-4 sm:p-6 pt-40 md:pt-32 transition-all duration-300 ${paymentOverlay.active ? 'blur-md pointer-events-none opacity-50' : ''}`}>
         
         <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3 mb-8">
           <ShoppingBag className="text-orange-600" /> Checkout

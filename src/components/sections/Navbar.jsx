@@ -157,7 +157,7 @@ export const Navbar = ({ theme, setTheme }) => {
             {/* User Auth / Cart Section */}
             {user ? (
               <div className="flex items-center gap-3 ml-2 border-l border-slate-200 dark:border-slate-800 pl-4">
-                <Link to="/cart" className="relative p-2 text-slate-700 dark:text-slate-200 hover:text-orange-600 transition-colors">
+                <Link to="/checkout" className="relative p-2 text-slate-700 dark:text-slate-200 hover:text-orange-600 transition-colors">
                   <ShoppingCart size={20} />
                   {/* Replace '3' with cartCount in the Desktop and Mobile cart icons */}
                   {cartCount > 0 && (
