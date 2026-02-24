@@ -54,8 +54,10 @@ export const HomeLayout = () => {
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
         <Navbar theme={theme} setTheme={setTheme} />
         <main>
-        <Hero onOrderClick={() => setIsCheckoutOpen(true)} />
-            {/* Points to the id="features" inside your Features component */}
+
+        <Hero onOrderPopup={() => setIsCheckoutOpen(true)} />
+
+        {/* Points to the id="features" inside your Features component */}
         <SectionDivider nextSectionId="features" />
         <Features />
 
@@ -75,15 +77,17 @@ export const HomeLayout = () => {
         <SectionDivider nextSectionId="reviews" />
         <Reviews />
 
-            <QuoteMarquee />
+        <QuoteMarquee />
 
         {/* Points to the id="blog" inside your Blog component */}
         <SectionDivider nextSectionId="blog" />
         <Blog /> {/* 2. ADD THE BLOG COMPONENT HERE, AFTER REVIEWS */}
 
-                <HeroCreative onOrderClick={() => setIsCheckoutOpen(true)} />
-            {/* The Marquee Section acting as a high-energy break */}
-            <QuoteSection/>
+        <HeroCreative onOrderClick={() => setIsCheckoutOpen(true)} />
+
+        {/* The Marquee Section acting as a high-energy break */}
+        <QuoteSection/>
+
         </main>
         <Footer />
 

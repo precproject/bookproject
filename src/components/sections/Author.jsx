@@ -32,7 +32,7 @@ export const Author = () => {
               src={authorImage}
               alt="Author" 
               // Added grayscale transition and slight scale on hover
-              className="w-full object-cover aspect-[4/5] grayscale hover:grayscale-0 scale-100 group-hover:scale-105 transition-all duration-700 ease-in-out" 
+              className="w-full object-cover aspect-[4/5] scale-100 group-hover:scale-105 transition-all duration-700 ease-in-out" 
             />
             {/* Subtle glossy overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none mix-blend-overlay"></div>

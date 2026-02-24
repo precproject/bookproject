@@ -13,14 +13,30 @@ import { DashboardReferrals } from './components/dashboard/DashboardReferrals';
 import { DashboardConfig } from './components/dashboard/DashboardConfig';
 import { ErrorPage } from './components/ui/ErrorPage';
 import { Login } from './components/dashboard/Login';
+import { AuthProvider } from './context/AuthContext';
+import { AuthModal } from './components/auth/AuthModal';
+import { CheckoutPage } from './pages/CheckoutPage';
+import { PaymentStatus } from './pages/PaymentStatus';
+import { CartProvider } from './context/CartContext';
 
 export default function App() {
   return (
     <BrowserRouter>
+      {/* 2. WRAP EVERYTHING INSIDE THE AUTH PROVIDER */}
+      <AuthProvider>
+      <CartProvider>
+
+      <AuthModal />
+
       <Routes>
         {/* Public Route */}
         <Route path="/" element={<HomeLayout />} />
         <Route path="/login" element={<Login />} />
+        {/* <Route path="/dashboard" element={ user ? <CustomerDashboard /> : <Navigate to="/" /> } />
+        {/* <Route path="/cart" element={<CartPage />} /> */}
+
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/payment-status/:orderId" element={<PaymentStatus />} />
 
         {/* Admin Dashboard Routes */}
         <Route
@@ -59,7 +75,11 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
         */}
         <Route path="*" element={<ErrorPage />} />
+
       </Routes>
+
+      </CartProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

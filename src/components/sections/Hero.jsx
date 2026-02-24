@@ -1,11 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Star, ChevronRight, Download, ArrowDown } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 import bookCoverImg from '../../assets/cover.png';
 
-export const Hero = ({ onOrderClick }) => {
+import { CartContext } from '../../context/CartContext';
+import apiClient from '../../api/client';
+import { useNavigate } from 'react-router-dom';
+
+export const Hero = ({ onOrderPopup }) => {
+
+  const navigate = useNavigate();
+  const { addToCart } = useContext(CartContext);
+  
+  // We add a tiny loading state so the button doesn't freeze while talking to the database
+  const [isAdding, setIsAdding] = useState(false);
 
   // This state acts as our "VIP Checker"
   const [hasReferral, setHasReferral] = useState(false);
@@ -18,6 +28,32 @@ export const Hero = ({ onOrderClick }) => {
       setHasReferral(true);
     }
   }, []);
+
+  const onOrderClick = async () => {
+    setIsAdding(true);
+    try {
+      // 1. Fetch the available books from your public API
+      const response = await apiClient.get('/public/books');
+      
+      // 2. Find the physical book
+      const physicalBook = response.data.find(book => book.type === 'Physical');
+
+      if (physicalBook) {
+        // 3. Add to our global Cart Context
+        addToCart(physicalBook);
+        
+        // 4. Send them straight to the checkout page!
+        navigate('/checkout');
+      } else {
+        alert("Sorry! The physical book is currently out of stock.");
+      }
+    } catch (error) {
+      console.error("Failed to load book:", error);
+      alert("Something went wrong connecting to the store.");
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
   // This acts as the host pointing the guest down the hallway
   const scrollToNext = () => {

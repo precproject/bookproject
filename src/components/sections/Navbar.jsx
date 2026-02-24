@@ -1,9 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Moon, Sun, Menu, X, Languages, ChevronDown, Check } from 'lucide-react';
+import { BookOpen, Moon, Sun, Menu, X, Languages, ChevronDown, Check, UserCircle, ShoppingCart, LayoutDashboard, LogOut } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { AuthContext } from '../../context/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
+import { CartContext } from '../../context/CartContext';
 
 export const Navbar = ({ theme, setTheme }) => {
+
+  const { user, logout, openAuthModal } = useContext(AuthContext);
+  const { cartCount } = useContext(CartContext); // <-- Add this
+
+  const navigate = useNavigate();
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -45,6 +54,12 @@ export const Navbar = ({ theme, setTheme }) => {
       googleSelect.value = langCode;
       googleSelect.dispatchEvent(new Event('change'));
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsMenuOpen(false);
+    //navigate('/');
   };
 
   const navLinks = [
@@ -139,9 +154,33 @@ export const Navbar = ({ theme, setTheme }) => {
               {theme === 'dark' ? <Sun size={18} className="text-orange-400" /> : <Moon size={18} />}
             </button>
 
-            <Button variant="primary" className="px-6 py-2.5 text-sm font-bold shadow-lg shadow-orange-500/25">
-              Buy Now
-            </Button>
+            {/* User Auth / Cart Section */}
+            {user ? (
+              <div className="flex items-center gap-3 ml-2 border-l border-slate-200 dark:border-slate-800 pl-4">
+                <Link to="/cart" className="relative p-2 text-slate-700 dark:text-slate-200 hover:text-orange-600 transition-colors">
+                  <ShoppingCart size={20} />
+                  {/* Replace '3' with cartCount in the Desktop and Mobile cart icons */}
+                  {cartCount > 0 && (
+                    <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 bg-orange-600 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white dark:border-slate-900">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+                
+                <Link to={user.role === 'Admin' ? "/admin" : "/dashboard"} className="p-2 text-slate-700 dark:text-slate-200 hover:text-orange-600 transition-colors" title="Dashboard">
+                  <LayoutDashboard size={20} />
+                </Link>
+
+                <button onClick={handleLogout} className="p-2 text-red-500 hover:text-red-600 transition-colors" title="Logout">
+                  <LogOut size={20} />
+                </button>
+              </div>
+            ) : (
+              <Button onClick={openAuthModal} variant="primary" className="px-6 py-2.5 text-sm font-bold shadow-lg shadow-orange-500/25 flex items-center gap-2">
+                <UserCircle size={18} /> Login
+              </Button>
+            )}
+
           </div>
         </div>
 
@@ -150,6 +189,15 @@ export const Navbar = ({ theme, setTheme }) => {
            <button onClick={toggleTheme} className="p-2 text-slate-700 dark:text-slate-200">
             {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
           </button>
+
+          {/* Mobile Cart Preview (Only if logged in) */}
+          {user && (
+            <Link to="/cart" className="relative p-2 text-slate-700 dark:text-slate-200">
+              <ShoppingCart size={22} />
+              <span className="absolute top-0 right-0 bg-orange-600 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">3</span>
+            </Link>
+          )}
+
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-900 dark:text-white"
@@ -211,7 +259,31 @@ export const Navbar = ({ theme, setTheme }) => {
                   ))}
                 </div>
               </div>
-              <Button variant="primary" className="w-full py-5 text-xl">Buy Now</Button>
+
+
+              {/* Mobile Auth Actions */}
+              {user ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3 py-2 px-1 text-slate-500 text-sm font-bold">
+                    <UserCircle size={18} /> Hello, {user.name}
+                  </div>
+                  <Link to="/cart" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-between py-4 px-5 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold text-slate-700 dark:text-slate-200">
+                    <div className="flex items-center gap-3"><ShoppingCart size={20} /> My Cart</div>
+                    <span className="bg-orange-600 text-white px-3 py-1 rounded-full text-xs">3 Items</span>
+                  </Link>
+                  <Link to={user.role === 'Admin' ? "/admin" : "/dashboard"} onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 py-4 px-5 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold text-slate-700 dark:text-slate-200">
+                    <LayoutDashboard size={20} /> Dashboard
+                  </Link>
+                  <button onClick={handleLogout} className="flex items-center justify-center gap-3 py-4 px-5 bg-red-50 dark:bg-red-900/10 rounded-2xl font-bold text-red-600">
+                    <LogOut size={20} /> Logout
+                  </button>
+                </div>
+              ) : (
+                <Button onClick={() => { openAuthModal(); setIsMenuOpen(false); }} variant="primary" className="w-full py-5 text-xl flex justify-center items-center gap-3">
+                  <UserCircle size={24} /> Login / Register
+                </Button>
+              )}
+
             </div>
           </motion.div>
         )}
