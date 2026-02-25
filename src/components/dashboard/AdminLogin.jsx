@@ -58,7 +58,7 @@ export const AdminLogin = () => {
           <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-emerald-800 shadow-xl mb-4">
             <BookOpen size={32} />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Chintamukti.</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">SahakarStree</h1>
           <p className="text-emerald-200 mt-2 text-sm">Secure Admin Portal</p>
         </div>
 
@@ -82,7 +82,7 @@ export const AdminLogin = () => {
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@chintamukti.com"
+                  placeholder="admin@sahakarstree.com"
                   className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                   required
                 />
@@ -123,7 +123,7 @@ export const AdminLogin = () => {
 
         {/* Footer */}
         <p className="text-center text-xs font-medium text-slate-400 mt-8">
-          &copy; {new Date().getFullYear()} Chintamukti Publications. Internal Use Only.
+          &copy; {new Date().getFullYear()} SahakarStree Publications. Internal Use Only.
         </p>
       </div>
     </div>

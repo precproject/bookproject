@@ -18,7 +18,7 @@ export const DashboardLayout = ({ children, activePath = '/admin' }) => {
 
   // Extract user details dynamically
   const userName = user?.name || 'System Admin';
-  const userEmail = user?.email || 'admin@chintamukti.com';
+  const userEmail = user?.email || 'admin@sahakarstree.com';
   const userInitial = userName.charAt(0).toUpperCase();
 
   // Close profile dropdown when clicking outside
@@ -57,7 +57,7 @@ export const DashboardLayout = ({ children, activePath = '/admin' }) => {
         {/* Logo */}
         <div className="flex items-center gap-2 px-2 mb-10 text-emerald-800 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/admin')}>
           <div className="w-8 h-8 rounded-xl bg-emerald-800 flex items-center justify-center text-white font-bold">C</div>
-          <span className="text-xl font-bold tracking-tight">Chintamukti.</span>
+          <span className="text-xl font-bold tracking-tight">SahakarStree</span>
         </div>
 
         <div className="text-xs font-bold text-slate-400 mb-4 px-2 tracking-wider uppercase">Menu</div>
@@ -186,7 +186,7 @@ export const DashboardLayout = ({ children, activePath = '/admin' }) => {
 
             <div className="flex items-center gap-2 px-2 mb-10 text-emerald-800 mt-2">
               <div className="w-8 h-8 rounded-xl bg-emerald-800 flex items-center justify-center text-white font-bold">C</div>
-              <span className="text-xl font-bold tracking-tight">Chintamukti.</span>
+              <span className="text-xl font-bold tracking-tight">SahakarStree</span>
             </div>
 
             <div className="text-xs font-bold text-slate-400 mb-4 px-2 tracking-wider uppercase">Menu</div>
