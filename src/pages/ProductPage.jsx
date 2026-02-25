@@ -1,25 +1,27 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import apiClient from '../api/client';
 import bookCoverImg from '../assets/cover.png'; // Fallback
-import { Navbar } from '../components/sections/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
 
+// 👉 1. Import your referral utility
+import { captureAndVerifyReferral } from '../utils/referralManager';
+
 import { 
   Star, ShoppingBag, ArrowLeft, ShieldCheck, Truck, 
-  Loader2, CheckCircle, User, Book, Globe, FileText, Award, ChevronRight 
+  Loader2, CheckCircle, User, Book, Globe, FileText, Award, ChevronRight, Lock 
 } from 'lucide-react';
+import { Navbar } from '../components/sections/Navbar';
 
 export const ProductPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   
-  // Pull updateQuantity and cartItems from Context to handle live cart state
   const { addToCart, cartItems, updateQuantity } = useContext(CartContext);
   const { user } = useContext(AuthContext);
 
@@ -28,12 +30,26 @@ export const ProductPage = () => {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Review Form State
+  // 👉 2. Add Referral State
+  const [hasReferral, setHasReferral] = useState(false);
+  const [referrerName, setReferrerName] = useState(null);
+
   const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Check if this specific book is already in the cart
   const cartItem = book ? cartItems.find(item => item.bookId === book._id) : null;
+
+  // 👉 3. Check for referral on page load
+  useEffect(() => {
+    const checkReferral = async () => {
+      const name = await captureAndVerifyReferral();
+      if (name) {
+        setReferrerName(name);
+        setHasReferral(true);
+      }
+    };
+    checkReferral();
+  }, []);
 
   useEffect(() => {
     const fetchBookData = async () => {
@@ -58,7 +74,7 @@ export const ProductPage = () => {
     addToCart(book);
     setTimeout(() => {
       setIsAdding(false);
-    }, 500); // Quick feedback delay
+    }, 500); 
   };
 
   const handleSubmitReview = async (e) => {
@@ -68,8 +84,8 @@ export const ProductPage = () => {
     setSubmittingReview(true);
     try {
       const { data } = await apiClient.post(`/public/books/${id}/reviews`, newReview);
-      setReviews([data, ...reviews]); // Add to top of list
-      setNewReview({ rating: 5, comment: '' }); // Reset form
+      setReviews([data, ...reviews]); 
+      setNewReview({ rating: 5, comment: '' }); 
     } catch (error) {
       alert(error.response?.data?.message || "Failed to submit review.");
     } finally {
@@ -100,41 +116,34 @@ export const ProductPage = () => {
       <Navbar theme={theme} setTheme={toggleTheme} />
 
       <main className="pt-24 pb-16">
-        {/* Navigation Breadcrumb */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <button onClick={() => navigate('/store')} className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-orange-600 dark:text-slate-400 dark:hover:text-orange-500 transition-colors">
             <ArrowLeft size={16} /> Back to Collection
           </button>
         </div>
 
-        {/* Product Top Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-12 lg:gap-20">
             
-            {/* Left: Sticky Image Gallery */}
             <div className="w-full lg:w-5/12">
               <motion.div 
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 className="sticky top-32 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-900/50 rounded-[2.5rem] p-8 sm:p-12 flex items-center justify-center border border-slate-200 dark:border-slate-800"
               >
-                {/* 3D Book Presentation */}
                 <div className="relative group [perspective:1000px]">
                   <img 
                     src={book.coverImage || bookCoverImg} 
                     alt={book.title} 
                     className="w-full max-w-sm h-auto object-cover shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-r-2xl border-l-[6px] border-slate-300 dark:border-slate-700 transition-transform duration-500 group-hover:rotate-y-12 group-hover:scale-105" 
                   />
-                  {/* Glossy overlay */}
                   <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent mix-blend-overlay pointer-events-none rounded-r-2xl" />
                 </div>
               </motion.div>
             </div>
 
-            {/* Right: Product Details */}
             <div className="w-full lg:w-7/12 py-6">
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                 
-                {/* Badges */}
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-xs font-bold uppercase tracking-wider border border-orange-200 dark:border-orange-800">
                     {book.type} Edition
@@ -155,7 +164,13 @@ export const ProductPage = () => {
                 </h1>
                 <p className="text-lg text-slate-500 dark:text-slate-400 mb-6">by <span className="font-semibold text-slate-700 dark:text-slate-300">{book.author || 'SahakarStree'}</span></p>
 
-                {/* Rating Snippet */}
+                {/* 👉 4. Show VIP Badge if Unlocked */}
+                {hasReferral && referrerName && (
+                  <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-xl text-sm font-bold border border-green-200 dark:border-green-800/50 shadow-sm animate-[fadeIn_0.5s_ease-out]">
+                    <Award size={18} /> Access Unlocked by {referrerName}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-4 mb-8">
                   <div className="flex items-center text-yellow-500">
                     {[...Array(5)].map((_, i) => (
@@ -175,11 +190,20 @@ export const ProductPage = () => {
                   {book.description || "Transform your mindset and achieve lasting success through structured, practical wisdom. The definitive guide to building habits that stick, written specifically for the modern Marathi entrepreneur and thinker."}
                 </p>
 
-                {/* ADVANCED E-COMMERCE CART ACTION AREA */}
+                {/* 👉 5. INVITE-ONLY LOGIC AREA */}
                 <div className="mb-10">
-                  {cartItem ? (
+                  {!hasReferral ? (
+                    /* Locked State */
+                    <div className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-inner">
+                      <Lock size={32} className="mx-auto text-slate-400 dark:text-slate-500 mb-3" />
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Invite-Only Access</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                        This book is currently available exclusively through member referrals. Please click a valid referral link shared by a friend to unlock purchasing.
+                      </p>
+                    </div>
+                  ) : cartItem ? (
+                    /* Already in Cart State */
                     <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800">
-                      {/* Quantity Controls */}
                       <div className="flex items-center justify-between w-full sm:w-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1 shadow-sm">
                         <button 
                           onClick={() => updateQuantity(book._id, cartItem.qty - 1)} 
@@ -198,7 +222,6 @@ export const ProductPage = () => {
                         </button>
                       </div>
                       
-                      {/* Checkout Button */}
                       <Button 
                         variant="primary" 
                         onClick={() => navigate('/checkout')}
@@ -208,6 +231,7 @@ export const ProductPage = () => {
                       </Button>
                     </div>
                   ) : (
+                    /* Unlocked / Ready to Add State */
                     <Button 
                       variant="primary" 
                       onClick={handleAddToCart}
@@ -219,7 +243,6 @@ export const ProductPage = () => {
                   )}
                 </div>
 
-                {/* E-Commerce Book Specifications Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-6 border-t border-slate-200 dark:border-slate-800">
                   <div className="flex flex-col gap-1">
                     <Globe className="text-slate-400 dark:text-slate-500 mb-1" size={20} />
@@ -243,7 +266,6 @@ export const ProductPage = () => {
                   </div>
                 </div>
 
-                {/* Trust Badges */}
                 <div className="grid grid-cols-2 gap-4 py-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 mt-4 rounded-2xl px-4">
                   <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
                     <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-full text-orange-600 dark:text-orange-400"><Truck size={20} /></div>
@@ -260,7 +282,6 @@ export const ProductPage = () => {
           </div>
         </div>
 
-        {/* Middle Section: Marketing / Why Read This Book? */}
         <div className="bg-slate-50 dark:bg-slate-900 border-y border-slate-200 dark:border-slate-800 mt-20 py-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
             <h2 className="text-2xl md:text-3xl font-serif font-bold text-slate-900 dark:text-white mb-8">What you'll discover inside</h2>
@@ -284,13 +305,11 @@ export const ProductPage = () => {
           </div>
         </div>
 
-        {/* Bottom: Reviews Section */}
         <div id="reviews" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
           <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-10">Customer Reviews</h2>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             
-            {/* Submit Review Form */}
             <div className="lg:col-span-1 bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 h-fit sticky top-32">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Write a Review</h3>
               {!user ? (
@@ -326,7 +345,6 @@ export const ProductPage = () => {
               )}
             </div>
 
-            {/* Reviews List */}
             <div className="lg:col-span-2 space-y-6">
               {reviews.length === 0 ? (
                 <div className="bg-slate-50 dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800 text-center">
