@@ -16,16 +16,17 @@ import { HeroCreative } from '../sections/HeroCreative';
 import { QuoteSection } from '../sections/QuoteSection';
 import { QuoteMarquee } from '../sections/QuoteMarquee';
 import { PurchaseAlert } from '../ui/PurchaseAlert';
+import { captureAndVerifyReferral } from '../../utils/referralManager';
 
 export const HomeLayout = () => {
 
     const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('theme');
-        if (stored) return stored;
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
-    }
-    return 'light'; 
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem('theme');
+            if (stored) return stored;
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+        }
+        return 'light'; 
     });
 
     // 2. ADD A STATE TO TRACK IF CHECKOUT IS OPEN
@@ -91,8 +92,8 @@ export const HomeLayout = () => {
         </main>
         <Footer />
 
-    {/* Purchase Alert Popup */}
-    <PurchaseAlert />
+        {/* Purchase Alert Popup */}
+        <PurchaseAlert />
 
         {/* 5. ADD THE CHECKOUT COMPONENT HERE */}
         <Checkout

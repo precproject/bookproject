@@ -81,17 +81,19 @@ export const Navbar = ({ theme, setTheme }) => {
       <div className="container mx-auto px-4 md:px-8 flex justify-between items-center">
         
         {/* Logo / Brand */}
-        <div 
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="text-xl md:text-2xl font-serif font-bold flex items-center gap-2 cursor-pointer text-slate-900 dark:text-white group"
-        >
-          <div className="bg-orange-600 p-1.5 rounded-lg group-hover:rotate-12 transition-transform">
-            <BookOpen className="text-white" size={20} />
+        <Link to="/">
+          <div 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="text-xl md:text-2xl font-serif font-bold flex items-center gap-2 cursor-pointer text-slate-900 dark:text-white group"
+          >
+            <div className="bg-orange-600 p-1.5 rounded-lg group-hover:rotate-12 transition-transform">
+              <BookOpen className="text-white" size={20} />
+            </div>
+            <span className="tracking-tight">
+              चिंतनातून चिंतामुक्तीकडे<span className="text-orange-600">.</span>
+            </span>
           </div>
-          <span className="tracking-tight">
-            चिंतनातून चिंतामुक्तीकडे<span className="text-orange-600">.</span>
-          </span>
-        </div>
+        </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-8">

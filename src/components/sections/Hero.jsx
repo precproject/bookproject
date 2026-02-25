@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, ChevronRight, Download, ArrowDown } from 'lucide-react';
+import { Star, ChevronRight, Download, ArrowDown, Loader2, Book, ShoppingBag } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 import bookCoverImg from '../../assets/cover.png';
@@ -8,8 +8,10 @@ import bookCoverImg from '../../assets/cover.png';
 import { CartContext } from '../../context/CartContext';
 import apiClient from '../../api/client';
 import { useNavigate } from 'react-router-dom';
+import { captureAndVerifyReferral } from '../../utils/referralManager';
 
 export const Hero = ({ onOrderPopup }) => {
+  const [referrerName, setReferrerName] = useState(null); 
 
   const navigate = useNavigate();
   const { addToCart } = useContext(CartContext);
@@ -21,12 +23,21 @@ export const Hero = ({ onOrderPopup }) => {
   const [hasReferral, setHasReferral] = useState(false);
 
   useEffect(() => {
+    // Check URL and verify code on first load
     // When the page loads, we check the web address for our special stamp
     // If the address looks like "yourwebsite.com/?ref=friend", it turns on the premium button.
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('ref')) {
-      setHasReferral(true);
-    }
+    // if (urlParams.has('ref')) {
+    //   setHasReferral(true);
+    // }
+    const checkReferral = async () => {
+      const name = await captureAndVerifyReferral();
+      if (name) {
+          setReferrerName(name);
+          setHasReferral(true); // Turn on the VIP Button
+      }
+    };
+    checkReferral();
   }, []);
 
   const onOrderClick = async () => {
@@ -92,22 +103,29 @@ export const Hero = ({ onOrderPopup }) => {
             </motion.h1>
 
             <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-lg mx-auto lg:mx-0">
-              <span className="font-serif font-bold text-orange-600 dark:text-orange-400 text-lg md:text-xl block mb-1">"सवयी: यशाचा राजमार्ग"</span>
-              The definitive guide to building habits that stick. Written specifically for the modern Marathi entrepreneur and thinker.
+              <span className="font-serif font-bold text-orange-600 dark:text-orange-400 text-lg md:text-xl block mb-1"> </span>
+              !! आपले शब्द , विचार, पूर्वज कितीही प्रबळ असले तरी,. स्वतःला सिद्ध केल्याखेरीज या सर्व या उपाध्येंना काहीच किंमत नसते. !!
             </motion.p>
 
             {/* --- THE BUTTON LOGIC HAPPENS HERE --- */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-6">
               
-              {hasReferral ? (
+              {hasReferral && referrerName ? (
                 /* The Premium VIP Button */
                 <button 
                   onClick={onOrderClick}
+                  disabled={isAdding}
                   className="relative overflow-hidden group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-orange-500 to-[#FF5A36] text-white rounded-full font-bold text-lg shadow-[0_10px_30px_rgba(255,90,54,0.3)] hover:shadow-[0_15px_40px_rgba(255,90,54,0.5)] transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-3 border border-orange-400/50"
                 >
-                  <span className="relative z-10 flex items-center gap-2">
-                    Order Hardcopy <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />
-                  </span>
+                   {isAdding ? (
+                      <><Loader2 size={22} className="animate-spin" /> Adding to Cart ...</>
+                    ) : (
+                      <>
+                      <span className="relative z-10 flex items-center gap-2">
+                        <ShoppingBag/> Order Book <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />
+                      </span>
+                      </>
+                    )}
                   {/* The glossy sweep effect that slides across the button on hover */}
                   <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
                 </button>
@@ -137,7 +155,7 @@ export const Hero = ({ onOrderPopup }) => {
             {/* CHANGE 1: Increased responsive sizes significantly.
                Old: w-[220px] h-[330px] sm:w-[280px] sm:h-[420px] md:w-[350px] md:h-[500px]
             */}
-            <div className="relative group w-[260px] h-[400px] sm:w-[340px] sm:h-[520px] md:w-[420px] md:h-[640px]">
+            <div className="relative group w-[260px] h-[400px] sm:w-[340px] sm:h-[520px] md:w-[450px] md:h-[640px]">
               
               {/* The 3D Book Container */}
               {/* CHANGE 2: Reduced border-l-[12px] to border-l-[6px] for a thinner spine.
