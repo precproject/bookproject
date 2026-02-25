@@ -5,8 +5,11 @@ import { AuthContext } from '../../context/AuthContext';
 import { Navbar } from '../sections/Navbar';
 import OrdersTab from './OrdersTab';
 import ReferralTab from './ReferralTab';
+import { useTheme } from '../../context/ThemeContext';
 
-export const CustomerDashboard = ({ theme, setTheme }) => {
+export const CustomerDashboard = () => {
+  const { theme, toggleTheme } = useTheme();
+  
   const { user, loading } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('orders');
 
@@ -20,8 +23,8 @@ export const CustomerDashboard = ({ theme, setTheme }) => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar theme={theme} setTheme={setTheme} />
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <Navbar theme={theme} setTheme={toggleTheme} />
 
       <div className="max-w-6xl mx-auto p-4 sm:p-6 pt-40 md:pt-32">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">

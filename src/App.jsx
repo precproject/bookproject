@@ -28,10 +28,12 @@ import { DashboardDiscounts } from './components/dashboard/DashboardDiscounts';
 import { DashboardInventory } from './components/dashboard/DashboardInventory';
 import { DashboardReferrals } from './components/dashboard/DashboardReferrals';
 import { DashboardConfig } from './components/dashboard/DashboardConfig';
+import { ThemeProvider } from './context/ThemeContext';
 
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider> {/* <-- ADD THIS HERE */}
       {/* 1. STATE PROVIDERS (Wrapping the entire app) */}
       <AuthProvider>
         <CartProvider>
@@ -78,6 +80,7 @@ export default function App() {
           </AdminProvider>
         </CartProvider>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

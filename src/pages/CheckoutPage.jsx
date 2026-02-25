@@ -9,8 +9,11 @@ import { MapPin, Tag, CreditCard, ShoppingBag, Trash2, User, Loader2, CheckCircl
 import { Button } from '../components/ui/Button';
 import { orderService } from '../api/service/orderService';
 import { Navbar } from '../components/sections/Navbar';
+import { useTheme } from '../context/ThemeContext';
 
-export const CheckoutPage = ({ theme, setTheme }) => {
+export const CheckoutPage = () => {
+  const { theme, toggleTheme } = useTheme();
+
   const navigate = useNavigate();
   const { user, openAuthModal } = useContext(AuthContext);
   const { cartItems, cartSubtotal, requiresShipping, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
@@ -179,6 +182,7 @@ export const CheckoutPage = ({ theme, setTheme }) => {
         } else if (data.paymentStatus === 'Failed') {
           setPaymentOverlay(prev => ({ ...prev, status: 'failed' }));
           clearInterval(pollInterval);
+          setLoading(false)
         }
       } catch (error) {
         console.error('Polling error', error);
@@ -206,8 +210,9 @@ export const CheckoutPage = ({ theme, setTheme }) => {
   // --- EMPTY CART STATE ---
   if (cartItems.length === 0 && !paymentOverlay.active) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar theme={theme} setTheme={setTheme} />
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <Navbar theme={theme} setTheme={toggleTheme} />
+        
         <div className="max-w-2xl mx-auto p-6 pt-40 text-center">
           <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-100">
             <ShoppingBag size={60} className="text-slate-300 mx-auto mb-4" />
@@ -224,15 +229,15 @@ export const CheckoutPage = ({ theme, setTheme }) => {
     );
   }
 
-  return (
-    <div className="relative min-h-screen bg-slate-50">
-      <Navbar theme={theme} setTheme={setTheme} />
+return (
+    <div className="relative min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      <Navbar theme={theme} setTheme={toggleTheme} />
 
       {/* Main Content */}
       <div className={`max-w-6xl mx-auto p-4 sm:p-6 pt-40 md:pt-32 transition-all duration-300 ${paymentOverlay.active ? 'blur-md pointer-events-none opacity-50' : ''}`}>
         
-        <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3 mb-8">
-          <ShoppingBag className="text-orange-600" /> Secure Checkout
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3 mb-8">
+          <ShoppingBag className="text-orange-600 dark:text-orange-500" /> Secure Checkout
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -241,22 +246,22 @@ export const CheckoutPage = ({ theme, setTheme }) => {
           <div className="lg:col-span-2 space-y-6">
             
             {/* Live Cart Items */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-              <h2 className="text-lg font-bold mb-4 text-slate-700">Review Items</h2>
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
+              <h2 className="text-lg font-bold mb-4 text-slate-700 dark:text-slate-200">Review Items</h2>
               <div className="space-y-4">
                 {cartItems.map((item) => (
-                  <div key={item.bookId} className="flex items-center justify-between pb-4 border-b border-slate-100 last:border-0 last:pb-0">
+                  <div key={item.bookId} className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 last:border-0 last:pb-0">
                     <div>
-                      <h3 className="font-bold text-slate-800">{item.name}</h3>
-                      <p className="text-sm text-slate-500">{item.type} Edition - ₹{item.price}</p>
+                      <h3 className="font-bold text-slate-800 dark:text-white">{item.name}</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{item.type} Edition - ₹{item.price}</p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
-                        <button onClick={() => updateQuantity(item.bookId, item.qty - 1)} className="w-8 h-8 rounded bg-white shadow-sm text-slate-600 font-bold hover:text-orange-600 transition">-</button>
-                        <span className="w-6 text-center font-semibold text-slate-800">{item.qty}</span>
-                        <button onClick={() => updateQuantity(item.bookId, item.qty + 1)} className="w-8 h-8 rounded bg-white shadow-sm text-slate-600 font-bold hover:text-orange-600 transition">+</button>
+                      <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                        <button onClick={() => updateQuantity(item.bookId, item.qty - 1)} className="w-8 h-8 rounded bg-white dark:bg-slate-700 shadow-sm text-slate-600 dark:text-slate-200 font-bold hover:text-orange-600 dark:hover:text-orange-400 transition">-</button>
+                        <span className="w-6 text-center font-semibold text-slate-800 dark:text-white">{item.qty}</span>
+                        <button onClick={() => updateQuantity(item.bookId, item.qty + 1)} className="w-8 h-8 rounded bg-white dark:bg-slate-700 shadow-sm text-slate-600 dark:text-slate-200 font-bold hover:text-orange-600 dark:hover:text-orange-400 transition">+</button>
                       </div>
-                      <button onClick={() => removeFromCart(item.bookId)} className="text-red-400 hover:text-red-600 transition p-2">
+                      <button onClick={() => removeFromCart(item.bookId)} className="text-red-400 hover:text-red-600 dark:hover:text-red-400 transition p-2">
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -267,15 +272,15 @@ export const CheckoutPage = ({ theme, setTheme }) => {
 
             {/* Address Selection & Creation Section */}
             {requiresShipping && user && (
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-bold flex items-center gap-2 text-slate-700">
+                  <h2 className="text-lg font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200">
                     <MapPin size={20} /> Shipping Address
                   </h2>
                   {!isAddingNewAddress && savedAddresses.length > 0 && (
                     <button 
                       onClick={() => setIsAddingNewAddress(true)}
-                      className="text-sm font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                      className="text-sm font-bold text-orange-600 dark:text-orange-500 hover:text-orange-700 flex items-center gap-1"
                     >
                       <Plus size={16} /> New Address
                     </button>
@@ -283,7 +288,7 @@ export const CheckoutPage = ({ theme, setTheme }) => {
                 </div>
 
                 {isFetchingAddresses ? (
-                  <div className="flex items-center justify-center py-6 text-slate-400">
+                  <div className="flex items-center justify-center py-6 text-slate-400 dark:text-slate-500">
                     <Loader2 className="animate-spin mr-2" size={20} /> Loading saved addresses...
                   </div>
                 ) : (
@@ -297,20 +302,20 @@ export const CheckoutPage = ({ theme, setTheme }) => {
                             onClick={() => setSelectedAddressIndex(idx)}
                             className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                               selectedAddressIndex === idx 
-                                ? 'border-orange-500 bg-orange-50/50' 
-                                : 'border-slate-200 hover:border-orange-300'
+                                ? 'border-orange-500 bg-orange-50/50 dark:border-orange-500 dark:bg-orange-900/20' 
+                                : 'border-slate-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-500'
                             }`}
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`mt-0.5 ${selectedAddressIndex === idx ? 'text-orange-500' : 'text-slate-400'}`}>
+                              <div className={`mt-0.5 ${selectedAddressIndex === idx ? 'text-orange-500' : 'text-slate-400 dark:text-slate-500'}`}>
                                 <Home size={18} />
                               </div>
                               <div>
-                                <p className="font-bold text-slate-800 text-sm">{addr.fullName}</p>
-                                <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                                <p className="font-bold text-slate-800 dark:text-white text-sm">{addr.fullName}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
                                   {addr.street}, {addr.city}, {addr.state} - {addr.pincode}
                                 </p>
-                                <p className="text-xs text-slate-500 mt-1 font-medium">📞 {addr.phone}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">📞 {addr.phone}</p>
                               </div>
                             </div>
                           </div>
@@ -320,21 +325,21 @@ export const CheckoutPage = ({ theme, setTheme }) => {
 
                     {/* New Address Form */}
                     {isAddingNewAddress && (
-                      <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 animate-[fadeIn_0.2s_ease-out]">
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700 animate-[fadeIn_0.2s_ease-out]">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <input type="text" name="fullName" placeholder="Full Name" onChange={handleAddressChange} className="p-3 bg-white rounded-xl border border-slate-200 outline-none focus:border-orange-500 shadow-sm" />
-                          <input type="tel" name="phone" placeholder="Phone Number" onChange={handleAddressChange} className="p-3 bg-white rounded-xl border border-slate-200 outline-none focus:border-orange-500 shadow-sm" />
-                          <input type="text" name="street" placeholder="Street Address / Flat No" onChange={handleAddressChange} className="p-3 bg-white rounded-xl border border-slate-200 outline-none focus:border-orange-500 shadow-sm md:col-span-2" />
-                          <input type="text" name="city" placeholder="City" onChange={handleAddressChange} className="p-3 bg-white rounded-xl border border-slate-200 outline-none focus:border-orange-500 shadow-sm" />
+                          <input type="text" name="fullName" placeholder="Full Name" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                          <input type="tel" name="phone" placeholder="Phone Number" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                          <input type="text" name="street" placeholder="Street Address / Flat No" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm md:col-span-2" />
+                          <input type="text" name="city" placeholder="City" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
                           <div className="flex gap-4">
-                            <input type="text" name="state" placeholder="State" onChange={handleAddressChange} className="w-1/2 p-3 bg-white rounded-xl border border-slate-200 outline-none focus:border-orange-500 shadow-sm" />
-                            <input type="text" name="pincode" placeholder="PIN Code" onChange={handleAddressChange} className="w-1/2 p-3 bg-white rounded-xl border border-slate-200 outline-none focus:border-orange-500 shadow-sm" />
+                            <input type="text" name="state" placeholder="State" onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                            <input type="text" name="pincode" placeholder="PIN Code" onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
                           </div>
                         </div>
                         {savedAddresses.length > 0 && (
                           <button 
                             onClick={() => setIsAddingNewAddress(false)}
-                            className="mt-4 text-sm font-bold text-slate-500 hover:text-slate-700 underline"
+                            className="mt-4 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline"
                           >
                             Cancel and use saved address
                           </button>
@@ -347,20 +352,23 @@ export const CheckoutPage = ({ theme, setTheme }) => {
             )}
 
             {/* Promo Code Section */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-700"><Tag size={20} /> Apply Promo Code</h2>
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
+              <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200"><Tag size={20} /> Apply Promo Code</h2>
               <div className="flex gap-3">
-                <input 
-                  type="text" placeholder="Enter Discount Code" 
-                  value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  className="flex-1 p-3.5 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500 uppercase font-mono tracking-wider"
-                />
-                <Button variant="secondary" onClick={handleApplyPromo} disabled={isVerifyingPromo || !promoCode} className="px-6 border border-slate-300">
+                <div className="relative flex-1">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                  <input 
+                    type="text" placeholder="Enter Discount Code" 
+                    value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500 uppercase font-mono tracking-wider"
+                  />
+                </div>
+                <Button variant="secondary" onClick={handleApplyPromo} disabled={isVerifyingPromo || !promoCode} className="px-6 border border-slate-300 dark:border-slate-600">
                   {isVerifyingPromo ? <Loader2 size={18} className="animate-spin" /> : 'Apply'}
                 </Button>
               </div>
               {promoMessage.text && (
-                <div className={`mt-3 text-sm font-medium flex items-center gap-2 p-3 rounded-lg border ${promoMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                <div className={`mt-3 text-sm font-medium flex items-center gap-2 p-3 rounded-lg border ${promoMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400' : 'bg-red-50 border-red-200 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'}`}>
                   {promoMessage.type === 'success' ? <CheckCircle size={16} /> : <div className="font-bold text-lg leading-none">!</div>}
                   {promoMessage.text}
                 </div>
@@ -369,35 +377,35 @@ export const CheckoutPage = ({ theme, setTheme }) => {
           </div>
 
           {/* Right Column: Order Summary (Sticky) */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 h-fit lg:sticky top-28">
-            <h2 className="text-xl font-bold mb-6 text-slate-800">Order Summary</h2>
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none h-fit lg:sticky top-28 transition-colors duration-300">
+            <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-white">Order Summary</h2>
 
-            <div className="space-y-3 mb-6 pb-6 border-b border-slate-100">
-              <div className="flex justify-between text-slate-600">
+            <div className="space-y-3 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300">
                 <span>Subtotal</span> <span className="font-semibold">₹{cartSubtotal}</span>
               </div>
               
               {appliedDiscount > 0 && (
-                <div className="flex justify-between text-green-600 bg-green-50 p-2 rounded-lg -mx-2 px-2">
+                <div className="flex justify-between text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg -mx-2 px-2">
                   <span className="flex items-center gap-1"><Tag size={14}/> Discount</span> 
                   <span className="font-bold">-₹{appliedDiscount}</span>
                 </div>
               )}
 
-              <div className="flex justify-between text-slate-600 pt-2 border-t border-slate-100/50">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100/50 dark:border-slate-800/50">
                 <span>Taxes (5% GST)</span> <span className="font-semibold">₹{taxAmount}</span>
               </div>
 
-              <div className="flex justify-between text-slate-600">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300">
                 <span>Shipping</span> <span className="font-semibold">{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
               </div>
               
-              <div className="flex justify-between text-xl font-black text-slate-900 mt-4 pt-4 border-t border-slate-200">
-                <span>Total to Pay</span> <span className="text-orange-600">₹{finalTotal}</span>
+              <div className="flex justify-between text-xl font-black text-slate-900 dark:text-white mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <span>Total to Pay</span> <span className="text-orange-600 dark:text-orange-500">₹{finalTotal}</span>
               </div>
             </div>
 
-            {error && <p className="text-red-600 text-sm mb-4 font-medium p-3 bg-red-50 border border-red-100 rounded-lg">{error}</p>}
+            {error && <p className="text-red-600 dark:text-red-400 text-sm mb-4 font-medium p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-lg">{error}</p>}
 
             <Button 
               variant="primary" 
@@ -410,7 +418,7 @@ export const CheckoutPage = ({ theme, setTheme }) => {
               )}
             </Button>
             
-            <p className="text-center text-xs text-slate-400 mt-4 flex items-center justify-center gap-1">
+            <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4 flex items-center justify-center gap-1">
               <Lock size={12} /> Secure encrypted payment
             </p>
           </div>
@@ -420,17 +428,17 @@ export const CheckoutPage = ({ theme, setTheme }) => {
       {/* PAYMENT OVERLAY (Fixed Full Screen) */}
       {paymentOverlay.active && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
-          <div className="bg-white p-8 md:p-12 rounded-3xl max-w-lg w-full text-center shadow-2xl relative">
+          <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-3xl max-w-lg w-full text-center shadow-2xl relative border border-slate-200 dark:border-slate-800">
             
             {paymentOverlay.status === 'waiting' && (
               <>
                 <Loader2 size={60} className="text-orange-500 animate-spin mx-auto mb-6" />
-                <h2 className="text-2xl font-bold text-slate-800">Complete your payment</h2>
-                <p className="text-slate-500 mt-3 mb-6">
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Complete your payment</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-3 mb-6">
                   Please complete the payment in the new tab. <br/>
                   <strong>Do not close this window.</strong> We are waiting for the bank's confirmation.
                 </p>
-                <a href={paymentOverlay.paymentUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-orange-600 underline hover:text-orange-700">
+                <a href={paymentOverlay.paymentUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-orange-600 dark:text-orange-500 underline hover:text-orange-700 dark:hover:text-orange-400">
                   Click here if the payment tab didn't open automatically
                 </a>
               </>
@@ -439,17 +447,17 @@ export const CheckoutPage = ({ theme, setTheme }) => {
             {paymentOverlay.status === 'success' && (
               <>
                 <CheckCircle size={70} className="text-green-500 mx-auto mb-6" />
-                <h2 className="text-3xl font-bold text-slate-800">Payment Successful!</h2>
-                <p className="text-slate-500 mt-2">Redirecting to your dashboard...</p>
+                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">Payment Successful!</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2">Redirecting to your dashboard...</p>
               </>
             )}
 
             {paymentOverlay.status === 'failed' && (
               <>
                 <div className="text-red-500 text-6xl mx-auto mb-6">⚠️</div>
-                <h2 className="text-3xl font-bold text-slate-800">Payment Failed</h2>
-                <p className="text-slate-500 mt-2 mb-6">The payment was declined or cancelled.</p>
-                <Button onClick={() => setPaymentOverlay({ active: false })} className="w-full bg-slate-200 text-slate-800 hover:bg-slate-300">
+                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">Payment Failed</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 mb-6">The payment was declined or cancelled.</p>
+                <Button onClick={() => setPaymentOverlay({ active: false })} className="w-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-700">
                   Return to Checkout
                 </Button>
               </>
@@ -458,10 +466,10 @@ export const CheckoutPage = ({ theme, setTheme }) => {
             {paymentOverlay.status === 'timeout' && (
               <>
                 <Clock size={70} className="text-orange-400 mx-auto mb-6" />
-                <h2 className="text-2xl font-bold text-slate-800">Taking longer than usual...</h2>
-                <p className="text-slate-500 mt-2 mb-2">We haven't received the final status from the bank yet.</p>
-                <p className="text-sm font-bold text-slate-800 mb-6">Please check your order status again in a few minutes.</p>
-                <p className="text-xs text-slate-400">Redirecting to your dashboard...</p>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Taking longer than usual...</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 mb-2">We haven't received the final status from the bank yet.</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-white mb-6">Please check your order status again in a few minutes.</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">Redirecting to your dashboard...</p>
               </>
             )}
 
