@@ -22,7 +22,7 @@ export const DashboardInventory = () => {
   const [toastMessage, setToastMessage] = useState('');
   
   // Using _id for the database identifier, and sku for the visual Product ID
-  const defaultForm = { _id: null, sku: '', title: '', desc: '', type: 'Physical', price: '', stock: '' };
+  const defaultForm = { _id: null, sku: '', title: '', description: '', type: 'Physical', price: '', stock: '' };
   const [formData, setFormData] = useState(defaultForm);
 
   // --- FETCH LIVE DATA (WITH DEBOUNCE) ---
@@ -58,7 +58,7 @@ export const DashboardInventory = () => {
       _id: item._id, 
       sku: item.sku || item.id, // Fallback to id if backend uses 'id' instead of 'sku'
       title: item.title,
-      desc: item.desc,
+      description: item.description,
       type: item.type,
       price: item.price,
       stock: item.stock === null ? '' : item.stock
@@ -104,7 +104,7 @@ export const DashboardInventory = () => {
       const payload = {
         sku: formData.sku.toUpperCase(),
         title: formData.title,
-        desc: formData.desc,
+        description: formData.description,
         type: formData.type,
         price: Number(formData.price),
         stock: formattedStock
@@ -229,7 +229,7 @@ export const DashboardInventory = () => {
                             </div>
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-800 text-sm">{item.title}</span>
-                              <span className="text-xs text-slate-500 mt-0.5">{item.desc}</span>
+                              <span className="text-xs text-slate-500 mt-0.5">{item.description}</span>
                             </div>
                           </div>
                         </td>
@@ -341,8 +341,8 @@ export const DashboardInventory = () => {
                   <input 
                     type="text" 
                     required
-                    value={formData.desc}
-                    onChange={(e) => setFormData({...formData, desc: e.target.value})}
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
                     placeholder="e.g. Physical paperback edition." 
                     className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
                   />

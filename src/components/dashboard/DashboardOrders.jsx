@@ -86,6 +86,7 @@ export const DashboardOrders = () => {
 
   // --- ACTION HANDLERS ---
   const handleOpenModal = (order) => {
+    console.log(selectedOrder)
     setSelectedOrder(order);
     setNewStatus(order.status);
     setIsTransitExpanded(false);
@@ -357,9 +358,15 @@ export const DashboardOrders = () => {
                           <p>Shipping</p>
                           <p>₹{selectedOrder.priceBreakup?.shipping || 0}</p>
                         </div>
-                        {selectedOrder.priceBreakup?.discountAmount < 0 && (
+                        {selectedOrder.priceBreakup?.taxAmount && (
+                          <div className="flex justify-between text-sm text-slate-600">
+                            <p className="">Tax</p>
+                            <p>{selectedOrder.priceBreakup.taxAmount}</p>
+                          </div>
+                        )}
+                        {selectedOrder.priceBreakup?.discountAmount > 0 && (
                           <div className="flex justify-between text-sm font-medium text-emerald-600 bg-emerald-50 p-2 rounded-lg">
-                            <p className="flex items-center gap-1"><Tag size={12}/> Discount</p>
+                            <p className="flex items-center gap-1"><Tag size={12}/> Discount ({selectedOrder.priceBreakup.discountCode})</p>
                             <p>{selectedOrder.priceBreakup.discountAmount}</p>
                           </div>
                         )}

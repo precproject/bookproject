@@ -6,7 +6,8 @@ import { downloadInvoice } from '../../utils/generateInvoice';
 import { Button } from '../ui/Button';
 import { 
   PackageOpen, CreditCard, Download, Truck, Clock, 
-  AlertCircle, X, MapPin, CheckCircle, FileText, ChevronRight, Loader2, ShieldCheck
+  AlertCircle, X, MapPin, CheckCircle, FileText, ChevronRight, Loader2, ShieldCheck,
+  Gift
 } from 'lucide-react';
 
 const OrdersTab = () => {
@@ -237,6 +238,15 @@ const OrdersTab = () => {
                         </div>
                       </div>
                     )}
+
+                    {selectedOrder.referralCode && (
+                      <div className="flex justify-between items-center text-sm font-medium text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                        <div className="flex flex-col">
+                          <p className="flex items-center gap-1 font-bold"><Gift size={12}/> Referral Applied</p>
+                        </div>
+                        <p className="font-mono bg-amber-100 px-2 py-0.5 rounded text-xs">{selectedOrder?.referralCode}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* RIGHT COLUMN */}
@@ -251,9 +261,10 @@ const OrdersTab = () => {
                       {/* Subtotals */}
                       <div className="space-y-3 text-sm text-slate-600 mb-4 pb-4 border-b border-slate-100">
                         <div className="flex justify-between"><span>Subtotal</span> <span className="font-medium">₹{selectedOrder.priceBreakup.subtotal}</span></div>
+                        <div className="flex justify-between"><span>Tax</span> <span className="font-medium">₹{selectedOrder.priceBreakup.taxAmount}</span></div>
                         <div className="flex justify-between"><span>Shipping</span> <span className="font-medium">{selectedOrder.priceBreakup.shipping === 0 ? 'Free' : `₹${selectedOrder.priceBreakup.shipping}`}</span></div>
-                        {selectedOrder.priceBreakup.discountAmount < 0 && (
-                          <div className="flex justify-between text-green-600"><span>Discount</span> <span className="font-bold">{selectedOrder.priceBreakup.discountAmount}</span></div>
+                        {selectedOrder.priceBreakup.discountAmount > 0 && (
+                          <div className="flex justify-between text-green-600"><span>Discount ({selectedOrder.priceBreakup.discountCode})</span> <span className="font-bold">{selectedOrder.priceBreakup.discountAmount}</span></div>
                         )}
                       </div>
                       
