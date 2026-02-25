@@ -1,39 +1,50 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Tag, Edit, Trash2, CheckCircle, XCircle, Search, X, Save, IndianRupee } from 'lucide-react';
-
-// --- STANDARD MOCK DATA ---
-const INITIAL_DISCOUNTS = [
-  { id: 'DC-001', code: 'FESTIVAL20', type: 'Percentage', value: 20, maxDiscount: 150, validTill: '2026-12-31', currentUsage: 45, maxUsage: 100, totalDiscountProvided: 6750, status: 'Active' },
-  { id: 'DC-002', code: 'FLAT50', type: 'Amount', value: 50, maxDiscount: 50, validTill: '2026-11-15', currentUsage: 200, maxUsage: 200, totalDiscountProvided: 10000, status: 'Expired' },
-  { id: 'DC-003', code: 'WELCOME10', type: 'Percentage', value: 10, maxDiscount: 100, validTill: '', currentUsage: 892, maxUsage: null, totalDiscountProvided: 89200, status: 'Active' },
-];
+import React, { useState, useEffect } from 'react';
+import { 
+  Plus, Tag, Edit, Trash2, CheckCircle, XCircle, Search, X, Save, IndianRupee, Loader2 
+} from 'lucide-react';
+import { adminService } from '../../api/service/adminService';
 
 export const DashboardDiscounts = () => {
   // --- STATE MANAGEMENT ---
-  const [discounts, setDiscounts] = useState(INITIAL_DISCOUNTS);
+  const [discounts, setDiscounts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   
   // Form State
-  const defaultForm = { id: null, code: '', type: 'Percentage', value: '', maxDiscount: '', validTill: '', maxUsage: '' };
+  const defaultForm = { _id: null, code: '', type: 'Percentage', value: '', maxDiscount: '', validTill: '', maxUsage: '' };
   const [formData, setFormData] = useState(defaultForm);
 
-  // --- FILTERING LOGIC ---
-  const filteredDiscounts = useMemo(() => {
-    let result = [...discounts];
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(d => d.code.toLowerCase().includes(query));
-    }
-    return result;
-  }, [discounts, searchQuery]);
+  // --- FETCH LIVE DATA (WITH DEBOUNCE) ---
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      loadDiscounts();
+    }, 400);
 
-  // Stats
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const loadDiscounts = async () => {
+    setIsLoading(true);
+    try {
+      const data = await adminService.getDiscounts({ search: searchQuery });
+      setDiscounts(data || []);
+    } catch (error) {
+      console.error("Failed to load discounts:", error);
+      showToast("Error fetching discount codes.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- STATS CALCULATION ---
   const activeCount = discounts.filter(d => d.status === 'Active').length;
-  const totalSaved = discounts.reduce((acc, curr) => acc + curr.totalDiscountProvided, 0);
+  // Fallback to 0 if totalDiscountProvided isn't tracked in your DB yet
+  const totalSaved = discounts.reduce((acc, curr) => acc + (curr.totalDiscountProvided || 0), 0); 
 
   // --- ACTION HANDLERS ---
   const handleOpenAdd = () => {
@@ -43,63 +54,60 @@ export const DashboardDiscounts = () => {
 
   const handleOpenEdit = (discount) => {
     setFormData({
-      id: discount.id,
+      _id: discount._id,
       code: discount.code,
       type: discount.type,
       value: discount.value,
       maxDiscount: discount.maxDiscount,
-      validTill: discount.validTill || '',
+      validTill: discount.validTill ? new Date(discount.validTill).toISOString().split('T')[0] : '', // Format for date input
       maxUsage: discount.maxUsage || ''
     });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this discount code?')) {
-      setDiscounts(prev => prev.filter(d => d.id !== id));
-      showToast('Discount code deleted successfully.');
+      try {
+        await adminService.deleteDiscount(id);
+        setDiscounts(prev => prev.filter(d => d._id !== id));
+        showToast('Discount code deleted successfully.');
+      } catch (error) {
+        showToast('Failed to delete discount.');
+      }
     }
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
     
-    // Determine status based on dates and limits
-    let newStatus = 'Active';
-    if (formData.validTill && new Date(formData.validTill) < new Date()) newStatus = 'Expired';
-    if (formData.maxUsage && formData.currentUsage >= parseInt(formData.maxUsage)) newStatus = 'Expired'; // Exhausted
-
-    if (formData.id) {
-      // Edit Existing
-      setDiscounts(prev => prev.map(d => d.id === formData.id ? {
-        ...d,
+    try {
+      const payload = {
         code: formData.code.toUpperCase(),
         type: formData.type,
         value: Number(formData.value),
         maxDiscount: Number(formData.maxDiscount),
-        validTill: formData.validTill,
-        maxUsage: formData.maxUsage ? Number(formData.maxUsage) : null,
-        status: newStatus
-      } : d));
-      showToast('Discount updated successfully.');
-    } else {
-      // Add New
-      const newDiscount = {
-        id: `DC-${Math.floor(Math.random() * 10000)}`,
-        code: formData.code.toUpperCase(),
-        type: formData.type,
-        value: Number(formData.value),
-        maxDiscount: Number(formData.maxDiscount),
-        validTill: formData.validTill,
-        currentUsage: 0,
-        maxUsage: formData.maxUsage ? Number(formData.maxUsage) : null,
-        totalDiscountProvided: 0,
-        status: newStatus
+        validTill: formData.validTill || null,
+        maxUsage: formData.maxUsage ? Number(formData.maxUsage) : null
       };
-      setDiscounts([newDiscount, ...discounts]);
-      showToast('New discount code created.');
+
+      if (formData._id) {
+        // Edit Existing
+        await adminService.updateDiscount(formData._id, payload);
+        showToast('Discount updated successfully.');
+      } else {
+        // Add New
+        await adminService.createDiscount(payload);
+        showToast('New discount code created.');
+      }
+      
+      setIsModalOpen(false);
+      loadDiscounts(); // Refresh the list from the server
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to save discount.');
+    } finally {
+      setIsSaving(false);
     }
-    setIsModalOpen(false);
   };
 
   const showToast = (message) => {
@@ -108,7 +116,7 @@ export const DashboardDiscounts = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 relative">
+    <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
       
       {/* --- TOAST NOTIFICATION --- */}
       {toastMessage && (
@@ -168,76 +176,81 @@ export const DashboardDiscounts = () => {
 
         {/* Table Area */}
         <div className="overflow-x-auto min-h-[300px]">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="p-4 font-bold border-b border-slate-100">Promo Code</th>
-                <th className="p-4 font-bold border-b border-slate-100">Discount Value</th>
-                <th className="p-4 font-bold border-b border-slate-100">Max Discount</th>
-                <th className="p-4 font-bold border-b border-slate-100">Validity</th>
-                <th className="p-4 font-bold border-b border-slate-100">Usage</th>
-                <th className="p-4 font-bold border-b border-slate-100">Status</th>
-                <th className="p-4 font-bold border-b border-slate-100 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredDiscounts.length > 0 ? (
-                filteredDiscounts.map((discount) => (
-                  <tr key={discount.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-4">
-                      <span className="font-mono font-bold text-sm bg-slate-100 text-slate-800 px-3 py-1.5 rounded-lg tracking-wider border border-slate-200">
-                        {discount.code}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 text-sm">
-                          {discount.type === 'Percentage' ? `${discount.value}%` : `₹${discount.value}`}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+              <Loader2 className="animate-spin text-emerald-600 mb-4" size={32} />
+              Loading discount codes...
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse min-w-[900px]">
+              <thead>
+                <tr className="bg-slate-50/50 text-slate-500 text-xs uppercase tracking-wider">
+                  <th className="p-4 font-bold border-b border-slate-100">Promo Code</th>
+                  <th className="p-4 font-bold border-b border-slate-100">Discount Value</th>
+                  <th className="p-4 font-bold border-b border-slate-100">Max Discount</th>
+                  <th className="p-4 font-bold border-b border-slate-100">Validity</th>
+                  <th className="p-4 font-bold border-b border-slate-100">Usage</th>
+                  <th className="p-4 font-bold border-b border-slate-100">Status</th>
+                  <th className="p-4 font-bold border-b border-slate-100 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {discounts.length > 0 ? (
+                  discounts.map((discount) => (
+                    <tr key={discount._id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4">
+                        <span className="font-mono font-bold text-sm bg-slate-100 text-slate-800 px-3 py-1.5 rounded-lg tracking-wider border border-slate-200">
+                          {discount.code}
                         </span>
-                        <span className="text-xs text-slate-500">{discount.type}</span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-slate-600 font-medium">₹{discount.maxDiscount}</td>
-                    <td className="p-4 text-sm text-slate-600">
-                      {discount.validTill ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(discount.validTill)) : 'Never Expires'}
-                    </td>
-                    <td className="p-4">
-                      {/* Premium Hover Tooltip for Usage */}
-                      <div className="group relative inline-flex items-center gap-2 text-sm font-bold text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg cursor-help transition-colors hover:bg-slate-200">
-                        {discount.currentUsage} / {discount.maxUsage || '∞'}
-                        
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-800 text-white text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap shadow-lg animate-[scaleIn_0.1s_ease-out] z-10">
-                          Total Value Provided: <span className="text-emerald-400 font-bold">₹{discount.totalDiscountProvided.toLocaleString()}</span>
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-800 text-sm">
+                            {discount.type === 'Percentage' ? `${discount.value}%` : `₹${discount.value}`}
+                          </span>
+                          <span className="text-xs text-slate-500">{discount.type}</span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      {discount.status === 'Active' ? (
-                        <span className="flex items-center w-fit gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700"><CheckCircle size={12}/> Active</span>
-                      ) : (
-                        <span className="flex items-center w-fit gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-500"><XCircle size={12}/> Expired</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenEdit(discount)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={16} /></button>
-                        <button onClick={() => handleDelete(discount.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
-                      </div>
+                      </td>
+                      <td className="p-4 text-sm text-slate-600 font-medium">₹{discount.maxDiscount}</td>
+                      <td className="p-4 text-sm text-slate-600">
+                        {discount.validTill ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(discount.validTill)) : 'Never Expires'}
+                      </td>
+                      <td className="p-4">
+                        <div className="group relative inline-flex items-center gap-2 text-sm font-bold text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg cursor-help transition-colors hover:bg-slate-200">
+                          {discount.currentUsage || 0} / {discount.maxUsage || '∞'}
+                          
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-800 text-white text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap shadow-lg animate-[scaleIn_0.1s_ease-out] z-10">
+                            Total Value Provided: <span className="text-emerald-400 font-bold">₹{(discount.totalDiscountProvided || 0).toLocaleString()}</span>
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        {discount.status === 'Active' ? (
+                          <span className="flex items-center w-fit gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700"><CheckCircle size={12}/> Active</span>
+                        ) : (
+                          <span className="flex items-center w-fit gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-500"><XCircle size={12}/> {discount.status}</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => handleOpenEdit(discount)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={16} /></button>
+                          <button onClick={() => handleDelete(discount._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="p-12 text-center text-slate-500">
+                      <Tag size={40} className="mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-bold text-slate-600">No Discounts Found</p>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7" className="p-12 text-center text-slate-500">
-                    <Tag size={40} className="mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-bold text-slate-600">No Discounts Found</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -251,7 +264,7 @@ export const DashboardDiscounts = () => {
             {/* Modal Header */}
             <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <div>
-                <h2 className="text-xl font-bold text-slate-800">{formData.id ? 'Edit Discount Code' : 'Create Discount Code'}</h2>
+                <h2 className="text-xl font-bold text-slate-800">{formData._id ? 'Edit Discount Code' : 'Create Discount Code'}</h2>
                 <p className="text-xs text-slate-500 mt-1">Configure usage limits and values.</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 shadow-sm border border-slate-100">
@@ -335,7 +348,7 @@ export const DashboardDiscounts = () => {
                       min="1"
                       value={formData.maxUsage}
                       onChange={(e) => setFormData({...formData, maxUsage: e.target.value})}
-                      placeholder="Leave blank for unlimited" 
+                      placeholder="Blank for unlimited" 
                       className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
                     />
                   </div>
@@ -345,11 +358,12 @@ export const DashboardDiscounts = () => {
 
               {/* Modal Footer */}
               <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 mt-auto">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm">
+                <button type="button" onClick={() => setIsModalOpen(false)} disabled={isSaving} className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50">
                   Cancel
                 </button>
-                <button type="submit" className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-900 transition-colors shadow-md">
-                  <Save size={18} /> {formData.id ? 'Save Changes' : 'Create Code'}
+                <button type="submit" disabled={isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-900 transition-colors shadow-md disabled:opacity-50">
+                  {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} 
+                  {formData._id ? 'Save Changes' : 'Create Code'}
                 </button>
               </div>
             </form>

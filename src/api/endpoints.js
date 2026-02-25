@@ -13,6 +13,12 @@ export const ENDPOINTS = {
 
   // Admin
   ADMIN_STATS: '/admin/dashboard/stats',
+  ADMIN_ORDERS: '/admin/orders',
+  ADMIN_UPDATE_ORDER: (orderId) => `/admin/orders/${orderId}/status`,
+  ADMIN_DELIVERY: (orderId) => `/admin/orders/${orderId}/transit`,
+  ADMIN_USERS: '/admin/users',
+  ADMIN_DISCOUNTS: '/admin/discounts',
   ADMIN_INVENTORY: '/admin/inventory',
+  ADMIN_REFERRALS: '/admin/referrals',
   ADMIN_TOGGLE_USER: (userId) => `/admin/users/${userId}/toggle-status`,
 };

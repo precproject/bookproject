@@ -1,86 +1,82 @@
-import React, { useContext } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+// --- CONTEXT PROVIDERS ---
+import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
+import { AdminProvider } from './context/AdminContext';
+
+// --- GLOBAL COMPONENTS ---
+import { AuthModal } from './components/auth/AuthModal';
+import { ErrorPage } from './components/ui/ErrorPage';
+
+// --- PUBLIC & CUSTOMER PAGES ---
 import { HomeLayout } from './components/home/HomeLayout';
-import { DashboardHome } from './components/dashboard/DashboardHome';
+import { CheckoutPage } from './pages/CheckoutPage';
+import { PaymentStatus } from './pages/PaymentStatus';
+import { CustomerDashboard } from './components/customer/CustomerDashboard';
+
+// --- ADMIN PAGES ---
+import { AdminLogin } from './components/dashboard/AdminLogin';
 import { DashboardRoute } from './components/route/DashboardRoute';
+import { DashboardHome } from './components/dashboard/DashboardHome';
 import { DashboardOrders } from './components/dashboard/DashboardOrders';
 import { DashboardDelivery } from './components/dashboard/DashboardDelivery';
-import { Route, Routes, BrowserRouter } from 'react-router-dom';
 import { DashboardPayments } from './components/dashboard/DashboardPayments';
 import { DashboardUsers } from './components/dashboard/DashboardUsers';
 import { DashboardDiscounts } from './components/dashboard/DashboardDiscounts';
 import { DashboardInventory } from './components/dashboard/DashboardInventory';
 import { DashboardReferrals } from './components/dashboard/DashboardReferrals';
 import { DashboardConfig } from './components/dashboard/DashboardConfig';
-import { ErrorPage } from './components/ui/ErrorPage';
-import { Login } from './components/dashboard/Login';
-import { AuthProvider } from './context/AuthContext';
-import { AuthModal } from './components/auth/AuthModal';
-import { CheckoutPage } from './pages/CheckoutPage';
-import { PaymentStatus } from './pages/PaymentStatus';
-import { CartProvider } from './context/CartContext';
-import { CustomerDashboard } from './components/customer/CustomerDashboard';
 
 export default function App() {
-  
   return (
     <BrowserRouter>
-      {/* 2. WRAP EVERYTHING INSIDE THE AUTH PROVIDER */}
+      {/* 1. STATE PROVIDERS (Wrapping the entire app) */}
       <AuthProvider>
-      <CartProvider>
+        <CartProvider>
+          <AdminProvider>
+            
+            {/* Global Auth Modal (Can be triggered from anywhere) */}
+            <AuthModal />
 
-      <AuthModal />
+            {/* 2. APPLICATION ROUTES */}
+            <Routes>
+              
+              {/* --- PUBLIC ROUTES --- */}
+              <Route path="/" element={<HomeLayout />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/payment-status/:orderId" element={<PaymentStatus />} />
 
-      <Routes>
-        {/* Public Route */}
-        <Route path="/" element={<HomeLayout />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={ <CustomerDashboard /> } />
-        {/* <Route path="/cart" element={<CartPage />} /> */}
+              {/* --- CUSTOMER PROTECTED ROUTE --- */}
+              {/* CustomerDashboard internally checks if user is logged in, else redirects */}
+              <Route path="/dashboard" element={<CustomerDashboard />} />
 
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/payment-status/:orderId" element={<PaymentStatus />} />
+              {/* --- ADMIN AUTH ROUTE --- */}
+              <Route path="/login" element={<AdminLogin />} />
 
-        {/* Admin Dashboard Routes */}
-        <Route
-          path="/admin"
-          element={
-            <DashboardRoute>
-              <DashboardHome />
-            </DashboardRoute>
-          }
-        />
-        <Route
-          path="/admin/orders"
-          element={
-            <DashboardRoute>
-              <DashboardOrders />
-            </DashboardRoute>
-          }
-        />
-        <Route
-          path="/admin/delivery"
-          element={
-            <DashboardRoute>
-              <DashboardDelivery />
-            </DashboardRoute>
-          }
-        />
-        <Route path="/admin/payments" element={<DashboardRoute><DashboardPayments /></DashboardRoute>} />
-        <Route path="/admin/users" element={<DashboardRoute><DashboardUsers /></DashboardRoute>} />
-        <Route path="/admin/discounts" element={<DashboardRoute><DashboardDiscounts /></DashboardRoute>} />
-        <Route path="/admin/inventory" element={<DashboardRoute><DashboardInventory /></DashboardRoute>} />
-        <Route path="/admin/referrals" element={<DashboardRoute><DashboardReferrals /></DashboardRoute>} />
-        <Route path="/admin/settings" element={<DashboardRoute><DashboardConfig /></DashboardRoute>} />
+              {/* --- ADMIN DASHBOARD (Nested Routing) --- */}
+              {/* DashboardRoute acts as the Layout Guard. It renders the Sidebar/Header, 
+                  and the nested routes render inside its <Outlet /> */}
+              <Route path="/admin" element={<DashboardRoute />}>
+                <Route index element={<DashboardHome />} />
+                <Route path="orders" element={<DashboardOrders />} />
+                <Route path="delivery" element={<DashboardDelivery />} />
+                <Route path="payments" element={<DashboardPayments />} />
+                <Route path="users" element={<DashboardUsers />} />
+                <Route path="discounts" element={<DashboardDiscounts />} />
+                <Route path="inventory" element={<DashboardInventory />} />
+                <Route path="referrals" element={<DashboardReferrals />} />
+                <Route path="settings" element={<DashboardConfig />} />
+              </Route>
 
-        {/* Fallback */}
-        {/*
-        <Route path="*" element={<Navigate to="/" replace />} />
-        */}
-        <Route path="*" element={<ErrorPage />} />
+              {/* --- 404 FALLBACK ROUTE --- */}
+              <Route path="*" element={<ErrorPage />} />
 
-      </Routes>
+            </Routes>
 
-      </CartProvider>
+          </AdminProvider>
+        </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   );

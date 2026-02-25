@@ -1,16 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Home, ShoppingCart, Truck, CreditCard, 
   Users, Tag, BookCopy, Share2, Settings, 
   Search, Menu, X, LogOut, ChevronDown
 } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext'; // Import your AuthContext
 
 export const DashboardLayout = ({ children, activePath = '/admin' }) => {
+  // --- CONSUME AUTH CONTEXT ---
+  const { user, logout } = useContext(AuthContext);
+  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileRef = useRef(null);
   const navigate = useNavigate();
+
+  // Extract user details dynamically
+  const userName = user?.name || 'System Admin';
+  const userEmail = user?.email || 'admin@chintamukti.com';
+  const userInitial = userName.charAt(0).toUpperCase();
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
@@ -23,14 +32,15 @@ export const DashboardLayout = ({ children, activePath = '/admin' }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // --- SECURE LOGOUT HANDLER ---
   const handleLogout = () => {
-    // In a real app, you'd clear auth tokens here
-    navigate('/');
+    logout(); // This clears the global context and local storage token
+    navigate('/login'); // Redirect to the admin login page
   };
 
   const menuItems = [
     { name: 'Dashboard', icon: Home, path: '/admin' },
-    { name: 'Orders', icon: ShoppingCart, path: '/admin/orders', badge: '12' },
+    { name: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
     { name: 'Delivery', icon: Truck, path: '/admin/delivery' },
     { name: 'Payments', icon: CreditCard, path: '/admin/payments' },
     { name: 'Users', icon: Users, path: '/admin/users' },
@@ -111,23 +121,27 @@ export const DashboardLayout = ({ children, activePath = '/admin' }) => {
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                 className="flex items-center gap-3 bg-white border border-slate-200 rounded-full p-1 pr-4 cursor-pointer hover:bg-slate-50 transition-all shadow-sm"
               >
+                {/* Dynamic Avatar */}
                 <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-xs">
-                  A
+                  {userInitial}
                 </div>
+                {/* Dynamic Name & Email */}
                 <div className="hidden sm:block text-left">
-                  <p className="text-xs font-bold leading-tight text-slate-800">Admin User</p>
-                  <p className="text-[10px] text-slate-500 leading-tight">admin@chintamukti.com</p>
+                  <p className="text-xs font-bold leading-tight text-slate-800">{userName}</p>
+                  <p className="text-[10px] text-slate-500 leading-tight truncate max-w-[120px]">{userEmail}</p>
                 </div>
                 <ChevronDown size={14} className={`text-slate-400 hidden sm:block transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
               </div>
 
               {/* Dropdown Menu */}
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 animate-[scaleIn_0.15s_ease-out] origin-top-right z-50">
-                  <div className="px-4 py-2 border-b border-slate-100 mb-2 sm:hidden">
-                    <p className="text-sm font-bold text-slate-800">Admin User</p>
-                    <p className="text-xs text-slate-500">admin@chintamukti.com</p>
+                <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 animate-[scaleIn_0.15s_ease-out] origin-top-right z-50">
+                  {/* Mobile-only User Info inside dropdown */}
+                  <div className="px-4 py-3 border-b border-slate-100 mb-2 sm:hidden">
+                    <p className="text-sm font-bold text-slate-800">{userName}</p>
+                    <p className="text-xs text-slate-500 truncate">{userEmail}</p>
                   </div>
+                  
                   <button 
                     onClick={() => { setIsProfileMenuOpen(false); navigate('/admin/settings'); }}
                     className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-2"
@@ -201,6 +215,16 @@ export const DashboardLayout = ({ children, activePath = '/admin' }) => {
             </nav>
 
             <div className="mt-auto pt-6 border-t border-slate-100">
+              {/* Dynamic User info in mobile sidebar bottom */}
+              <div className="flex items-center gap-3 px-3 mb-4">
+                 <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-xs shrink-0">
+                  {userInitial}
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-sm font-bold text-slate-800 truncate">{userName}</p>
+                </div>
+              </div>
+
               <div className="text-xs font-bold text-slate-400 mb-4 px-2 tracking-wider uppercase">System</div>
               <button 
                 onClick={() => { setIsMobileMenuOpen(false); navigate('/admin/settings'); }} 
