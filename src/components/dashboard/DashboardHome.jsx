@@ -22,83 +22,53 @@ export const DashboardHome = () => {
 
   const fetchLiveDashboardData = async () => {
     try {
-      // 1. Send the messenger to get all the actual orders from your store
-      const allOrders = await adminService.getAllOrders();
-      
-      // We will assume you have a user endpoint, if not we will count unique emails from orders
-      // const users = await adminService.getAllUsers(); 
-      const uniqueUsers = new Set(allOrders.map(o => o.user?.email)).size;
+      // 1. Fetch the fast, aggregated stats from the backend AND the latest 100 orders for the charts
+      const [dashboardData, recentOrdersData] = await Promise.all([
+        adminService.getDashboardStats(),
+        adminService.getOrdersPaginated({ limit: 100 }) // Only fetch 100 for chart trends, not the whole DB
+      ]);
 
-      // 2. Count the money and sort the boxes
-      let totalRevenue = 0;
-      let activeDeliveries = 0;
-      let pendingList = [];
-      let recentList = [];
-      
-      let statusCounts = {
-        'Success': 0,
-        'Pending Order': 0,
-        'Pending Payment': 0
-      };
+      // 2. Populate Top Cards & Lists from the `getDashboardStats` API
+      if (dashboardData) {
+        setStats({
+          revenue: dashboardData.stats?.totalEarnings || 0,
+          totalOrders: dashboardData.stats?.totalOrders || 0,
+          activeDeliveries: dashboardData.stats?.inProgressDeliveries || 0,
+          totalUsers: dashboardData.stats?.totalUsers || 0
+        });
 
-      // Day of week tracker for the bar chart
+        setRecentPurchasers((dashboardData.recentPurchasers || []).map(p => ({
+          id: p._id,
+          name: p.user?.name || 'Guest Customer',
+          initial: (p.user?.name || 'G').charAt(0).toUpperCase(),
+          time: new Date(p.createdAt).toLocaleDateString(),
+          status: p.status === 'Success' ? 'Paid' : p.status
+        })));
+
+        setPendingPayments((dashboardData.pendingPayments || []).map(p => ({
+          id: p.orderId,
+          amount: p.priceBreakup?.total || 0,
+          user: p.user?.email || 'Unknown Email'
+        })));
+      }
+
+      // 3. Process the latest 100 orders locally to build the trend charts
+      let statusCounts = { 'Success': 0, 'Pending Order': 0, 'Pending Payment': 0 };
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weekCounts = { 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0 };
 
-      // Sort newest first
-      const sortedOrders = [...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      if (recentOrdersData && recentOrdersData.orders) {
+        recentOrdersData.orders.forEach(order => {
+          // Chart Data (Group by Day)
+          const orderDay = days[new Date(order.createdAt).getDay()];
+          weekCounts[orderDay] += 1;
 
-      sortedOrders.forEach(order => {
-        // Revenue (Only count successful payments)
-        if (order.payment?.status === 'Success') {
-          totalRevenue += order.priceBreakup.total;
-          statusCounts['Success'] += 1;
-          
-          // Add to recent purchasers (grab top 5)
-          if (recentList.length < 5) {
-            recentList.push({
-              id: order._id,
-              name: order.user?.name || 'Guest Customer',
-              initial: (order.user?.name || 'G').charAt(0).toUpperCase(),
-              time: new Date(order.createdAt).toLocaleDateString(),
-              status: 'Paid'
-            });
-          }
-        }
-
-        // Active Deliveries (Packed but not delivered)
-        if (order.status === 'In Progress') {
-          activeDeliveries += 1;
-          statusCounts['Pending Order'] += 1;
-        }
-
-        // Pending Payments
-        if (order.status === 'Pending Payment') {
-          statusCounts['Pending Payment'] += 1;
-          if (pendingList.length < 5) {
-            pendingList.push({
-              id: order.orderId,
-              amount: order.priceBreakup.total,
-              user: order.user?.email || 'Unknown Email'
-            });
-          }
-        }
-
-        // Chart Data (Group by Day)
-        const orderDay = days[new Date(order.createdAt).getDay()];
-        weekCounts[orderDay] += 1;
-      });
-
-      // 3. Put all the sorted information onto the manager's desk (State)
-      setStats({
-        revenue: totalRevenue,
-        totalOrders: allOrders.length,
-        activeDeliveries: activeDeliveries,
-        totalUsers: uniqueUsers > 0 ? uniqueUsers : 1 // Fallback
-      });
-
-      setRecentPurchasers(recentList);
-      setPendingPayments(pendingList);
+          // Status Donut Chart Data
+          if (order.status === 'Delivered' || order.status === 'Success') statusCounts['Success'] += 1;
+          if (order.status === 'In Progress') statusCounts['Pending Order'] += 1;
+          if (order.status === 'Pending Payment') statusCounts['Pending Payment'] += 1;
+        });
+      }
 
       setWeeklyData([
         { name: 'Mon', orders: weekCounts['Mon'] }, { name: 'Tue', orders: weekCounts['Tue'] },
@@ -109,19 +79,19 @@ export const DashboardHome = () => {
 
       setLast24hData([
         { name: 'Success', value: statusCounts['Success'] || 1, color: '#1B5E20' }, 
-        { name: 'Pending Order', value: statusCounts['Pending Order'], color: '#6EE7B7' }, 
+        { name: 'In Progress', value: statusCounts['Pending Order'], color: '#6EE7B7' }, 
         { name: 'Pending Payment', value: statusCounts['Pending Payment'], color: '#FCD34D' }
       ].filter(item => item.value > 0)); // Only show slices that have numbers
 
     } catch (error) {
-      console.error("Trouble fetching the store books:", error);
+      console.error("Trouble fetching dashboard stats:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleNotify = (email) => {
-    // Here you would eventually call an API to send a real email
+    // Future expansion: Trigger an email API here
     setToastMessage(`Payment reminder sent to ${email}`);
     setTimeout(() => setToastMessage(''), 3000);
   };
@@ -177,7 +147,7 @@ export const DashboardHome = () => {
             <div className="p-2 bg-slate-50 rounded-full text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors"><Package size={16} /></div>
           </div>
           <div>
-            <h3 className="text-3xl font-bold text-slate-800">{stats.totalOrders}</h3>
+            <h3 className="text-3xl font-bold text-slate-800">{stats.totalOrders.toLocaleString()}</h3>
           </div>
         </div>
 
@@ -191,7 +161,7 @@ export const DashboardHome = () => {
             <div className="p-2 bg-slate-50 rounded-full text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors"><Users size={16} /></div>
           </div>
           <div>
-            <h3 className="text-3xl font-bold text-slate-800">{stats.totalUsers}</h3>
+            <h3 className="text-3xl font-bold text-slate-800">{stats.totalUsers.toLocaleString()}</h3>
           </div>
         </div>
 
@@ -205,7 +175,7 @@ export const DashboardHome = () => {
             <div className="p-2 bg-slate-50 rounded-full text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors"><Clock size={16} /></div>
           </div>
           <div>
-            <h3 className="text-3xl font-bold text-slate-800">{stats.activeDeliveries}</h3>
+            <h3 className="text-3xl font-bold text-slate-800">{stats.activeDeliveries.toLocaleString()}</h3>
             {stats.activeDeliveries > 0 && (
               <div className="flex items-center gap-1 mt-2 text-xs font-medium text-orange-500">
                 <ArrowDownRight size={12} /> Needs packing
@@ -240,8 +210,8 @@ export const DashboardHome = () => {
 
         {/* Pie Chart: Overall Breakdown */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
-          <h3 className="text-base font-bold text-slate-800 mb-2">Order Status Breakdown</h3>
-          <p className="text-xs text-slate-500 mb-4">Total {stats.totalOrders} orders processed</p>
+          <h3 className="text-base font-bold text-slate-800 mb-2">Order Status Trends</h3>
+          <p className="text-xs text-slate-500 mb-4">Based on latest 100 orders</p>
           
           <div className="flex-1 min-h-[180px] relative">
             <ResponsiveContainer width="100%" height="100%">
@@ -255,7 +225,9 @@ export const DashboardHome = () => {
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-bold text-slate-800">{stats.totalOrders}</span>
+              <span className="text-2xl font-bold text-slate-800">
+                {last24hData.reduce((acc, curr) => acc + curr.value, 0)}
+              </span>
             </div>
           </div>
           
