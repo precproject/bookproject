@@ -18,12 +18,32 @@ import { QuoteMarquee } from '../sections/QuoteMarquee';
 import { PurchaseAlert } from '../ui/PurchaseAlert';
 import { captureAndVerifyReferral } from '../../utils/referralManager';
 import { useTheme } from '../../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
+import apiClient from '../../api/client';
 
 export const HomeLayout = () => {
+    const navigate = useNavigate();
     const { theme, toggleTheme } = useTheme();
 
     // 2. ADD A STATE TO TRACK IF CHECKOUT IS OPEN
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+    // NEW: Function to dynamically find the book and route to its product page
+    const handleRouteToProduct = async () => {
+        try {
+        const { data } = await apiClient.get('/public/books');
+        if (data && data.length > 0) {
+            // Route to the first/featured book in your database
+            navigate(`/store/book/${data[0]._id}`);
+        } else {
+            // Fallback to the store shelf if no specific book is found
+            navigate('/store');
+        }
+        } catch (error) {
+        console.error("Failed to fetch book for routing", error);
+        navigate('/store');
+        }
+    };
 
     // 3. PREVENT BACKGROUND SCROLLING WHEN CHECKOUT IS OPEN
     useEffect(() => {
@@ -41,7 +61,7 @@ export const HomeLayout = () => {
 
         <main>
 
-        <Hero onOrderPopup={() => setIsCheckoutOpen(true)} />
+        <Hero onOrderPopup={() => setIsCheckoutOpen(true)} productRoute={handleRouteToProduct}/>
 
         {/* Points to the id="features" inside your Features component */}
         <SectionDivider nextSectionId="features" />

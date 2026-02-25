@@ -29,6 +29,8 @@ import { DashboardInventory } from './components/dashboard/DashboardInventory';
 import { DashboardReferrals } from './components/dashboard/DashboardReferrals';
 import { DashboardConfig } from './components/dashboard/DashboardConfig';
 import { ThemeProvider } from './context/ThemeContext';
+import { StorePage } from './pages/StorePage';
+import { ProductPage } from './pages/ProductPage';
 
 export default function App() {
   return (
@@ -49,6 +51,8 @@ export default function App() {
               <Route path="/" element={<HomeLayout />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/payment-status/:orderId" element={<PaymentStatus />} />
+              <Route path="/store" element={<StorePage />} />
+              <Route path="/store/book/:id" element={<ProductPage />} />
 
               {/* --- CUSTOMER PROTECTED ROUTE --- */}
               {/* CustomerDashboard internally checks if user is logged in, else redirects */}
