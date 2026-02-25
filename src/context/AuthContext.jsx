@@ -6,18 +6,20 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // NEW: State to control the popup
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('chintamukti_token');
       if (token) {
         try {
+          // Verify token and fetch latest user profile
           const { data } = await apiClient.get('/auth/profile');
           setUser(data);
         } catch (error) {
-          localStorage.removeItem('token');
+          // If token is invalid/expired, clear it securely
+          localStorage.removeItem('chintamukti_token');
+          setUser(null);
         }
       }
       setLoading(false);
@@ -26,15 +28,17 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData, token) => {
-    localStorage.setItem('token', token);
-    setUser(userData);
+    localStorage.setItem('chintamukti_token', token);
+    
+    // Depending on your backend, user data might be nested (data.user) or flat (data)
+    setUser(userData.user || userData); 
     setIsAuthModalOpen(false); // Close modal automatically on success
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('chintamukti_token');
     setUser(null);
-    window.location.href = '/';
+    window.location.href = '/'; // Hard reset to clear all states and redirect home
   };
 
   const openAuthModal = () => setIsAuthModalOpen(true);
@@ -45,6 +49,7 @@ export const AuthProvider = ({ children }) => {
       user, login, logout, loading, 
       isAuthModalOpen, openAuthModal, closeAuthModal 
     }}>
+      {/* Wait to render the app until we know if the user is logged in or not */}
       {!loading && children}
     </AuthContext.Provider>
   );

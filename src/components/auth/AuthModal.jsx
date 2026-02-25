@@ -1,13 +1,13 @@
 import React, { useState, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, User, Phone } from 'lucide-react';
+import { X, Mail, Lock, User, Phone, Loader2 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
-import apiClient from '../../api/client';
 import { Button } from '../ui/Button'; 
 import { authService } from '../../api/service/authService';
 
 export const AuthModal = () => {
   const { isAuthModalOpen, closeAuthModal, login } = useContext(AuthContext);
+  
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,29 +21,32 @@ export const AuthModal = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-    // Inside your AuthModal submit handler:
-    const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Strongly prevents browser reload
     setLoading(true);
+    setError(''); // Clear previous errors
 
     try {
-        let data;
-        if (isLoginMode) {
+      let data;
+      if (isLoginMode) {
         data = await authService.login({ email: formData.email, password: formData.password });
-        } else {
+      } else {
         data = await authService.register(formData);
-        }
-        
-        login(data, data.token); // Context login
-        closeAuthModal();
+      }
+      
+      // Pass the entire response object and the token to context
+      login(data, data.token); 
+      // Note: closeAuthModal() is now handled cleanly inside context's login() function
+      
     } catch (err) {
-        setError(err.response?.data?.message || 'Something went wrong.' + err);
+      // Safely extract the backend error message
+      const errorMessage = err.response?.data?.message || 'Invalid credentials. Please try again.';
+      setError(errorMessage);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-    };
+  };
 
-  // Reset the form when switching between Login and Register
   const toggleMode = () => {
     setIsLoginMode(!isLoginMode);
     setError('');
@@ -61,7 +64,7 @@ export const AuthModal = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeAuthModal}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
           />
 
           {/* Modal Box */}
@@ -69,18 +72,18 @@ export const AuthModal = () => {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden"
+            className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800"
           >
             <div className="p-6 sm:p-8">
               <button 
                 onClick={closeAuthModal}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-2 bg-slate-100 dark:bg-slate-800 rounded-full"
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full"
               >
                 <X size={20} />
               </button>
 
               <div className="text-center mb-8 mt-2">
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-serif">
                   {isLoginMode ? 'Welcome Back' : 'Create Account'}
                 </h2>
                 <p className="text-sm sm:text-base text-slate-500 mt-2">
@@ -88,10 +91,11 @@ export const AuthModal = () => {
                 </p>
               </div>
 
+              {/* Error Display */}
               {error && (
-                <div className="mb-6 p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 text-center font-medium">
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 text-center font-medium">
                   {error}
-                </div>
+                </motion.div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -126,7 +130,9 @@ export const AuthModal = () => {
                   />
                 </div>
 
-                <Button variant="primary" type="submit" className="w-full py-4 text-lg font-bold mt-4 shadow-lg shadow-orange-500/30 rounded-2xl" disabled={loading}>
+                {/* Explicitly set type="submit" to catch the Enter key and trigger the form handler securely */}
+                <Button variant="primary" type="submit" className="w-full py-4 text-lg font-bold mt-4 shadow-lg shadow-orange-500/30 rounded-2xl flex justify-center items-center gap-2" disabled={loading}>
+                  {loading && <Loader2 size={18} className="animate-spin" />}
                   {loading ? 'Processing...' : (isLoginMode ? 'Login' : 'Create Account')}
                 </Button>
               </form>
@@ -136,7 +142,7 @@ export const AuthModal = () => {
                 <button 
                   type="button"
                   onClick={toggleMode}
-                  className="text-orange-600 font-bold hover:text-orange-700 transition-colors ml-1"
+                  className="text-orange-600 font-bold hover:text-orange-700 transition-colors ml-1 focus:outline-none"
                 >
                   {isLoginMode ? 'Register here' : 'Login here'}
                 </button>

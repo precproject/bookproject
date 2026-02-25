@@ -144,7 +144,7 @@ export const CheckoutPage = ({ theme, setTheme }) => {
       };
 
       const data = await orderService.checkout(payload);
-      clearCart();
+      //clearCart();
 
       setPaymentOverlay({ active: true, status: 'waiting', orderId: data.orderId, paymentUrl: data.paymentPayload.redirectUrl });
       
@@ -174,6 +174,7 @@ export const CheckoutPage = ({ theme, setTheme }) => {
         if (data.paymentStatus === 'Success') {
           setPaymentOverlay(prev => ({ ...prev, status: 'success' }));
           clearInterval(pollInterval);
+          clearCart();
           setTimeout(() => navigate('/dashboard'), 3000);
         } else if (data.paymentStatus === 'Failed') {
           setPaymentOverlay(prev => ({ ...prev, status: 'failed' }));
