@@ -3,25 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import apiClient from '../api/client';
-import { ENDPOINTS } from '../api/endpoints';
 import { getValidReferralCode } from '../utils/referralManager';
 import { MapPin, Tag, CreditCard, ShoppingBag, Trash2, User, Loader2, CheckCircle, Clock, Plus, Home, Lock } from 'lucide-react';
-import { Button } from '../components/ui/Button';
 import { orderService } from '../api/service/orderService';
 import { Navbar } from '../components/sections/Navbar';
 import { useTheme } from '../context/ThemeContext';
+import { Button } from '../components/ui/Button';
 
 export const CheckoutPage = () => {
   const { theme, toggleTheme } = useTheme();
-
   const navigate = useNavigate();
   const { user, openAuthModal } = useContext(AuthContext);
   const { cartItems, cartSubtotal, requiresShipping, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
 
+  // --- CONFIG (TAX & SHIPPING) STATE ---
+  const [shopConfig, setShopConfig] = useState({ taxRate: 5, shippingCharge: 50 }); // Safe defaults
+
   // --- ADDRESS MANAGEMENT STATE ---
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [addressError, setAddressError] = useState('');
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(null);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [newAddress, setNewAddress] = useState({ fullName: '', phone: '', street: '', city: '', state: '', pincode: '' });
   const [isFetchingAddresses, setIsFetchingAddresses] = useState(true);
   
@@ -37,21 +41,34 @@ export const CheckoutPage = () => {
   const [error, setError] = useState('');
 
   // --- PRICING CALCULATIONS ---
-  const shipping = requiresShipping ? 50 : 0;
+  const shipping = requiresShipping ? shopConfig.shippingCharge : 0;
   const taxableAmount = Math.max(0, cartSubtotal - appliedDiscount);
-  const taxRate = 0.05; // 5% standard GST on books/merchandise
-  const taxAmount = Math.round(taxableAmount * taxRate);
+  const taxAmount = Math.round(taxableAmount * (shopConfig.taxRate / 100));
   const finalTotal = taxableAmount + shipping + taxAmount;
 
-  // --- FETCH USER ADDRESSES ---
+  // --- FETCH INITIAL DATA (Addresses & Config) ---
   useEffect(() => {
-    const fetchAddresses = async () => {
+    const fetchCheckoutData = async () => {
+      // 1. Fetch Dynamic Config (Tax & Shipping) from your backend
+      try {
+        const configRes = await apiClient.get('/public/config');
+        if (configRes.data) {
+          setShopConfig({
+            taxRate: configRes.data.taxRate || 5,
+            shippingCharge: configRes.data.shippingCharge || 50
+          });
+        }
+      } catch (err) {
+        console.log("Using default tax and shipping configuration.");
+      }
+
+      // 2. Fetch User Addresses
       if (!user) {
         setIsFetchingAddresses(false);
         return;
       }
+      
       try {
-        // Create this endpoint in your backend to fetch the logged-in user's profile/addresses
         const { data } = await apiClient.get('/user/addresses'); 
         setSavedAddresses(data.addresses || []);
         
@@ -69,11 +86,81 @@ export const CheckoutPage = () => {
       }
     };
 
-    fetchAddresses();
+    fetchCheckoutData();
   }, [user]);
 
+  // --- ADDRESS FORM HANDLERS ---
   const handleAddressChange = (e) => setNewAddress({ ...newAddress, [e.target.name]: e.target.value });
 
+  // Pincode Auto-Fill Logic using Indian Postal API
+  const handlePincodeChange = async (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6); // Only numbers, max 6 chars
+    setNewAddress(prev => ({ ...prev, pincode: val }));
+
+    if (val.length === 6) {
+      setIsFetchingLocation(true);
+      try {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${val}`);
+        const data = await response.json();
+        
+        if (data && data[0] && data[0].Status === 'Success') {
+          const postOffice = data[0].PostOffice[0];
+          setNewAddress(prev => ({
+            ...prev,
+            city: postOffice.District,
+            state: postOffice.State
+          }));
+        } else {
+          setAddressError('Invalid Pincode. Could not fetch city/state.');
+        }
+      } catch (err) {
+        console.error("Pincode fetch error:", err);
+      } finally {
+        setIsFetchingLocation(false);
+      }
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    if (!newAddress.fullName || !newAddress.phone || !newAddress.street || !newAddress.city || !newAddress.state || !newAddress.pincode) {
+      setAddressError('Please fill in all the details before saving.');
+      return;
+    }
+
+    setIsSavingAddress(true);
+    setAddressError('');
+
+    try {
+      const { data } = await apiClient.post('/user/addresses', newAddress);
+      setSavedAddresses(data.addresses);
+      setSelectedAddressIndex(0);
+      setIsAddingNewAddress(false);
+      setNewAddress({ fullName: '', phone: '', street: '', city: '', state: '', pincode: '' });
+    } catch (err) {
+      setAddressError('Failed to save address. Please try again.');
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
+
+  const handleDeleteAddress = async (e, addressId, index) => {
+    e.stopPropagation(); // Prevent selecting the card when clicking trash
+    if (!window.confirm("Are you sure you want to remove this address?")) return;
+
+    try {
+      // Assuming your backend expects the address ID or Index to delete it
+      const { data } = await apiClient.delete(`/user/addresses/${addressId || index}`);
+      setSavedAddresses(data.addresses);
+      
+      // Reset selection if they deleted the currently selected address
+      if (selectedAddressIndex === index) setSelectedAddressIndex(null);
+      if (data.addresses.length === 0) setIsAddingNewAddress(true);
+      
+    } catch (err) {
+      alert("Failed to delete address.");
+    }
+  };
+  
   // --- PROMO VALIDATION ---
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
@@ -81,7 +168,6 @@ export const CheckoutPage = () => {
     setPromoMessage({ text: '', type: '' });
     
     try {
-      // Backend should check code validity, usage limits, and return the calculated discount
       const { data } = await apiClient.post('/discounts/validate', { code: promoCode, subtotal: cartSubtotal });
       setAppliedDiscount(data.discountAmount);
       setPromoMessage({ text: `Awesome! Saved ₹${data.discountAmount}`, type: 'success' });
@@ -100,30 +186,19 @@ export const CheckoutPage = () => {
       return;
     }
 
-    // Validate Address
+    if (isAddingNewAddress && requiresShipping) {
+      setError('Please save your shipping address first by clicking the "Save & Select Address" button.');
+      return;
+    }
+
     let finalShippingAddress = 'Digital Delivery';
     if (requiresShipping) {
-      if (isAddingNewAddress) {
-        if (!newAddress.fullName || !newAddress.phone || !newAddress.street || !newAddress.city || !newAddress.state || !newAddress.pincode) {
-          setError('Please fill in all shipping details for the new address.');
-          return;
-        }
-        finalShippingAddress = `${newAddress.fullName}, ${newAddress.phone}, ${newAddress.street}, ${newAddress.city}, ${newAddress.state} - ${newAddress.pincode}`;
-        
-        // Optional: Save this new address to the user's profile in the background
-        try {
-          await apiClient.post('/user/addresses', newAddress);
-        } catch (e) {
-          console.error("Could not save new address to profile", e);
-        }
-      } else {
-        if (selectedAddressIndex === null || !savedAddresses[selectedAddressIndex]) {
-          setError('Please select a shipping address.');
-          return;
-        }
-        const addr = savedAddresses[selectedAddressIndex];
-        finalShippingAddress = `${addr.fullName}, ${addr.phone}, ${addr.street}, ${addr.city}, ${addr.state} - ${addr.pincode}`;
+      if (selectedAddressIndex === null || !savedAddresses[selectedAddressIndex]) {
+        setError('Please select a shipping address.');
+        return;
       }
+      const addr = savedAddresses[selectedAddressIndex];
+      finalShippingAddress = `${addr.fullName}, ${addr.phone}, ${addr.street}, ${addr.city}, ${addr.state} - ${addr.pincode}`;
     }
 
     setLoading(true);
@@ -131,7 +206,6 @@ export const CheckoutPage = () => {
 
     try {
       const hiddenReferral = getValidReferralCode();
-
       const payload = {
         orderItems: cartItems.map(item => ({ bookId: item.bookId, qty: item.qty })),
         shippingAddress: finalShippingAddress,
@@ -147,14 +221,11 @@ export const CheckoutPage = () => {
       };
 
       const data = await orderService.checkout(payload);
-      //clearCart();
 
       setPaymentOverlay({ active: true, status: 'waiting', orderId: data.orderId, paymentUrl: data.paymentPayload.redirectUrl });
       
-      const newWindow = window.open(data.paymentPayload.redirectUrl, '_blank');
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        console.log("Popup blocked by browser. User must click fallback link.");
-      }
+      // Safely handle mobile redirections
+      window.location.href = data.paymentPayload.redirectUrl;
 
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to initialize checkout. Please try again.');
@@ -165,7 +236,6 @@ export const CheckoutPage = () => {
   // --- PAYMENT POLLING LOGIC ---
   useEffect(() => {
     if (!paymentOverlay.active || !paymentOverlay.orderId || paymentOverlay.status !== 'waiting') return;
-
     let attempts = 0;
     const maxAttempts = 6; 
     let pollInterval;
@@ -182,7 +252,7 @@ export const CheckoutPage = () => {
         } else if (data.paymentStatus === 'Failed') {
           setPaymentOverlay(prev => ({ ...prev, status: 'failed' }));
           clearInterval(pollInterval);
-          setLoading(false)
+          setLoading(false);
         }
       } catch (error) {
         console.error('Polling error', error);
@@ -204,24 +274,20 @@ export const CheckoutPage = () => {
       window.removeEventListener('focus', handleFocus);
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [paymentOverlay, navigate]);
-
+  }, [paymentOverlay, navigate, clearCart]);
 
   // --- EMPTY CART STATE ---
   if (cartItems.length === 0 && !paymentOverlay.active) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
         <Navbar theme={theme} setTheme={toggleTheme} />
-        
         <div className="max-w-2xl mx-auto p-6 pt-40 text-center">
-          <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-100">
-            <ShoppingBag size={60} className="text-slate-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-slate-800">Your cart is empty</h2>
-            <p className="text-slate-500 mt-2 mb-8">Looks like you haven't added any books to your cart yet.</p>
+          <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
+            <ShoppingBag size={60} className="text-slate-300 dark:text-slate-700 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Your cart is empty</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 mb-8">Looks like you haven't added any books to your cart yet.</p>
             <div className="flex justify-center">
-              <Button variant="primary" onClick={() => navigate('/')} className="px-8 py-3">
-                Explore the Store
-              </Button>
+              <Button variant="primary" onClick={() => navigate('/store')} className="px-8 py-3">Explore the Store</Button>
             </div>
           </div>
         </div>
@@ -229,7 +295,7 @@ export const CheckoutPage = () => {
     );
   }
 
-return (
+  return (
     <div className="relative min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       <Navbar theme={theme} setTheme={toggleTheme} />
 
@@ -282,7 +348,7 @@ return (
                       onClick={() => setIsAddingNewAddress(true)}
                       className="text-sm font-bold text-orange-600 dark:text-orange-500 hover:text-orange-700 flex items-center gap-1"
                     >
-                      <Plus size={16} /> New Address
+                      <Plus size={16} /> Add New Address
                     </button>
                   )}
                 </div>
@@ -298,19 +364,27 @@ return (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         {savedAddresses.map((addr, idx) => (
                           <div 
-                            key={idx} 
+                            key={addr._id || idx} 
                             onClick={() => setSelectedAddressIndex(idx)}
-                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                            className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${
                               selectedAddressIndex === idx 
                                 ? 'border-orange-500 bg-orange-50/50 dark:border-orange-500 dark:bg-orange-900/20' 
                                 : 'border-slate-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-500'
                             }`}
                           >
+                            <button 
+                              onClick={(e) => handleDeleteAddress(e, addr._id, idx)}
+                              className="absolute top-4 right-4 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                              title="Delete Address"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+
                             <div className="flex items-start gap-3">
                               <div className={`mt-0.5 ${selectedAddressIndex === idx ? 'text-orange-500' : 'text-slate-400 dark:text-slate-500'}`}>
                                 <Home size={18} />
                               </div>
-                              <div>
+                              <div className="pr-6">
                                 <p className="font-bold text-slate-800 dark:text-white text-sm">{addr.fullName}</p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
                                   {addr.street}, {addr.city}, {addr.state} - {addr.pincode}
@@ -326,24 +400,53 @@ return (
                     {/* New Address Form */}
                     {isAddingNewAddress && (
                       <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700 animate-[fadeIn_0.2s_ease-out]">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <input type="text" name="fullName" placeholder="Full Name" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
-                          <input type="tel" name="phone" placeholder="Phone Number" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
-                          <input type="text" name="street" placeholder="Street Address / Flat No" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm md:col-span-2" />
-                          <input type="text" name="city" placeholder="City" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                        
+                        {addressError && (
+                          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg border border-red-100 dark:border-red-800/50">
+                            {addressError}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                          <input type="text" name="fullName" value={newAddress.fullName} placeholder="Full Name" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                          <input type="tel" name="phone" value={newAddress.phone} placeholder="Phone Number" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                          
+                          <input type="text" name="street" value={newAddress.street} placeholder="Street Address / Flat No" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm md:col-span-2" />
+                          
+                          {/* Pincode placed here so it feels natural to auto-fill the rest */}
+                          <div className="relative">
+                            <input type="text" name="pincode" value={newAddress.pincode} placeholder="PIN Code" onChange={handlePincodeChange} maxLength={6} className="w-full p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                            {isFetchingLocation && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-orange-500" />}
+                          </div>
+
                           <div className="flex gap-4">
-                            <input type="text" name="state" placeholder="State" onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
-                            <input type="text" name="pincode" placeholder="PIN Code" onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                            <input type="text" name="city" value={newAddress.city} placeholder="City" onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                            <input type="text" name="state" value={newAddress.state} placeholder="State" onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
                           </div>
                         </div>
-                        {savedAddresses.length > 0 && (
+                        
+                        <div className="flex flex-col sm:flex-row gap-3">
                           <button 
-                            onClick={() => setIsAddingNewAddress(false)}
-                            className="mt-4 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline"
+                            onClick={handleSaveAddress}
+                            disabled={isSavingAddress}
+                            className="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
                           >
-                            Cancel and use saved address
+                            {isSavingAddress ? <Loader2 size={18} className="animate-spin" /> : null}
+                            {isSavingAddress ? 'Saving...' : 'Save & Select Address'}
                           </button>
-                        )}
+                          
+                          {savedAddresses.length > 0 && (
+                            <button 
+                              onClick={() => {
+                                setIsAddingNewAddress(false);
+                                setAddressError('');
+                              }}
+                              className="px-6 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </>
@@ -393,7 +496,7 @@ return (
               )}
 
               <div className="flex justify-between text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100/50 dark:border-slate-800/50">
-                <span>Taxes (5% GST)</span> <span className="font-semibold">₹{taxAmount}</span>
+                <span>Taxes ({shopConfig.taxRate}% GST)</span> <span className="font-semibold">₹{taxAmount}</span>
               </div>
 
               <div className="flex justify-between text-slate-600 dark:text-slate-300">
@@ -410,7 +513,7 @@ return (
             <Button 
               variant="primary" 
               onClick={handleCheckout} 
-              disabled={loading}
+              disabled={loading || (requiresShipping && isAddingNewAddress)}
               className="w-full py-4 text-lg font-bold flex justify-center items-center gap-2 shadow-lg shadow-orange-500/30 rounded-xl"
             >
               {loading ? <><Loader2 size={20} className="animate-spin"/> Processing...</> : (
