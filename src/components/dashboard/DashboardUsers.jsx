@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Search, Mail, Phone, ShoppingBag, ChevronRight, Shield, User, X, CheckCircle, Ban, Gift, Loader2 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
+import { OrderDetailsModal } from '../shared/OrderDetailsModal';
+import { AdminContext } from '../../context/AdminContext';
 
 export const DashboardUsers = () => {
+  
+  const { updateLocalOrder } = useContext(AdminContext);  
+
   // --- SERVER-SIDE STATE ---
   const [users, setUsers] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -21,6 +26,54 @@ export const DashboardUsers = () => {
   const [fetchedOrders, setFetchedOrders] = useState([]);
   const [toastMessage, setToastMessage] = useState('');
   const [isTogglingId, setIsTogglingId] = useState(null);
+
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  const handleOpenOrder = (order) => {
+    setSelectedOrder(order);
+    setIsOrderModalOpen(true);
+  };
+
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    // Make your API call here: await apiClient.put(`/admin/orders/${orderId}`, { status: newStatus });
+    if (newStatus === selectedOrder.status) return;
+    
+    setIsUpdatingStatus(true);
+    try {
+      // 1. Send update to Backend API
+      await adminService.updateOrderStatus(selectedOrder._id, newStatus);
+      
+      // 2. Update global cache. Because `visibleOrders` relies on `orderCache`, the UI updates instantly!
+      updateLocalOrder(selectedOrder._id, { status: newStatus });
+      
+      // 3. Update the modal's internal state
+      setSelectedOrder(prev => ({ ...prev, status: newStatus }));
+      
+      showToast(`Order #${selectedOrder.orderId} updated to ${newStatus}`);
+    } catch (error) {
+      console.log(error)
+      showToast("Failed to update status. " + (error.response?.data?.message || ''));
+    } finally {
+      setIsUpdatingStatus(false);
+      setIsModalOpen(false);
+    }
+    console.log(`Updating order ${orderId} to ${newStatus}`);
+  };
+
+  const handleNotifyUser = (email, type) => {
+    console.log(`Sending ${type} notification to ${email}`);
+  };
+
+  const getStatusBadge = (status) => {
+    switch(status) {
+      case 'Delivered': return <span className="text-[10px] font-bold px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-100 uppercase tracking-wider">Delivered</span>;
+      case 'In Progress': return <span className="text-[10px] font-bold px-2 py-1 bg-blue-50 text-blue-700 rounded-md border border-blue-100 uppercase tracking-wider">In Progress</span>;
+      case 'Cancelled': return <span className="text-[10px] font-bold px-2 py-1 bg-red-50 text-red-700 rounded-md border border-red-100 uppercase tracking-wider">Cancelled</span>;
+      default: return <span className="text-[10px] font-bold px-2 py-1 bg-yellow-50 text-yellow-700 rounded-md border border-yellow-100 uppercase tracking-wider">Pending</span>;
+    }
+  };
 
   // --- TRIGGER API ON FILTER/PAGE CHANGE ---
   useEffect(() => {
@@ -81,7 +134,8 @@ export const DashboardUsers = () => {
     setIsOrdersLoading(true);
     try {
       const orders = await adminService.getUserOrders(user._id);
-      setFetchedOrders(orders);
+      console.log(orders)
+      setFetchedOrders(orders.orders);
     } catch (error) {
       console.error("Failed to load user orders:", error);
       showToast("Failed to load order history.");
@@ -317,7 +371,7 @@ export const DashboardUsers = () => {
               ) : fetchedOrders.length > 0 ? (
                 <div className="space-y-4">
                   {fetchedOrders.map((order) => (
-                    <div key={order._id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-emerald-200 transition-colors">
+                    <div key={order._id} onClick={() => handleOpenOrder(order)} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-emerald-200 transition-colors">
                       
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
@@ -348,6 +402,15 @@ export const DashboardUsers = () => {
               )}
             </div>
 
+            <OrderDetailsModal 
+              isOpen={isOrderModalOpen}
+              onClose={() => setIsOrderModalOpen(false)}
+              order={selectedOrder}
+              isAdmin={true} // True if used in Admin Dashboard, False if used in Customer Dashboard
+              onUpdateStatus={handleUpdateStatus}
+              onNotifyUser={handleNotifyUser}
+            />
+                  
           </div>
         </div>
       )}
