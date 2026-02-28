@@ -136,5 +136,15 @@ export const adminService = {
     // section can be 'general', 'payment', 'delivery', or 'dynamic'
     const response = await apiClient.put(`/admin/config/${section}`, data);
     return response.data;
+  },
+
+  // --- USER MANAGEMENT ---
+  
+  // Quick create a new user from the admin dashboard
+  createUser: async (userData) => {
+    const response = await apiClient.post('/admin/users', userData);
+    // Depending on your backend response structure, return the user object.
+    // Usually it's response.data or response.data.user
+    return response.data.user || response.data;
   }
 };
