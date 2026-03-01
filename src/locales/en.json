@@ -1,0 +1,23 @@
+{
+  "footer": {
+    "andMore": "And More",
+    "aboutUs": "About Us",
+    "aboutDesc": "Empowering the next generation of thinkers, entrepreneurs, and leaders through the power of practical knowledge and cooperative building.",
+    "explore": "Explore",
+    "exploreLinks": {
+      "store": "Store",
+      "blog": "Blog",
+      "aboutAuthor": "About Author",
+      "trackOrder": "Track Order"
+    },
+    "recentArticles": "Recent Articles",
+    "readArticle": "Read Article",
+    "noArticles": "No articles published yet.",
+    "getInTouch": "Get in Touch",
+    "privacyPolicy": "Privacy policy",
+    "refundPolicy": "Refund policy",
+    "termsOfService": "Terms of service",
+    "copyright": "© {{year}} SahakarStree",
+    "pricingInfo": "**Prices are listed inclusive of GST"
+  }
+}

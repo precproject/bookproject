@@ -6,18 +6,25 @@ import { AuthContext } from '../../context/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { CartContext } from '../../context/CartContext';
 
+// Import useTranslation from react-i18next
+import { useTranslation } from 'react-i18next';
+
 export const Navbar = ({ theme, setTheme }) => {
   const { user, logout, openAuthModal } = useContext(AuthContext);
   const { cartCount } = useContext(CartContext);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Hook into i18next
+  const { t, i18n } = useTranslation();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const [language, setLanguage] = useState('MR');
   
-  // Two refs needed because the dropdown exists in both Desktop and Mobile views
+  // Initialize internal state with the currently active i18n language
+  const [language, setLanguage] = useState(i18n.language === 'mr' ? 'MR' : 'EN');
+  
   const langRef = useRef(null);
   const mobileLangRef = useRef(null);
 
@@ -61,11 +68,15 @@ export const Navbar = ({ theme, setTheme }) => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  // --- DUAL TRANSLATION TRIGGER ---
   const handleLanguageChange = (langCode, displayCode) => {
     setLanguage(displayCode);
     setLangOpen(false);
     
-    // Google Translate Trigger Logic
+    // 1. Change internal UI language via i18next
+    i18n.changeLanguage(langCode);
+    
+    // 2. Trigger Google Translate for dynamic content (Blogs/Products)
     const googleSelect = document.querySelector('.goog-te-combo');
     if (googleSelect) {
       googleSelect.value = langCode;
@@ -79,7 +90,9 @@ export const Navbar = ({ theme, setTheme }) => {
     navigate('/');
   };
 
-  // Navigation Links
+  // If you want these nav links to be translatable, you would update them to use t()
+  // e.g., name: t('navbar.home') 
+  // For now, I've left them as is to not break your existing layout if you haven't added them to json yet.
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Store', path: '/store' },
