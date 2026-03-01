@@ -31,6 +31,9 @@ import { DashboardConfig } from './components/dashboard/DashboardConfig';
 import { ThemeProvider } from './context/ThemeContext';
 import { StorePage } from './pages/StorePage';
 import { ProductPage } from './pages/ProductPage';
+import { BlogArticle } from './pages/BlogArticle';
+import { BlogPage } from './pages/BlogPage';
+import { DashboardBlogs } from './components/dashboard/DashboardBlogs';
 
 export default function App() {
   return (
@@ -53,6 +56,8 @@ export default function App() {
               <Route path="/payment-status/:orderId" element={<PaymentStatus />} />
               <Route path="/store" element={<StorePage />} />
               <Route path="/store/book/:id" element={<ProductPage />} />
+              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/blog/:slug" element={<BlogArticle />} />
 
               {/* --- CUSTOMER PROTECTED ROUTE --- */}
               {/* CustomerDashboard internally checks if user is logged in, else redirects */}
@@ -74,6 +79,7 @@ export default function App() {
                 <Route path="inventory" element={<DashboardInventory />} />
                 <Route path="referrals" element={<DashboardReferrals />} />
                 <Route path="settings" element={<DashboardConfig />} />
+                <Route path="blog" element={<DashboardBlogs />} />
               </Route>
 
               {/* --- 404 FALLBACK ROUTE --- */}

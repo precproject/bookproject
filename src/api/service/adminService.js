@@ -146,5 +146,23 @@ export const adminService = {
     // Depending on your backend response structure, return the user object.
     // Usually it's response.data or response.data.user
     return response.data.user || response.data;
-  }
+  },
+
+  // --- BLOG MANAGEMENT ---
+  getBlogsAdmin: async (params) => {
+    const { data } = await apiClient.get('/blogs', { params: { ...params, adminView: 'true' } });
+    return data;
+  },
+  createBlog: async (payload) => {
+    const { data } = await apiClient.post('/admin/blogs', payload);
+    return data;
+  },
+  updateBlog: async (id, payload) => {
+    const { data } = await apiClient.put(`/admin/blogs/${id}`, payload);
+    return data;
+  },
+  deleteBlog: async (id) => {
+    const { data } = await apiClient.delete(`/admin/blogs/${id}`);
+    return data;
+  },
 };

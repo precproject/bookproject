@@ -47,6 +47,7 @@ export const DashboardLayout = ({ children, activePath = '/admin' }) => {
     { name: 'Discounts', icon: Tag, path: '/admin/discounts' },
     { name: 'Inventory', icon: BookCopy, path: '/admin/inventory' },
     { name: 'Referrals', icon: Share2, path: '/admin/referrals' },
+    { name: 'Blog', icon: Share2, path: '/admin/blog' },
   ];
 
   return (
