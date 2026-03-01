@@ -40,7 +40,7 @@ export const Footer = () => {
   useEffect(() => {
     const fetchRecentBlogs = async () => {
       try {
-        const response = await apiClient.get('/public/blogs', { params: { limit: 3 } });
+        const response = await apiClient.get('/blogs', { params: { limit: 3 } });
         setRecentBlogs(response.data.blogs || []);
       } catch (error) {
         console.error("Failed to load footer blogs", error);

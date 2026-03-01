@@ -19,5 +19,22 @@
     "termsOfService": "Terms of service",
     "copyright": "© {{year}} SahakarStree",
     "pricingInfo": "**Prices are listed inclusive of GST"
+  },
+  "hero": {
+    "badge": "National Bestseller",
+    "title": "Chintanatun Chintamuktookade",
+    "subtitle": "(Maratha Samaj)",
+    "description": "Break free from the mental traps holding you back. The definitive guide to decoding modern success and finding clarity in chaos.",
+    "orderBtn": "Order Hardcopy",
+    "trailerBtn": "Watch Trailer"
+  },
+  "homeBlog": {
+    "subtitle": "Blog & Media",
+    "title": "Latest Content",
+    "viewAll": "View all content",
+    "actionText": "Read Article",
+    "actionVideo": "Watch Video",
+    "actionAudio": "Listen to Podcast",
+    "noArticles": "No content published yet."
   }
 }
