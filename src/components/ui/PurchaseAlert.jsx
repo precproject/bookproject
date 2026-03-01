@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, ShoppingBag, X } from 'lucide-react';
-import apiClient from '../../api/client'; // Adjust path if necessary
+import { ShoppingBag } from 'lucide-react';
+import apiClient from '../../api/client'; 
 
-// Utility to convert ISO date to "2 hours ago", "10 mins ago", etc.
+// Utility to convert ISO date to "2h ago", "10m ago", etc. (Shortened for modern UI)
 const getTimeAgo = (dateString) => {
   const date = new Date(dateString);
   const now = new Date();
   const seconds = Math.floor((now - date) / 1000);
 
   let interval = Math.floor(seconds / 86400);
-  if (interval >= 1) return interval + " day" + (interval === 1 ? "" : "s") + " ago";
+  if (interval >= 1) return interval + "d ago";
   
   interval = Math.floor(seconds / 3600);
-  if (interval >= 1) return interval + " hour" + (interval === 1 ? "" : "s") + " ago";
+  if (interval >= 1) return interval + "h ago";
   
   interval = Math.floor(seconds / 60);
-  if (interval >= 1) return interval + " min" + (interval === 1 ? "" : "s") + " ago";
+  if (interval >= 1) return interval + "m ago";
   
   return "Just now";
 };
@@ -26,7 +26,6 @@ export const PurchaseAlert = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [purchaseData, setPurchaseData] = useState([]);
   
-  // Use a ref to keep track of the current index without triggering re-renders
   const indexRef = useRef(0);
   const timerRef = useRef(null);
 
@@ -52,12 +51,11 @@ export const PurchaseAlert = () => {
     };
   }, []);
 
-  // 2. Handle the display cycle once data is loaded
+  // 2. Handle the 3-second display cycle
   useEffect(() => {
     if (purchaseData.length === 0) return;
 
     const showNextPurchase = () => {
-      // Get current item and update time format dynamically
       const item = purchaseData[indexRef.current];
       setCurrentPurchase({
         name: item.name,
@@ -67,19 +65,18 @@ export const PurchaseAlert = () => {
       
       setIsVisible(true);
 
-      // Hide after 5 seconds
+      // Hide strictly after 3 seconds
       timerRef.current = setTimeout(() => {
         setIsVisible(false);
         
-        // Move to the next index, loop back to 0 if at the end
         indexRef.current = (indexRef.current + 1) % purchaseData.length;
         
-        // Wait 10 seconds before showing the next one
-        timerRef.current = setTimeout(showNextPurchase, 10000);
-      }, 5000);
+        // Wait 12 seconds before showing the next one to avoid spamming the user
+        timerRef.current = setTimeout(showNextPurchase, 12000);
+      }, 3000); 
     };
 
-    // Initial delay before first popup
+    // Initial delay before the very first popup (e.g., 5 seconds after page load)
     timerRef.current = setTimeout(showNextPurchase, 5000);
 
     return () => {
@@ -87,8 +84,8 @@ export const PurchaseAlert = () => {
     };
   }, [purchaseData]);
 
-  // Handle manual close
-  const handleClose = () => {
+  // Allow users to instantly dismiss it by tapping it
+  const handleDismiss = () => {
     setIsVisible(false);
   };
 
@@ -96,42 +93,30 @@ export const PurchaseAlert = () => {
     <AnimatePresence>
       {isVisible && currentPurchase && (
         <motion.div
-          initial={{ opacity: 0, x: -50, y: 50 }}
-          animate={{ opacity: 1, x: 0, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-          className="fixed bottom-6 left-6 z-[100] flex items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)] border border-slate-100 dark:border-slate-800 max-w-sm"
+          initial={{ opacity: 0, y: -20, x: 20 }}
+          animate={{ opacity: 1, y: 0, x: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: -10, transition: { duration: 0.2 } }}
+          onClick={handleDismiss}
+          className="fixed top-24 right-4 md:right-8 z-[100] flex items-center gap-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3 rounded-2xl md:rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)] border border-slate-100 dark:border-slate-800 max-w-[90vw] md:max-w-md cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
-          {/* Circular Icon Placeholder */}
-          <div className="relative flex-shrink-0">
-            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center text-orange-600 dark:text-orange-500">
-              <ShoppingBag size={20} />
-            </div>
-            <div className="absolute -bottom-1 -right-1 bg-green-500 text-white rounded-full p-0.5 border-2 border-white dark:border-slate-900 shadow-sm">
-              <CheckCircle size={10} fill="currentColor" />
-            </div>
+          {/* Compact Modern Icon */}
+          <div className="flex-shrink-0 w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <ShoppingBag size={14} strokeWidth={2.5} />
           </div>
 
-          {/* Text Content */}
-          <div className="flex flex-col pr-4">
-            <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
-              {currentPurchase.name} <span className="font-normal text-slate-500">from</span> {currentPurchase.location}
-            </p>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-              Recently purchased <span className="font-semibold text-orange-600 dark:text-orange-500">चिंतामुक्ती</span>
-            </p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider font-medium">
-              {currentPurchase.time}
-            </p>
-          </div>
+          {/* One/Two Liner Text Content */}
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-snug pr-2">
+            <span className="font-bold text-slate-900 dark:text-white">{currentPurchase.name}</span> from {currentPurchase.location} bought <span className="font-bold text-orange-600 dark:text-orange-500">चिंतामुक्ती</span>
+            <span className="text-slate-400 dark:text-slate-500 text-xs ml-1.5 whitespace-nowrap hidden sm:inline-block">
+              • {currentPurchase.time}
+            </span>
+          </p>
 
-          {/* Close Button */}
-          <button 
-            onClick={handleClose}
-            className="absolute top-3 right-3 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 transition-colors p-1"
-            aria-label="Close notification"
-          >
-            <X size={14} strokeWidth={3} />
-          </button>
+          {/* Time on a new line for very small mobile screens only */}
+          <span className="text-slate-400 dark:text-slate-500 text-[10px] sm:hidden absolute bottom-1.5 right-4">
+            {currentPurchase.time}
+          </span>
+          
         </motion.div>
       )}
     </AnimatePresence>
