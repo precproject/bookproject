@@ -83,8 +83,9 @@ export const HomeLayout = () => {
         <SectionDivider nextSectionId="reviews" />
         <Reviews />
 
+{/*
         <QuoteMarquee />
-
+*/}
         {/* Points to the id="blog" inside your Blog component */}
         <SectionDivider nextSectionId="blog" />
         <Blog /> {/* 2. ADD THE BLOG COMPONENT HERE, AFTER REVIEWS */}
