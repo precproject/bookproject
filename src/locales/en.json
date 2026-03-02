@@ -36,5 +36,30 @@
     "actionVideo": "Watch Video",
     "actionAudio": "Listen to Podcast",
     "noArticles": "No content published yet."
+  },
+  "chapters": {
+    "title": "What's Inside?",
+    "subtitle": "Book Index",
+    "showMore": "Show More Chapters",
+    "showLess": "Show Less",
+    "list": [
+      { "num": "01", "title": "While Starting a Business", "sub": "Chapter 1", "topics": ["Business Knowledge", "Knowledge About Buying and Selling", "What to Do? What Not to Do?", "Don't Take Toxic Risks", "Handicraft/Skill is More Important Than Trading"] },
+      { "num": "02", "title": "Capital and Discussions on Capital", "sub": "Chapter 2", "topics": ["How to Raise Money for Business", "The Importance of Current, CC, and Savings Accounts"] },
+      { "num": "03", "title": "Independent Business, Partnerships & Family", "sub": "Chapter 3", "topics": ["Partnerships and Their Challenges", "Discussing Partnerships with Others", "Lack of Communication: What Exactly is a Meeting?", "Why Meetings Should Always be Held", "Don't Let the Business Stagnate"] },
+      { "num": "04", "title": "How to Manage a Business", "sub": "Chapter 4", "topics": ["Emotions Have No Value in Business", "Managing the Business", "Success and Failure are Parts of the Trade", "Avoid Interference from Friends, Relatives, and Non-Professionals", "Emotions Should Not Enter Transactions"] },
+      { "num": "05", "title": "Commercial Space and Its Importance", "sub": "Chapter 5", "topics": ["Starting a New Business in Your Own Space", "Rented Spaces and Opinions on Them", "Choose a Location Taking Advice from Experienced People"] },
+      { "num": "06", "title": "Handling Workers & Their Problems", "sub": "Chapter 6", "topics": ["How to Train Workers", "What Will the Future Labor Situation Be?", "How Domestic Workers are Created", "The Difference Between Others' Employees and Ours", "The Labor Situation Will Be Very Difficult in the Future"] },
+      { "num": "07", "title": "While Doing Any Business", "sub": "Chapter 7", "topics": ["Manufacturers and Traders: It's Not Just About Setup", "Consistency is Important", "Returns and Profits from Inherent Skills"] },
+      { "num": "08", "title": "The Importance of Written Records", "sub": "Chapter 8", "topics": ["Lending, Borrowing, Credit, and Household Transactions", "Causes of Losses: Lack of Written Records", "Written Things Like Laws and Agreements Hold Importance"] },
+      { "num": "09", "title": "Why Good Businesses Eventually Decline", "sub": "Chapter 9", "topics": ["Unexpected and Hidden Costs", "Once the Business Graph Goes Down, It Doesn't Come Back Up", "Innovation Must be Brought into Any Business"] },
+      { "num": "10", "title": "Maratha Entrepreneurs and Disputes", "sub": "Chapter 10", "topics": ["Getting Angry Quickly, Inability to Communicate", "Our Language, Its Consequences, and How Words Hurt", "Money Can Be Invested, But Can't Be Extracted Easily", "Lack of Business Knowledge", "Pros and Cons of Compromise"] },
+      { "num": "11", "title": "Moving Towards a Stable Business", "sub": "Chapter 11", "topics": ["Why You Should Travel the World", "Who to Keep Business Contacts With", "Reviewing the Past While Growing the Business", "What Was Gained and Lost Over Time"] },
+      { "num": "12", "title": "What Was Achieved Moving Forward?", "sub": "Chapter 12", "topics": ["Good and Bad Experiences in Business", "How to Digest Success and Face Failure"] },
+      { "num": "13", "title": "Discussion About Complaints", "sub": "Chapter 13", "topics": ["Whose Help to Take; Whose Not To", "Our Own People Don't Help", "Why Help; Who to Help; Who Not to Help", "When Does Help Become Profitable or Disadvantageous"] },
+      { "num": "14", "title": "Do Maratha Professionals Grow or Not?", "sub": "Chapter 14", "topics": ["Once a Maratha Professional Falls, They Don't Rise Again", "What Care to Take While Growing a Business", "Money Cannot Give Birth to Money", "Income From a Single Business is Dangerous"] },
+      { "num": "15", "title": "How Maratha Professionals are Demoralized", "sub": "Chapter 15", "topics": ["Economic Demoralization", "Social Demoralization"] },
+      { "num": "16", "title": "Reason for Writing the Book", "sub": "Chapter 16", "topics": ["Every Community United, But the Maratha Community Did Not", "Others Have Written for Business and Politics", "The Dangers of Writing: What to Do and What Not to Do", "Raising Questions and Providing Guidance for Society", "A List for Business Guidance"] },
+      { "num": "17", "title": "Efforts Made to Build the Community", "sub": "Chapter 17", "topics": [] }
+    ]
   }
 }

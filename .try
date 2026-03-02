@@ -1,0 +1,299 @@
+import React from 'react';
+
+import { motion } from 'framer-motion';
+
+import { Play, Feather, BookOpen } from 'lucide-react';
+
+import { SectionHeading } from '../ui/SectionHeading';
+
+import { Button } from '../ui/Button';
+
+
+
+export const Chapters = () => (
+
+  <section id="chapters" className="py-20 md:py-24 bg-white dark:bg-slate-950">
+
+    <div className="container mx-auto px-4 md:px-6 flex flex-col lg:flex-row gap-12 lg:gap-16">
+
+      <div className="w-full lg:w-1/3 text-center lg:text-left">
+
+        <SectionHeading title="What's Inside?" subtitle="-" align="left" />
+
+        <p className="text-slate-600 dark:text-slate-400 mb-8 text-sm md:text-base">
+
+          A comprehensive journey through 10 chapters, breaking down complex concepts into simple, actionable Marathi.
+
+        </p>
+
+        <Button variant="outline" className="w-full sm:w-auto lg:w-full justify-center">Download Full Index</Button>
+
+      </div>
+
+      <div className="w-full lg:w-2/3 grid gap-4">
+
+        {[
+
+          { num: "01", title: "The Psychology of Habits", sub: "सवयींचे मानसशास्त्र" },
+
+          { num: "02", title: "Internal & External Triggers", sub: "ट्रिगर आणि कृती" },
+
+          { num: "03", title: "Variable Rewards", sub: "अपेक्षित बक्षीस" },
+
+          { num: "04", title: "The Investment Phase", sub: "गुंतवणूक" },
+
+          { num: "05", title: "Building Local Products", sub: "स्थानिक उत्पादने तयार करणे" },
+
+        ].map((c, i) => (
+
+          <motion.div key={i} initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="group flex flex-col sm:flex-row sm:items-center justify-between p-5 md:p-6 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl hover:border-orange-500 transition-all cursor-pointer gap-4 sm:gap-0">
+
+            <div className="flex items-center gap-4 md:gap-6">
+
+              <span className="text-3xl md:text-4xl font-bold text-slate-200 dark:text-slate-800 font-serif group-hover:text-orange-100 transition-colors">{c.num}</span>
+
+              <div>
+
+                <h4 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white group-hover:text-orange-600 transition-colors">{c.title}</h4>
+
+                <p className="text-slate-500 text-xs md:text-sm mt-1">{c.sub}</p>
+
+              </div>
+
+            </div>
+
+            <div className="hidden sm:flex w-10 h-10 rounded-full bg-white dark:bg-slate-800 items-center justify-center text-slate-400 group-hover:bg-orange-600 group-hover:text-white transition-all">
+
+              <Feather size={18} />
+
+            </div>
+
+          </motion.div>
+
+        ))}
+
+      </div>
+
+    </div>
+
+  </section>
+
+);
+
+
+
+
+
+update the index with following context and subtopic if expanded, align it properly 
+
+remove option of "Download Full Index" and use that space, and this line "A comprehensive journey through 10 chapters, breaking down complex concepts into simple, actionable Marathi."
+
+
+
+here index and sub-topic show on expanded a topic, and also after 5 index chapter show "Show More" option or respective text that will show other chapter as well
+
+
+
+(have english translation as well
+
+
+
+अनुक्रमणिका
+
+१. “ व्यवसायाची सुरवात करताना " 
+
+-“व्यवसायाबद्दलचे ज्ञान”-
+
+-" खरेदी विक्री बद्दल ज्ञान".
+
+
+
+-काय करावे? काय करू नये?
+
+
+
+-विषाचे परीक्षा घेऊ नये.
+
+
+
+-व्यवसायात ट्रेडिंग पेक्षा हस्तकला महत्त्वाची.
+
+
+
+२. भांडवल व भांडवलाबाबत चर्चा
+
+-व्यवसायासाठी पैसा कसा उभा केला.
+
+-" करंट खाते, सी, सी खाते, बचत खाते, यांचे व्यवसायातील महत्त्व".
+
+
+
+३. “ व्यवसाय स्वतंत्र, भागेदारी, घरातील व्यक्तींचा सहभाग".
+
+
+
+-भागीदारी व त्यातील अडचणी:
+
+
+
+-इतरांच्या भागीदारीवर चर्चा
+
+
+
+-संवादाचे अभाव, मीटिंग हे नेमकं काय असतं.
+
+
+
+-मीटिंग (चर्चा) नेहमीच का केली जाते.
+
+
+
+-व्यवसायाला मुंघेर पडू नये.
+
+
+
+४. व्यवसायाचे व्यवस्थापन कसे करावे.
+
+
+
+-व्यवसायात भावनेला किंमत नसते
+
+-व्यवसाय सांभाळणे
+
+-यश अपयश व्यवहाराचे भाग आहे.
+
+
+
+-मित्र, नातेवाईक, अव्यावसायिक व्यक्तींचा हस्तक्षेप नकोच.
+
+
+
+
+
+-भावना व्यवहारात येऊ नये
+
+५. व्यावसायिक जागा व त्याचे महत्त्व
+
+-स्वतःच्या जागेत नवीन व्यवसाय करताना
+
+-भाडेतत्वावरील जागा व जागेबाबतचे मत.
+
+-जागेची निवड अनुभवी व्यक्तीचे सल्ले घेऊन करावी.
+
+
+
+६. कामगार सांभाळताना तक्रारी, आमचे नोकर व त्यांच्या अडचणी
+
+-"कामगार कसे तयार करावे”
+
+-यापुढील कामगार परिस्थिती काय असेल?
+
+
+
+-घरातील कामगार (लेबर) कसे निर्माण करतात ( कामगार निर्माण करणे) १२७
+
+-इतरांचे नोकर व आपले नोकर यातील फरक.
+
+-"यापुढे कामगार परिस्थिती फार अवघड असेल, मग ती कशी असेल”
+
+७. “कोणताही व्यवसाय करताना "
+
+-"उत्पादक, ट्रेडर्स म्हणजे फक्त उभारणी नाही "
+
+-सातत्त्य असणे महत्त्वाचे
+
+-“अंतर्भूत कलेने काय होते परतावा व फायदा”-
+
+८. “व्यवसायात लिखाणाचे महत्त्व". लिखाण हे प्रत्येक दिवसाचे का असावे_
+
+-“उधार देणे, घेणे, उसणवारी, घरातील देणे घेणे”.
+
+-“ नुकसान झालेले त्याची कारणे, लिखित नसणे:”
+
+-" कायदा, वायदा या लिखित गोष्टींना महत्त्व असते: "
+
+९. “चांगली सुरुवात झालेली व्यवसाय नंतर कमी कमी होतात "
+
+-अचानक येणारे खर्च आणि छुपे खर्च
+
+
+
+-“समाजातील व्यावसायिक आलेख खाली वर झाले की पुन्हा वर येत नाही : "
+
+-"कोणत्याही व्यवसायात नावीन्य घेऊन यावे लागतेः”
+
+१०. “मराठा व्यवसायिक व वाद विवाद".
+
+-राग लवकर येतो, बोलता येत नाही.
+
+
+
+-" आपली भाषा व त्याचे परिणाम, आपले शब्द लागतात.”.
+
+-“व्यवसायात पैसा गुंतवता येतो, पण तसंच काढता येत नाही”.
+
+-“व्यावसायिक ज्ञानाचे अभाव”_
+
+-" तडजोडीचे फायदे तोटे"
+
+११. “ स्थिरस्थावर व्यवसायाकडे वाटचाल" 
+
+-"जग का फिरायला हवे
+
+
+
+-“व्यावसायिक संपर्क कोणाबरोबर हवे "_
+
+-“व्यवसाय वाढत असताना माघील आढावा घ्यावा”
+
+-" किती कालावधीत काय मिळवले, काय सोडले”-
+
+१२. “व्यवसाय पुढे जाताना काय साध्य झाले?".
+
+-“व्यवसायातील चांगले वाईट अनुभव"
+
+-"यश कसे पचवतात, अपयशाला कसे सामोरे जातात"
+
+१३. " तक्रारी बाबत चर्चा "
+
+-" मदत कोणाची घ्यावी; कोणाची नाही"
+
+-" आपली माणसे मदत करत नाही"
+
+-" मदत का करावी; कोणाला करावी; कोणाला करू नये”.
+
+-" मदत केव्हा फायद्या तोट्याची ठरते"
+
+
+
+१४. “मराठा व्यवसायिक वाढतात की नाही".
+
+-“मराठा व्यवसायिक घसरण झाली की पुन्हा उभारत नाही”.
+
+-“व्यवसाय वाढवताना काय काळजी घ्यावी”
+
+-“पैश्याने पैश्याला जन्म देता येत नाही".
+
+-“एकाच व्यवसायातून येणारे उत्पन्न घातक असते”. 
+
+१५. “मराठा व्यावसायिकांचे खच्चीकरण कसे होते”
+
+
+
+-“आर्थिक खच्चीकरण, सामाजिक खच्चीकरण”
+
+
+
+१६. “पुस्तक लिहिण्याचे कारण काय? त्याने काय साध्य होईल”
+
+-“प्रत्येक समाज एकत्र आलेत, पण मराठा समाज एकत्र नाही आला".
+
+-“इतरांनी व्यवसायासाठी, राजकारणासाठी लिखाण केलेले आहे” "यासाठी पर्याय काय करावे लागतील तर "
+
+-" लिखाणाचे धोके काय, काय करावे, काय करू नये यासाठी प्रयत्न"
+
+-" काही दर्शन, काही मार्गदर्शन समाजासाठी काही प्रश्न उभे केले आहे”
+
+-"व्यावसायिक मार्गदर्शनासाठी यादी”.
+
+१७.“समाज उभारणीसाठी काही प्रयत्न केले आहे का?"
