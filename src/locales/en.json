@@ -61,5 +61,12 @@
       { "num": "16", "title": "Reason for Writing the Book", "sub": "Chapter 16", "topics": ["Every Community United, But the Maratha Community Did Not", "Others Have Written for Business and Politics", "The Dangers of Writing: What to Do and What Not to Do", "Raising Questions and Providing Guidance for Society", "A List for Business Guidance"] },
       { "num": "17", "title": "Efforts Made to Build the Community", "sub": "Chapter 17", "topics": [] }
     ]
+  },
+  "author": {
+    "sectionLabel": "The Mind Behind The Words",
+    "name": "Kailasrao Tukaram Turkane Patil",
+    "quote": "Writing in Marathi to empower the next generation of local entrepreneurs.",
+    "para1": "This literature has been created to provide the Maratha community with the right direction, clear thoughts, and a positive vision. The primary goal is to offer the right ideology to farmers, entrepreneurs, professionals, and the new generation from a business perspective.",
+    "para2": "It provides guidance in extremely simple and understandable language on how to correct often misguided attitudes in society, develop a business mindset, and empower everyone to stand strong and capable in their respective fields."
   }
 }
