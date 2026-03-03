@@ -1,102 +1,116 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
-// --- CONTEXT PROVIDERS ---
+// --- CONTEXT PROVIDERS (Must be synchronous) ---
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { AdminProvider } from './context/AdminContext';
+import { ThemeProvider } from './context/ThemeContext';
 
-// --- GLOBAL COMPONENTS ---
+// --- GLOBAL COMPONENTS & CRITICAL ROUTES ---
+// We keep HomeLayout synchronous so the landing page loads instantly (Better LCP / SEO score)
 import { AuthModal } from './components/auth/AuthModal';
-import { ErrorPage } from './components/ui/ErrorPage';
+import { HomeLayout } from './components/home/HomeLayout';
+import { ScrollToTop } from './components/ui/ScrollToTop';
+
+// ============================================================================
+// LAZY LOADED COMPONENTS (Code Splitting)
+// These only load when the user navigates to their specific route.
+// We use `.then(m => ({ default: m.ComponentName }))` to support your Named Exports.
+// ============================================================================
 
 // --- PUBLIC & CUSTOMER PAGES ---
-import { HomeLayout } from './components/home/HomeLayout';
-import { CheckoutPage } from './pages/CheckoutPage';
-import { PaymentStatus } from './pages/PaymentStatus';
-import { CustomerDashboard } from './components/customer/CustomerDashboard';
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then(m => ({ default: m.CheckoutPage })));
+const PaymentStatus = lazy(() => import('./pages/PaymentStatus').then(m => ({ default: m.PaymentStatus })));
+const CustomerDashboard = lazy(() => import('./components/customer/CustomerDashboard').then(m => ({ default: m.CustomerDashboard })));
+const StorePage = lazy(() => import('./pages/StorePage').then(m => ({ default: m.StorePage })));
+const ProductPage = lazy(() => import('./pages/ProductPage').then(m => ({ default: m.ProductPage })));
+const BlogPage = lazy(() => import('./pages/BlogPage').then(m => ({ default: m.BlogPage })));
+const BlogArticle = lazy(() => import('./pages/BlogArticle').then(m => ({ default: m.BlogArticle })));
+const PrivacyPolicy = lazy(() => import('./components/ui/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
+const RefundPolicy = lazy(() => import('./components/ui/RefundPolicy').then(m => ({ default: m.RefundPolicy })));
+const TermsOfService = lazy(() => import('./components/ui/TermsOfService').then(m => ({ default: m.TermsOfService })));
+const ErrorPage = lazy(() => import('./components/ui/ErrorPage').then(m => ({ default: m.ErrorPage })));
 
 // --- ADMIN PAGES ---
-import { AdminLogin } from './components/dashboard/AdminLogin';
-import { DashboardRoute } from './components/route/DashboardRoute';
-import { DashboardHome } from './components/dashboard/DashboardHome';
-import { DashboardOrders } from './components/dashboard/DashboardOrders';
-import { DashboardDelivery } from './components/dashboard/DashboardDelivery';
-import { DashboardPayments } from './components/dashboard/DashboardPayments';
-import { DashboardUsers } from './components/dashboard/DashboardUsers';
-import { DashboardDiscounts } from './components/dashboard/DashboardDiscounts';
-import { DashboardInventory } from './components/dashboard/DashboardInventory';
-import { DashboardReferrals } from './components/dashboard/DashboardReferrals';
-import { DashboardConfig } from './components/dashboard/DashboardConfig';
-import { ThemeProvider } from './context/ThemeContext';
-import { StorePage } from './pages/StorePage';
-import { ProductPage } from './pages/ProductPage';
-import { BlogArticle } from './pages/BlogArticle';
-import { BlogPage } from './pages/BlogPage';
-import { DashboardBlogs } from './components/dashboard/DashboardBlogs';
-import { PrivacyPolicy } from './components/ui/PrivacyPolicy';
-import { RefundPolicy } from './components/ui/RefundPolicy';
-import { TermsOfService } from './components/ui/TermsOfService';
+const AdminLogin = lazy(() => import('./components/dashboard/AdminLogin').then(m => ({ default: m.AdminLogin })));
+const DashboardRoute = lazy(() => import('./components/route/DashboardRoute').then(m => ({ default: m.DashboardRoute })));
+const DashboardHome = lazy(() => import('./components/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
+const DashboardOrders = lazy(() => import('./components/dashboard/DashboardOrders').then(m => ({ default: m.DashboardOrders })));
+const DashboardDelivery = lazy(() => import('./components/dashboard/DashboardDelivery').then(m => ({ default: m.DashboardDelivery })));
+const DashboardPayments = lazy(() => import('./components/dashboard/DashboardPayments').then(m => ({ default: m.DashboardPayments })));
+const DashboardUsers = lazy(() => import('./components/dashboard/DashboardUsers').then(m => ({ default: m.DashboardUsers })));
+const DashboardDiscounts = lazy(() => import('./components/dashboard/DashboardDiscounts').then(m => ({ default: m.DashboardDiscounts })));
+const DashboardInventory = lazy(() => import('./components/dashboard/DashboardInventory').then(m => ({ default: m.DashboardInventory })));
+const DashboardReferrals = lazy(() => import('./components/dashboard/DashboardReferrals').then(m => ({ default: m.DashboardReferrals })));
+const DashboardConfig = lazy(() => import('./components/dashboard/DashboardConfig').then(m => ({ default: m.DashboardConfig })));
+const DashboardBlogs = lazy(() => import('./components/dashboard/DashboardBlogs').then(m => ({ default: m.DashboardBlogs })));
+
+// --- LOADING FALLBACK ---
+// A sleek, theme-aware spinner that shows while a lazy chunk is downloading
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+    <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"></div>
+  </div>
+);
 
 export default function App() {
   return (
     <BrowserRouter>
-      <ThemeProvider> {/* <-- ADD THIS HERE */}
-      {/* 1. STATE PROVIDERS (Wrapping the entire app) */}
-      <AuthProvider>
-        <CartProvider>
-          <AdminProvider>
-            
-            {/* Global Auth Modal (Can be triggered from anywhere) */}
-            <AuthModal />
-
-            {/* 2. APPLICATION ROUTES */}
-            <Routes>
+      <ScrollToTop />
+      <ThemeProvider>
+        <AuthProvider>
+          <CartProvider>
+            <AdminProvider>
               
-              {/* --- PUBLIC ROUTES --- */}
-              <Route path="/" element={<HomeLayout />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/payment-status/:orderId" element={<PaymentStatus />} />
-              <Route path="/store" element={<StorePage />} />
-              <Route path="/store/book/:id" element={<ProductPage />} />
-              <Route path="/blog" element={<BlogPage />} />
-              <Route path="/blog/:slug" element={<BlogArticle />} />
+              <AuthModal />
 
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/refund-policy" element={<RefundPolicy />} />
-              <Route path="/terms-of-service" element={<TermsOfService/>} />
+              {/* Suspense Boundary catches all lazy loaded routes */}
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  
+                  {/* --- PUBLIC ROUTES --- */}
+                  <Route path="/" element={<HomeLayout />} /> {/* Sync loading for instant FCP */}
+                  <Route path="/checkout" element={<CheckoutPage />} />
+                  <Route path="/payment-status/:orderId" element={<PaymentStatus />} />
+                  <Route path="/store" element={<StorePage />} />
+                  <Route path="/store/book/:id" element={<ProductPage />} />
+                  <Route path="/blog" element={<BlogPage />} />
+                  <Route path="/blog/:slug" element={<BlogArticle />} />
 
-              {/* --- CUSTOMER PROTECTED ROUTE --- */}
-              {/* CustomerDashboard internally checks if user is logged in, else redirects */}
-              <Route path="/dashboard" element={<CustomerDashboard />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/refund-policy" element={<RefundPolicy />} />
+                  <Route path="/terms-of-service" element={<TermsOfService />} />
 
-              {/* --- ADMIN AUTH ROUTE --- */}
-              <Route path="/login" element={<AdminLogin />} />
+                  {/* --- CUSTOMER PROTECTED ROUTE --- */}
+                  <Route path="/dashboard" element={<CustomerDashboard />} />
 
-              {/* --- ADMIN DASHBOARD (Nested Routing) --- */}
-              {/* DashboardRoute acts as the Layout Guard. It renders the Sidebar/Header, 
-                  and the nested routes render inside its <Outlet /> */}
-              <Route path="/admin" element={<DashboardRoute />}>
-                <Route index element={<DashboardHome />} />
-                <Route path="orders" element={<DashboardOrders />} />
-                <Route path="delivery" element={<DashboardDelivery />} />
-                <Route path="payments" element={<DashboardPayments />} />
-                <Route path="users" element={<DashboardUsers />} />
-                <Route path="discounts" element={<DashboardDiscounts />} />
-                <Route path="inventory" element={<DashboardInventory />} />
-                <Route path="referrals" element={<DashboardReferrals />} />
-                <Route path="settings" element={<DashboardConfig />} />
-                <Route path="blog" element={<DashboardBlogs />} />
-              </Route>
+                  {/* --- ADMIN AUTH ROUTE --- */}
+                  <Route path="/login" element={<AdminLogin />} />
 
-              {/* --- 404 FALLBACK ROUTE --- */}
-              <Route path="*" element={<ErrorPage />} />
+                  {/* --- ADMIN DASHBOARD (Nested Routing) --- */}
+                  <Route path="/admin" element={<DashboardRoute />}>
+                    <Route index element={<DashboardHome />} />
+                    <Route path="orders" element={<DashboardOrders />} />
+                    <Route path="delivery" element={<DashboardDelivery />} />
+                    <Route path="payments" element={<DashboardPayments />} />
+                    <Route path="users" element={<DashboardUsers />} />
+                    <Route path="discounts" element={<DashboardDiscounts />} />
+                    <Route path="inventory" element={<DashboardInventory />} />
+                    <Route path="referrals" element={<DashboardReferrals />} />
+                    <Route path="settings" element={<DashboardConfig />} />
+                    <Route path="blog" element={<DashboardBlogs />} />
+                  </Route>
 
-            </Routes>
+                  {/* --- 404 FALLBACK ROUTE --- */}
+                  <Route path="*" element={<ErrorPage />} />
 
-          </AdminProvider>
-        </CartProvider>
-      </AuthProvider>
+                </Routes>
+              </Suspense>
+
+            </AdminProvider>
+          </CartProvider>
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

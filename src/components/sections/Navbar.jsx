@@ -5,8 +5,6 @@ import { Button } from '../ui/Button';
 import { AuthContext } from '../../context/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { CartContext } from '../../context/CartContext';
-
-// Import useTranslation from react-i18next
 import { useTranslation } from 'react-i18next';
 
 export const Navbar = ({ theme, setTheme }) => {
@@ -77,11 +75,11 @@ export const Navbar = ({ theme, setTheme }) => {
     i18n.changeLanguage(langCode);
     
     // 2. Trigger Google Translate for dynamic content (Blogs/Products)
-    const googleSelect = document.querySelector('.goog-te-combo');
-    if (googleSelect) {
-      googleSelect.value = langCode;
-      googleSelect.dispatchEvent(new Event('change'));
-    }
+    // const googleSelect = document.querySelector('.goog-te-combo');
+    // if (googleSelect) {
+    //   googleSelect.value = langCode;
+    //   googleSelect.dispatchEvent(new Event('change'));
+    // }
   };
 
   const handleLogout = () => {
@@ -90,15 +88,13 @@ export const Navbar = ({ theme, setTheme }) => {
     navigate('/');
   };
 
-  // If you want these nav links to be translatable, you would update them to use t()
-  // e.g., name: t('navbar.home') 
-  // For now, I've left them as is to not break your existing layout if you haven't added them to json yet.
+  // Dynamically translated navigation links
   const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Store', path: '/store' },
-    { name: 'Blog', path: '/blog' },
-    { name: 'Author', path: '/#author' },
-    { name: 'Chapters', path: '/#chapters' }
+    { name: t('navbar.home', 'Home'), path: '/' },
+    { name: t('navbar.store', 'Store'), path: '/store' },
+    { name: t('navbar.blog', 'Blog'), path: '/blog' },
+    { name: t('navbar.author', 'Author'), path: '/#author' },
+    { name: t('navbar.chapters', 'Chapters'), path: '/#chapters' }
   ];
 
   const handleNavClick = (path) => {
@@ -124,28 +120,27 @@ export const Navbar = ({ theme, setTheme }) => {
   return (
     <nav className={`fixed w-full z-[100] transition-all duration-500 ${
       scrolled 
-        ? 'bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl py-3 shadow-lg border-b border-slate-200/50 dark:border-slate-800/50' 
+        ? 'bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl py-3 shadow-sm border-b border-slate-200/50 dark:border-slate-800/50' 
         : 'bg-transparent py-5'
     }`}>
       {/* Hidden Google Translate Element */}
       <div id="google_translate_element" className="hidden"></div>
 
-      <div className="container mx-auto px-3 md:px-8 flex justify-between items-center">
+      <div className="container mx-auto px-4 md:px-8 flex justify-between items-center">
         
-        {/* Logo / Brand */}
+        {/* === TRANSLATED LOGO === */}
         <div 
           onClick={() => handleNavClick('/')}
-          className="text-xl md:text-2xl font-serif font-bold flex items-center gap-2 cursor-pointer text-slate-900 dark:text-white group"
+          className="text-xl md:text-2xl font-serif font-black flex items-center gap-2 cursor-pointer text-slate-900 dark:text-white group"
         >
-          <div className="bg-orange-600 p-1.5 rounded-lg group-hover:rotate-12 transition-transform ">
+          <div className="bg-orange-600 p-1.5 rounded-lg group-hover:rotate-12 transition-transform duration-300 shadow-sm shadow-orange-500/30">
             <BookOpen className="text-white" size={20} />
           </div>
           <span className="tracking-tight hidden sm:block">
-            Sahakar<span className="text-orange-600">Stree</span>
+            {t('navbar.brandPart1', 'Sahakar')}<span className="text-orange-600">{t('navbar.brandPart2', 'Stree')}</span>
           </span>
-          {/* Extremely compact logo for very small mobile screens to fit icons */}
           <span className="tracking-tight sm:hidden text-lg">
-            Sahakar<span className="text-orange-600">Stree</span>
+            {t('navbar.brandPart1', 'Sahakar')}<span className="text-orange-600">{t('navbar.brandPart2', 'Stree')}</span>
           </span>
         </div>
 
@@ -154,18 +149,20 @@ export const Navbar = ({ theme, setTheme }) => {
           
           <div className="flex items-center gap-6">
             {navLinks.map((link) => {
-              const isActive = location.pathname === link.path;
+              const isActive = location.pathname === link.path || (link.path.includes('#') && location.hash === link.path.replace('/', ''));
               return (
                 <button 
                   key={link.name} 
                   onClick={() => handleNavClick(link.path)}
-                  className={`text-sm font-semibold transition-colors ${
+                  className={`relative text-sm font-bold transition-colors py-1 group ${
                     isActive 
                       ? 'text-orange-600 dark:text-orange-500' 
                       : 'text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400'
                   }`}
                 >
                   {link.name}
+                  {/* Animated Underline for UX polish */}
+                  <span className={`absolute left-0 bottom-0 w-full h-0.5 bg-orange-500 transform origin-left transition-transform duration-300 ${isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`} />
                 </button>
               );
             })}
@@ -174,17 +171,17 @@ export const Navbar = ({ theme, setTheme }) => {
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
 
           {/* Actions & Utilities */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             
             {/* Desktop Language Selector */}
             <div className="relative" ref={langRef}>
               <button 
                 onClick={() => setLangOpen(!langOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs font-bold"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-[13px] font-bold shadow-sm"
               >
                 <Languages size={14} />
                 <span>{language}</span>
-                <ChevronDown size={12} className={`transition-transform duration-300 ${langOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`transition-transform duration-300 ${langOpen ? 'rotate-180' : ''}`} />
               </button>
 
               <AnimatePresence>
@@ -194,7 +191,7 @@ export const Navbar = ({ theme, setTheme }) => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-3 w-40 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden py-1"
+                    className="absolute right-0 mt-3 w-40 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-xl overflow-hidden py-1"
                   >
                     {languages.map((lang) => (
                       <button
@@ -202,7 +199,7 @@ export const Navbar = ({ theme, setTheme }) => {
                         onClick={() => handleLanguageChange(lang.code, lang.display)}
                         className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
                       >
-                        <span className={language === lang.display ? 'font-bold text-orange-600' : 'text-slate-600 dark:text-slate-300'}>
+                        <span className={language === lang.display ? 'font-bold text-orange-600' : 'text-slate-600 dark:text-slate-300 font-medium'}>
                           {lang.label}
                         </span>
                         {language === lang.display && <Check size={14} className="text-orange-600" />}
@@ -216,51 +213,51 @@ export const Navbar = ({ theme, setTheme }) => {
             {/* Desktop Theme Toggle */}
             <button 
               onClick={toggleTheme} 
-              className="p-2.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:scale-110 transition-transform"
+              className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all shadow-sm"
             >
               {theme === 'dark' ? <Sun size={18} className="text-orange-400" /> : <Moon size={18} />}
             </button>
 
             {/* Desktop User Auth / Cart Section */}
             {user ? (
-              <div className="flex items-center gap-2 ml-2 border-l border-slate-200 dark:border-slate-800 pl-4">
-                <Link to="/checkout" className="relative p-2 text-slate-700 dark:text-slate-200 hover:text-orange-600 transition-colors" title="Cart / Checkout">
+              <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 dark:border-slate-800 pl-4">
+                <Link to="/checkout" className="relative p-2 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-500 transition-colors" title={t('navbar.checkout', 'Checkout')}>
                   <ShoppingCart size={20} />
                   {cartCount > 0 && (
-                    <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 bg-orange-600 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-950">
+                    <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 bg-orange-600 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center shadow-sm">
                       {cartCount}
                     </span>
                   )}
                 </Link>
                 
-                <Link to={user.role === 'Admin' ? "/admin" : "/dashboard"} className="p-2 text-slate-700 dark:text-slate-200 hover:text-orange-600 transition-colors" title="Dashboard">
+                <Link to={user.role === 'Admin' ? "/admin" : "/dashboard"} className="p-2 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-500 transition-colors" title={t('navbar.dashboard', 'Dashboard')}>
                   <LayoutDashboard size={20} />
                 </Link>
 
-                <button onClick={handleLogout} className="p-2 text-red-500 hover:text-red-600 transition-colors" title="Logout">
+                <button onClick={handleLogout} className="p-2 text-red-500 hover:text-red-600 transition-colors" title={t('navbar.logout', 'Logout')}>
                   <LogOut size={20} />
                 </button>
               </div>
             ) : (
-              <Button onClick={openAuthModal} variant="primary" className="px-6 py-2.5 text-sm font-bold shadow-lg shadow-orange-500/25 flex items-center gap-2 ml-2">
-                <UserCircle size={18} /> Login
+              <Button onClick={openAuthModal} variant="primary" className="px-5 py-2 text-sm font-bold shadow-md shadow-orange-500/20 flex items-center gap-2 ml-2">
+                <UserCircle size={18} /> {t('navbar.login', 'Login')}
               </Button>
             )}
 
           </div>
         </div>
 
-        {/* --- MOBILE NAVIGATION TOGGLES (Always Visible on Top) --- */}
-        <div className="lg:hidden flex items-center gap-1.5 sm:gap-3">
+        {/* --- MOBILE NAVIGATION TOGGLES --- */}
+        <div className="lg:hidden flex items-center gap-2 sm:gap-3">
            
           {/* Mobile Language Selector */}
           <div className="relative" ref={mobileLangRef}>
             <button 
               onClick={() => setLangOpen(!langOpen)}
-              className="p-1.5 text-slate-700 dark:text-slate-200 flex items-center flex-col gap-0.5"
+              className="p-1.5 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-500 flex items-center flex-col gap-0.5 transition-colors"
             >
               <Languages size={18} />
-              <span className="text-[9px] font-bold uppercase">{language}</span>
+              <span className="text-[9px] font-extrabold uppercase">{language}</span>
             </button>
 
             <AnimatePresence>
@@ -270,7 +267,7 @@ export const Navbar = ({ theme, setTheme }) => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 mt-2 w-36 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden py-1"
+                  className="absolute right-0 mt-2 w-36 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-xl overflow-hidden py-1"
                 >
                   {languages.map((lang) => (
                     <button
@@ -278,7 +275,7 @@ export const Navbar = ({ theme, setTheme }) => {
                       onClick={() => handleLanguageChange(lang.code, lang.display)}
                       className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
                     >
-                      <span className={language === lang.display ? 'font-bold text-orange-600' : 'text-slate-600 dark:text-slate-300'}>
+                      <span className={language === lang.display ? 'font-bold text-orange-600' : 'text-slate-600 dark:text-slate-300 font-medium'}>
                         {lang.label}
                       </span>
                       {language === lang.display && <Check size={14} className="text-orange-600" />}
@@ -290,24 +287,24 @@ export const Navbar = ({ theme, setTheme }) => {
           </div>
 
           {/* Mobile Theme Toggle */}
-          <button onClick={toggleTheme} className="p-1.5 text-slate-700 dark:text-slate-200">
+          <button onClick={toggleTheme} className="p-1.5 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-500 transition-colors">
             {theme === 'dark' ? <Sun size={20} className="text-orange-400" /> : <Moon size={20} />}
           </button>
 
           {/* Mobile Login / Profile */}
           {user ? (
-            <Link to={user.role === 'Admin' ? "/admin" : "/dashboard"} className="p-1.5 text-slate-700 dark:text-slate-200">
+            <Link to={user.role === 'Admin' ? "/admin" : "/dashboard"} className="p-1.5 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-500 transition-colors">
               <UserCircle size={20} />
             </Link>
           ) : (
-            <button onClick={openAuthModal} className="p-1.5 text-slate-700 dark:text-slate-200">
+            <button onClick={openAuthModal} className="p-1.5 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-500 transition-colors">
               <UserCircle size={20} />
             </button>
           )}
 
           {/* Mobile Cart Preview */}
           {user && (
-            <Link to="/checkout" className="relative p-1.5 text-slate-700 dark:text-slate-200">
+            <Link to="/checkout" className="relative p-1.5 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-500 transition-colors">
               <ShoppingCart size={20} />
               {cartCount > 0 && (
                 <span className="absolute top-0 right-0 bg-orange-600 text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center border border-white dark:border-slate-950">
@@ -320,9 +317,9 @@ export const Navbar = ({ theme, setTheme }) => {
           {/* Mobile Hamburger Menu */}
           <button 
             onClick={() => setIsMenuOpen(true)}
-            className="p-1.5 ml-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-900 dark:text-white"
+            className="p-2 ml-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           >
-            <Menu size={22} />
+            <Menu size={20} strokeWidth={2.5} />
           </button>
         </div>
       </div>
@@ -338,60 +335,65 @@ export const Navbar = ({ theme, setTheme }) => {
             className="fixed inset-0 z-[200] bg-white dark:bg-slate-950 flex flex-col h-[100dvh] overflow-y-auto"
           >
             {/* Mobile Menu Header */}
-            <div className="flex justify-between items-center p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800 shrink-0">
-               <div className="text-xl font-serif font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+               <div className="text-xl font-serif font-black flex items-center gap-2 text-slate-900 dark:text-white">
                 <div className="bg-orange-600 p-1.5 rounded-lg">
                   <BookOpen className="text-white" size={18} />
                 </div>
-                <span>Sahakar<span className="text-orange-600">Stree</span></span>
+                <span>
+                  {t('navbar.brandPart1', 'Sahakar')}<span className="text-orange-600">{t('navbar.brandPart2', 'Stree')}</span>
+                </span>
               </div>
-              <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300">
-                <X size={24} />
+              <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <X size={20} strokeWidth={2.5} />
               </button>
             </div>
 
             {/* Mobile Menu Links */}
-            <div className="flex flex-col gap-2 p-6 sm:p-8 flex-1">
-              {navLinks.map((link) => (
-                <button 
-                  key={link.name} 
-                  onClick={() => handleNavClick(link.path)}
-                  className={`text-2xl font-bold text-left py-4 border-b border-slate-100 dark:border-slate-800/50 ${
-                    location.pathname === link.path ? 'text-orange-600 dark:text-orange-500' : 'text-slate-800 dark:text-white'
-                  }`}
-                >
-                  {link.name}
-                </button>
-              ))}
+            <div className="flex flex-col gap-2 p-6 flex-1">
+              {navLinks.map((link) => {
+                const isActive = location.pathname === link.path || (link.path.includes('#') && location.hash === link.path.replace('/', ''));
+                return (
+                  <button 
+                    key={link.name} 
+                    onClick={() => handleNavClick(link.path)}
+                    className={`text-xl font-bold text-left py-4 border-b border-slate-100 dark:border-slate-800/50 transition-colors ${
+                      isActive ? 'text-orange-600 dark:text-orange-500' : 'text-slate-700 dark:text-slate-200'
+                    }`}
+                  >
+                    {link.name}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Mobile Menu Footer (Auth Actions Only) */}
-            <div className="p-6 sm:p-8 bg-slate-50 dark:bg-slate-900 shrink-0 space-y-6">
+            <div className="p-6 bg-slate-50 dark:bg-slate-900 shrink-0 space-y-5 border-t border-slate-100 dark:border-slate-800">
               
               {user ? (
                 <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2 py-2 px-1 text-slate-500 dark:text-slate-400 text-sm font-bold">
-                    <UserCircle size={18} /> Logged in as: {user.name}
+                  <div className="flex items-center gap-2 py-1 px-1 text-slate-500 dark:text-slate-400 text-sm font-bold">
+                    <UserCircle size={18} /> {t('navbar.loggedInAs', 'Logged in as')}: {user.name}
                   </div>
                   
-                  <Link to="/checkout" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-between py-3.5 px-5 bg-white dark:bg-slate-800 rounded-xl font-bold text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <div className="flex items-center gap-3"><ShoppingCart size={20} className="text-slate-400" /> Checkout</div>
-                    {cartCount > 0 && <span className="bg-orange-600 text-white px-3 py-1 rounded-full text-xs">{cartCount} Items</span>}
+                  <Link to="/checkout" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-between py-3.5 px-5 bg-white dark:bg-slate-800 rounded-xl font-bold text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95 transition-transform">
+                    <div className="flex items-center gap-3"><ShoppingCart size={20} className="text-slate-400" /> {t('navbar.checkout', 'Checkout')}</div>
+                    {cartCount > 0 && <span className="bg-orange-600 text-white px-3 py-1 rounded-full text-xs shadow-sm">{cartCount}</span>}
                   </Link>
                   
                   <div className="grid grid-cols-2 gap-3">
-                    <Link to={user.role === 'Admin' ? "/admin" : "/dashboard"} onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center gap-2 py-3.5 bg-white dark:bg-slate-800 rounded-xl font-bold text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 shadow-sm">
-                      <LayoutDashboard size={18} className="text-slate-400" /> Dashboard
+                    <Link to={user.role === 'Admin' ? "/admin" : "/dashboard"} onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center gap-2 py-3.5 bg-white dark:bg-slate-800 rounded-xl font-bold text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95 transition-transform">
+                      <LayoutDashboard size={18} className="text-slate-400" /> {t('navbar.dashboard', 'Dashboard')}
                     </Link>
                     
-                    <button onClick={handleLogout} className="flex items-center justify-center gap-2 py-3.5 bg-red-50 dark:bg-red-900/20 rounded-xl font-bold text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30">
-                      <LogOut size={18} /> Logout
+                    <button onClick={handleLogout} className="flex items-center justify-center gap-2 py-3.5 bg-red-50 dark:bg-red-900/20 rounded-xl font-bold text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30 active:scale-95 transition-transform">
+                      <LogOut size={18} /> {t('navbar.logout', 'Logout')}
                     </button>
                   </div>
                 </div>
               ) : (
-                <Button onClick={() => { openAuthModal(); setIsMenuOpen(false); }} variant="primary" className="w-full py-4 text-lg flex justify-center items-center gap-3 shadow-orange-500/25">
-                  <UserCircle size={22} /> Login / Register
+                <Button onClick={() => { openAuthModal(); setIsMenuOpen(false); }} variant="primary" className="w-full py-3.5 text-base flex justify-center items-center gap-2 shadow-md shadow-orange-500/20">
+                  <UserCircle size={20} /> {t('navbar.login', 'Login')}
                 </Button>
               )}
 

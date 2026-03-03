@@ -10,7 +10,11 @@ import apiClient from '../../api/client';
 import { useNavigate } from 'react-router-dom';
 import { captureAndVerifyReferral } from '../../utils/referralManager';
 
+import { useTranslation } from 'react-i18next';
+
 export const Hero = ({ onOrderPopup,productRoute }) => {
+  const { t } = useTranslation();
+
   const [referrerName, setReferrerName] = useState(null); 
 
   const navigate = useNavigate();
@@ -21,6 +25,7 @@ export const Hero = ({ onOrderPopup,productRoute }) => {
 
   // This state acts as our "VIP Checker"
   const [hasReferral, setHasReferral] = useState(false);
+
 
   useEffect(() => {
     // Check URL and verify code on first load
@@ -75,57 +80,62 @@ export const Hero = ({ onOrderPopup,productRoute }) => {
   };
 
   return (
-    <section className="min-h-[100svh] flex items-center pt-28 pb-16 bg-gradient-to-br from-orange-50 to-white dark:from-slate-900 dark:to-slate-950 relative overflow-hidden">
+    <section className="min-h-[100svh] flex items-center pt-28 pb-16 bg-gradient-to-br from-orange-50 to-white dark:from-slate-900 dark:to-slate-950 relative overflow-hidden transition-colors duration-300">
       {/* Background blobs */}
-      <div className="absolute top-0 right-0 w-72 h-72 md:w-96 md:h-96 bg-orange-400/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-56 h-56 md:w-72 md:h-72 bg-blue-400/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 right-0 w-72 h-72 md:w-96 md:h-96 bg-orange-400/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-56 h-56 md:w-72 md:h-72 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 md:px-6 relative z-10">
         {/* Changed to flex-col on mobile, row on desktop */}
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           
           {/* Text Content */}
-          <div className="w-full lg:w-1/2 space-y-6 md:space-y-8 text-center lg:text-left mt-8 lg:mt-0 order-2 lg:order-1">
+          <div className="w-full lg:w-1/2 space-y-6 md:space-y-8 text-center lg:text-left mt-8 lg:mt-0 order-2 lg:order-1 flex flex-col items-center lg:items-start">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center justify-center lg:justify-start gap-2">
-              <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-full text-xs font-bold uppercase tracking-wide border border-orange-200 dark:border-orange-800">
-                #1 Bestseller
+              <span className="px-4 py-1.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-full text-[11px] md:text-xs font-bold uppercase tracking-widest border border-orange-200 dark:border-orange-800 shadow-sm">
+                {t('mainHero.badge')}
               </span>
-              <div className="flex text-yellow-500">
+              <div className="flex text-yellow-500 drop-shadow-sm">
                 {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
               </div>
             </motion.div>
 
             <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-bold leading-[1.15]">
-              मराठा समाज <br className="sm:block"/>
-              <span className="p-3 text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-yellow-500">
-              चिंतनातून चिंतामुक्तीकडे
+              {t('mainHero.titlePart1')} <br className="hidden sm:block"/>
+              <span className="pt-3 text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-yellow-500">
+               {t('mainHero.titlePart2')}
               </span>
             </motion.h1>
 
-            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-lg mx-auto lg:mx-0">
-              <span className="font-serif font-bold text-orange-600 dark:text-orange-400 text-lg md:text-xl block mb-1"> </span>
-              !! आपले शब्द , विचार, पूर्वज कितीही प्रबळ असले तरी,. स्वतःला सिद्ध केल्याखेरीज या सर्व या उपाध्येंना काहीच किंमत नसते. !!
-            </motion.p>
+            {/* Inspirational Quote */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ delay: 0.2 }}
+              className="relative max-w-lg lg:max-w-xl mx-auto lg:mx-0 px-4 md:px-6 py-2 border-l-4 border-orange-500 bg-orange-50/50 dark:bg-orange-900/10 rounded-r-xl"
+            >
+              <p className="text-[15px] sm:text-lg text-slate-700 dark:text-slate-300 leading-relaxed font-medium italic text-left">
+                {t('mainHero.quote')}
+              </p>
+            </motion.div>
 
             {/* --- THE BUTTON LOGIC HAPPENS HERE --- */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4 w-full sm:w-auto">
               
               {hasReferral && referrerName ? (
                 /* The Premium VIP Button */
                 <button 
                   onClick={productRoute}
                   disabled={isAdding}
-                  className="relative overflow-hidden group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-orange-500 to-[#FF5A36] text-white rounded-full font-bold text-lg shadow-[0_10px_30px_rgba(255,90,54,0.3)] hover:shadow-[0_15px_40px_rgba(255,90,54,0.5)] transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-3 border border-orange-400/50"
+                  className="relative overflow-hidden group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-orange-500 to-[#FF5A36] text-white rounded-full font-bold text-lg shadow-[0_10px_30px_rgba(255,90,54,0.3)] hover:shadow-[0_15px_40px_rgba(255,90,54,0.5)] transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-3 border border-orange-400/50 active:scale-95"
                 >
-                   {isAdding ? (
-                      <><Loader2 size={22} className="animate-spin" /> Adding to Cart ...</>
-                    ) : (
-                      <>
-                      <span className="relative z-10 flex items-center gap-2">
-                        <ShoppingBag/> Order Book <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />
-                      </span>
-                      </>
-                    )}
+                  {isAdding ? (
+                    <span className="flex items-center gap-2"><Loader2 size={22} className="animate-spin" /> {t('mainHero.addingToCart')}</span>
+                  ) : (
+                    <span className="relative z-10 flex items-center gap-2">
+                      <ShoppingBag size={20}/> {t('mainHero.orderBook')} <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  )}
                   {/* The glossy sweep effect that slides across the button on hover */}
                   <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
                 </button>
@@ -145,7 +155,6 @@ export const Hero = ({ onOrderPopup,productRoute }) => {
           </div>
 
           {/* Responsive Book Image */}
-          {/* Responsive Book Image */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.9, rotateY: -15 }} 
             animate={{ opacity: 1, scale: 1, rotateY: 0 }} 
@@ -164,7 +173,8 @@ export const Hero = ({ onOrderPopup,productRoute }) => {
                  
                  <img 
                    src={bookCoverImg} 
-                   alt="Book Cover" 
+                   alt={t('mainHero.titlePart1')} 
+                   loading="eager" // Preload for instant LCP
                    className="w-full h-full object-cover"
                  />
 
