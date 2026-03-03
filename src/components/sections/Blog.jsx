@@ -106,7 +106,7 @@ export const Blog = () => {
                     {/* Image Container with Dynamic Media Overlays */}
                     <div className="overflow-hidden relative h-56 shrink-0 bg-slate-100 dark:bg-slate-900">
                       <img 
-                        src={displayImage} 
+                        src={article.featuredImage} 
                         alt={article.title} 
                         className={`w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-105 ${article.type && article.type !== 'text' ? 'opacity-80 group-hover:opacity-60' : ''}`}
                       />

@@ -1,0 +1,27 @@
+name: Deploy React App to VPS
+on:
+  push:
+    branches: [ main ] 
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js 
+      uses: actions/setup-node@v3
+      with:
+        node-version: '24.13.1' # Use project node version
+    - run: npm ci
+    - run: npm run build
+    
+    - name: Install SSH Key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.VPS_SSH_KEY }}
+        known_hosts: 'just-a-placeholder-so-we-dont-get-errors'
+        
+    - name: Adding Known Hosts
+      run: ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to VPS using rsync
+      run: rsync -avz --delete build/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/frontend/ # Edit with pathing

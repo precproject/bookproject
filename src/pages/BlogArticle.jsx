@@ -9,6 +9,7 @@ import { Navbar } from '../components/sections/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { AuthContext } from '../context/AuthContext'; // To get logged-in user for comments
 import apiClient from '../api/client';
+import { Footer } from '../components/sections/Footer';
 
 export const BlogArticle = () => {
   const { slug } = useParams();
@@ -332,6 +333,8 @@ export const BlogArticle = () => {
             )}
           </div>
         </section>
+
+      <Footer />
 
       </main>
 

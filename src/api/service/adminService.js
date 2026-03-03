@@ -182,5 +182,16 @@ export const adminService = {
   createCustomer: async (payload) => {
     const response = await apiClient.post('/auth/register', payload);
     return response.data;
+  },
+  // --- REVIEWS MANAGEMENT ---
+  getReviewsAdmin: async (params) => {
+    // params = { page, limit, bookId }
+    const response = await apiClient.get('/admin/reviews', { params });
+    return response.data;
+  },
+  
+  toggleReviewStatus: async (reviewId) => {
+    const response = await apiClient.put(`/admin/reviews/${reviewId}/toggle`);
+    return response.data;
   }
 };

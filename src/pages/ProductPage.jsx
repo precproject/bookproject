@@ -14,7 +14,8 @@ import { captureAndVerifyReferral } from '../utils/referralManager';
 
 import { 
   Star, ShoppingBag, ArrowLeft, ShieldCheck, Truck, 
-  Loader2, CheckCircle, User, Book, Globe, FileText, Award, ChevronRight, Lock 
+  Loader2, CheckCircle, User, Book, Globe, FileText, Award, ChevronRight, Lock, 
+  Trash2
 } from 'lucide-react';
 import { Navbar } from '../components/sections/Navbar';
 
@@ -92,6 +93,19 @@ export const ProductPage = () => {
       alert(error.response?.data?.message || "Failed to submit review.");
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+
+    try {
+      await apiClient.delete(`/public/books/${id}/reviews/${reviewId}`);
+      
+      // Instantly remove the deleted review from the screen
+      setReviews(reviews.filter(review => review._id !== reviewId));
+    } catch (error) {
+      alert("Failed to delete review.");
     }
   };
 
@@ -360,31 +374,50 @@ export const ProductPage = () => {
                   <p className="text-slate-500 dark:text-slate-400 font-medium">{t('product.noReviews', 'No reviews yet. Be the first to share your thoughts!')}</p>
                 </div>
               ) : (
-                reviews.map((review, idx) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
-                    key={idx} 
-                    className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-none"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-500 font-bold text-lg">
-                          {review.user?.name ? review.user.name.charAt(0) : <User size={20}/>}
+                reviews.map((review, idx) => {
+                  // 👉 Check if the logged-in user owns this review or is an Admin
+                  const isOwner = user && review.user && (user._id === review.user._id || user.id === review.user._id);
+                  const isAdmin = user && user.role === 'Admin';
+                  const canDelete = isOwner || isAdmin;
+
+                  return (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
+                      key={review._id || idx} 
+                      className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-none relative group"
+                    >
+                      
+                      {/* 👉 DELETE BUTTON (Only shows if they own it or are Admin) */}
+                      {canDelete && (
+                        <button 
+                          onClick={() => handleDeleteReview(review._id)}
+                          className="absolute top-6 right-6 p-2 text-slate-400 hover:text-red-500 bg-slate-50 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-900/30 rounded-full transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                          title="Delete Review"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row sm:items-center mb-4 gap-4 pr-10">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-500 font-bold text-lg">
+                            {review.user?.name ? review.user.name.charAt(0) : <User size={20}/>}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 dark:text-white">{review.user?.name || t('product.verifiedReader', 'Verified Reader')}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                              <CheckCircle size={12} className="text-green-500"/> {t('product.verifiedPurchase', 'Verified Purchase')} • {new Date(review.createdAt || Date.now()).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white">{review.user?.name || t('product.verifiedReader', 'Verified Reader')}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
-                            <CheckCircle size={12} className="text-green-500"/> {t('product.verifiedPurchase', 'Verified Purchase')} • {new Date(review.createdAt || Date.now()).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
-                          </p>
+                        <div className="flex text-yellow-500 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-full w-fit sm:ml-auto">
+                          {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < review.rating ? "currentColor" : "none"} stroke="currentColor" />)}
                         </div>
                       </div>
-                      <div className="flex text-yellow-500 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-full w-fit">
-                        {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < review.rating ? "currentColor" : "none"} stroke="currentColor" />)}
-                      </div>
-                    </div>
-                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{review.comment}</p>
-                  </motion.div>
-                ))
+                      <p className="text-slate-700 dark:text-slate-300 leading-relaxed pr-2">{review.comment}</p>
+                    </motion.div>
+                  )
+                })
               )}
             </div>
 

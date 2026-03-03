@@ -13,6 +13,7 @@ import { AuthModal } from './components/auth/AuthModal';
 import { HomeLayout } from './components/home/HomeLayout';
 import { ScrollToTop } from './components/ui/ScrollToTop';
 import { ConfigProvider } from './context/ConfigContext';
+import { DashboardReviews } from './components/dashboard/DashboardReviews';
 
 // ============================================================================
 // LAZY LOADED COMPONENTS (Code Splitting)
@@ -103,6 +104,7 @@ export default function App() {
                     <Route path="referrals" element={<DashboardReferrals />} />
                     <Route path="settings" element={<DashboardConfig />} />
                     <Route path="blog" element={<DashboardBlogs />} />
+                    <Route path="review" element={<DashboardReviews />} />
                   </Route>
 
                   {/* --- 404 FALLBACK ROUTE --- */}

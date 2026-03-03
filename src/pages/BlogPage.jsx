@@ -5,6 +5,7 @@ import { Navbar } from '../components/sections/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import apiClient from '../api/client';
 import { useTranslation } from 'react-i18next'; // 👈 Import translation hook
+import { Footer } from '../components/sections/Footer';
 
 const CATEGORIES = ["All", "Technology", "Business", "Mindset", "Finance", "Marketing", "Education"];
 
@@ -227,6 +228,8 @@ export const BlogPage = () => {
             </div>
           )}
         </section>
+
+      <Footer />
 
       </main>
 

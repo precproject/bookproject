@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Home, ShoppingCart, Truck, CreditCard, 
   Users, Tag, BookCopy, Share2, Settings, 
-  Search, Menu, X, LogOut, ChevronDown
+  Search, Menu, X, LogOut, ChevronDown,
+  IceCream2,
+  Pen
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext'; // Import your AuthContext
 
@@ -47,7 +49,8 @@ export const DashboardLayout = ({ children, activePath = '/admin' }) => {
     { name: 'Discounts', icon: Tag, path: '/admin/discounts' },
     { name: 'Inventory', icon: BookCopy, path: '/admin/inventory' },
     { name: 'Referrals', icon: Share2, path: '/admin/referrals' },
-    { name: 'Blog', icon: Share2, path: '/admin/blog' },
+    { name: 'Blog', icon: Pen, path: '/admin/blog' },
+    { name: 'Review', icon: IceCream2, path: '/admin/review' },
   ];
 
   return (

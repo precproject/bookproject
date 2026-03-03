@@ -281,5 +281,12 @@
     "postComment": "Post Review",
     "noComments": "No reviews yet. Be the first to share your thoughts!",
     "commentError": "Failed to post comment. Please try again."
+  },
+  "dashboard": {
+    "loading": "Loading dashboard...",
+    "welcome": "Welcome",
+    "subtitle": "Manage your orders, track deliveries, and view your earnings.",
+    "myOrders": "My Orders",
+    "referralEarnings": "Referral Earnings"
   }
 }
