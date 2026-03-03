@@ -24,4 +24,4 @@ jobs:
       run: ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
     - name: Deploy to VPS using rsync
-      run: rsync -avz --delete build/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/frontend/ # Edit with pathing
+      run: rsync -avz --delete dist/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/frontend/
