@@ -34,6 +34,9 @@ import { ProductPage } from './pages/ProductPage';
 import { BlogArticle } from './pages/BlogArticle';
 import { BlogPage } from './pages/BlogPage';
 import { DashboardBlogs } from './components/dashboard/DashboardBlogs';
+import { PrivacyPolicy } from './components/ui/PrivacyPolicy';
+import { RefundPolicy } from './components/ui/RefundPolicy';
+import { TermsOfService } from './components/ui/TermsOfService';
 
 export default function App() {
   return (
@@ -58,6 +61,10 @@ export default function App() {
               <Route path="/store/book/:id" element={<ProductPage />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogArticle />} />
+
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService/>} />
 
               {/* --- CUSTOMER PROTECTED ROUTE --- */}
               {/* CustomerDashboard internally checks if user is logged in, else redirects */}

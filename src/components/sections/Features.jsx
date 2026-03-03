@@ -1,24 +1,32 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, MoveHorizontal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+// --- Import Real Images from Assets ---
+import feature1Img from '../../assets/chapter3.png';
+import feature2Img from '../../assets/chapter4.png';
+import feature3Img from '../../assets/chapter9.png';
+import feature4Img from '../../assets/chapter10.png';
+import feature5Img from '../../assets/chapter14.png';
 
 // --- Geometric Icons ---
 const IconOne = () => (
-  <svg viewBox="0 0 40 40" fill="none" className="w-8 h-8 md:w-10 md:h-10">
+  <svg viewBox="0 0 40 40" fill="none" className="w-6 h-6 md:w-8 md:h-8">
     <path d="M20 40C8.954 40 0 31.046 0 20C0 8.954 8.954 0 20 0V20H40C40 31.046 31.046 40 20 40Z" className="fill-slate-800 dark:fill-white" />
     <circle cx="28" cy="12" r="8" fill="#f97316" />
   </svg>
 );
 
 const IconTwo = () => (
-  <svg viewBox="0 0 40 40" fill="none" className="w-8 h-8 md:w-10 md:h-10">
+  <svg viewBox="0 0 40 40" fill="none" className="w-6 h-6 md:w-8 md:h-8">
     <polygon points="0,0 24,0 0,24" fill="#f97316" />
     <polygon points="40,40 16,40 40,16" className="fill-slate-800 dark:fill-white" />
   </svg>
 );
 
 const IconThree = () => (
-  <svg viewBox="0 0 40 40" fill="none" className="w-8 h-8 md:w-10 md:h-10">
+  <svg viewBox="0 0 40 40" fill="none" className="w-6 h-6 md:w-8 md:h-8">
     <path d="M0 20C0 8.954 8.954 0 20 0V20H0Z" fill="#f97316" />
     <path d="M40 20C40 31.046 31.046 40 20 40V20H40Z" className="fill-slate-800 dark:fill-white" />
   </svg>
@@ -32,74 +40,39 @@ const IconFour = () => (
 );
 
 const IconFive = () => (
-  <svg viewBox="0 0 40 40" fill="none" className="w-8 h-8 md:w-10 md:h-10">
+  <svg viewBox="0 0 40 40" fill="none" className="w-6 h-6 md:w-8 md:h-8">
     <rect x="0" y="20" width="40" height="20" className="fill-slate-800 dark:fill-white" />
     <polygon points="20,0 40,20 0,20" fill="#f97316" />
   </svg>
 );
 
+// Map icons and images sequentially
+const featureIcons = [IconOne, IconTwo, IconThree, IconFour, IconFive];
+const featureImages = [feature1Img, feature2Img, feature3Img, feature4Img, feature5Img];
+
 export const Features = () => {
+  const { t } = useTranslation();
   const scrollRef = useRef(null);
   
   // States to track if we can scroll left or right
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  // Added beautiful images to perfectly match each card's theme
-  const features = [
-    { 
-      title: "Practical Insights To Create User Habits That Stick.", 
-      marathi: "व्यावहारिक ज्ञान", 
-      desc: "Hooked is based on Eyal's years of research, consulting, and practical experience. Tailored for the modern entrepreneur.", 
-      icon: IconOne,
-      image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    },
-    { 
-      title: "Actionable Steps For Building Products People Love.", 
-      marathi: "पाऊल-दर-पाऊल", 
-      desc: "Not abstract theory, but a how-to guide for building a better product. A definitive blueprint for your next big idea.", 
-      icon: IconTwo,
-      image: "https://images.unsplash.com/photo-1553877522-43269d4ea984?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    },
-    { 
-      title: "Fascinating Examples From Daily Life.", 
-      marathi: "मानसशास्त्र", 
-      desc: "Understand human behavior, marketing strategies, and what drives our daily actions without requiring a psychology degree.", 
-      icon: IconThree,
-      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    },
-    { 
-      title: "Mastering Internal And External Triggers.", 
-      marathi: "ट्रिगर्स ओळखा", 
-      desc: "Learn how to identify the exact moments that prompt user action and how to design environments that encourage positive habits.", 
-      icon: IconFour,
-      image: "https://images.unsplash.com/photo-1512314889357-e157c22f938d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    },
-    { 
-      title: "The Power Of Variable Rewards.", 
-      marathi: "अपेक्षित बक्षीस", 
-      desc: "Discover why unpredictable rewards are the secret engine behind the world's most engaging and habit-forming products.", 
-      icon: IconFive,
-      image: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    },
-  ];
+  // Load the feature list dynamically from translations
+  // The translations are already in perfect chronological order (Ch 3, 4, 9, 10, 14)
+  const features = t('features.list', { returnObjects: true }) || [];
 
   // Robust function to check scroll position 
   const checkForScrollPosition = () => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      
-      // If scroll is more than 15px from left edge, show Left Arrow
       setCanScrollLeft(scrollLeft > 15);
-      
-      // If we are within 5px of the maximum scroll distance, hide Right Arrow
       setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 20);
     }
   };
 
   useEffect(() => {
     checkForScrollPosition();
-    // Safety check after fonts/images load
     const timer = setTimeout(checkForScrollPosition, 500); 
 
     window.addEventListener('resize', checkForScrollPosition);
@@ -109,10 +82,8 @@ export const Features = () => {
     };
   }, []);
 
-  // Smooth snapping scroll logic
   const handleScroll = (direction) => {
     if (scrollRef.current && scrollRef.current.firstElementChild) {
-      // Find the exact width of a single card + the gap (24px or 32px)
       const gap = window.innerWidth > 768 ? 32 : 24; 
       const scrollAmount = scrollRef.current.firstElementChild.offsetWidth + gap;
       
@@ -140,12 +111,12 @@ export const Features = () => {
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
             <h2 className="text-4xl sm:text-5xl md:text-6xl font-serif font-black text-white tracking-tight leading-tight md:mt-8">
-              In This Book<span className="text-orange-500">.</span>
+              {t('features.heading', 'In This Book')}<span className="text-orange-500">.</span>
             </h2>
           </motion.div>
         </div>
         
-        {/* CAROUSEL WRAPPER (Removed 'group' from here to fix hover bug) */}
+        {/* CAROUSEL WRAPPER */}
         <div className="relative">
           
           {/* --- FLOATING LEFT ARROW --- */}
@@ -183,67 +154,65 @@ export const Features = () => {
           </AnimatePresence>
 
           {/* SCROLLABLE CARDS CONTAINER */}
-          {/* Note: Added onScroll here to track scrolling/swiping instantly */}
           <div 
             ref={scrollRef}
             onScroll={checkForScrollPosition}
             className="flex overflow-x-auto gap-6 md:gap-8 pb-8 md:pb-16 pt-12 px-3 snap-x snap-mandatory scroll-smooth hide-scrollbar relative z-10"
           >
-            {features.map((f, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: i * 0.08, ease: "easeOut" }}
-                // 'group' class is strictly on the individual card now
-                className="group relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none transition-all duration-300 hover:-translate-y-2 hover:border-orange-500/30 hover:shadow-orange-500/5 shrink-0 w-[82vw] sm:w-[320px] md:w-[380px] snap-center md:snap-start flex flex-col overflow-hidden will-change-transform"
-              >
-                
-                {/* --- RESPONSIVE CARD IMAGE --- */}
-                <div className="w-full h-48 md:h-56 shrink-0 relative overflow-hidden bg-slate-100 dark:bg-slate-800">
-                  <img 
-                    src={f.image} 
-                    alt={f.title}
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  {/* Subtle gradient overlay to make the floating icon pop */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                </div>
+            {features.map((f, i) => {
+              // Dynamically pull the correct icon and image based on the index
+              const FeatureIcon = featureIcons[i % featureIcons.length];
+              const displayImage = featureImages[i % featureImages.length];
 
-                {/* --- FLOATING GEOMETRIC ICON --- */}
-                {/* Perfectly positioned to float halfway between the image and the content */}
-                <div className="absolute top-40 md:top-48 left-6 md:left-8 w-16 h-16 md:w-20 md:h-20 bg-white dark:bg-slate-900 rounded-[1.2rem] flex items-center justify-center shadow-lg shadow-slate-200/50 dark:shadow-slate-950 border border-slate-50 dark:border-slate-800 transition-transform duration-500 group-hover:scale-110 z-10">
-                  <f.icon />
-                </div>
-
-                {/* --- CARD CONTENT --- */}
-                <div className="px-6 pt-12 pb-8 md:px-8 md:pt-16 md:pb-10 flex flex-col flex-grow bg-white dark:bg-slate-900">
+              return (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.5, delay: i * 0.08, ease: "easeOut" }}
+                  className="group relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none transition-all duration-300 hover:-translate-y-2 hover:border-orange-500/30 hover:shadow-orange-500/5 shrink-0 w-[82vw] sm:w-[320px] md:w-[380px] snap-center md:snap-start flex flex-col overflow-hidden will-change-transform"
+                >
                   
-                  {/* Marathi Subtitle Tag */}
-                  <div className="mb-4">
-                    <span className="inline-block bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs font-bold tracking-wider uppercase px-3 py-1 rounded-full border border-orange-100 dark:border-orange-500/20">
-                      {f.marathi}
-                    </span>
+                  {/* --- RESPONSIVE CARD IMAGE --- */}
+                  <div className="w-full h-48 md:h-56 shrink-0 relative overflow-hidden bg-slate-100 dark:bg-slate-800">
+                    <img 
+                      src={displayImage} 
+                      alt={f.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
 
-                  {/* Main Card Title */}
-                  <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-3 md:mb-4 leading-snug group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors duration-300">
-                    {f.title}
-                  </h3>
+                  {/* --- FLOATING GEOMETRIC ICON --- */}
+                  <div className="absolute top-[10.5rem] md:top-[12.5rem] left-6 md:left-8 w-12 h-12 md:w-16 md:h-16 bg-white dark:bg-slate-900 rounded-[1rem] flex items-center justify-center shadow-lg shadow-slate-200/50 dark:shadow-slate-950 border border-slate-50 dark:border-slate-800 transition-transform duration-500 group-hover:scale-110 z-10">                    <FeatureIcon />
+                  </div>
 
-                  {/* Description */}
-                  <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-sm md:text-base flex-grow">
-                    {f.desc}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
+                  {/* --- CARD CONTENT --- */}
+                  <div className="px-6 pt-12 pb-8 md:px-8 md:pt-16 md:pb-10 flex flex-col flex-grow bg-white dark:bg-slate-900">
+                    
+                    {/* Tag */}
+                    <div className="mb-4">
+                      <span className="inline-block bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs font-bold tracking-wider uppercase px-3 py-1 rounded-full border border-orange-100 dark:border-orange-500/20">
+                        {f.marathi}
+                      </span>
+                    </div>
+
+                    {/* Main Card Title */}
+                    <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-3 md:mb-4 leading-snug group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors duration-300">
+                      {f.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-sm md:text-base flex-grow">
+                      {f.desc}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
             
-            {/* Spacer div ensures the last card doesn't get stuck behind padding.
-              'snap-end' forces the browser to treat this as the absolute scroll limit.
-            */}
             <div className="shrink-0 w-2 md:w-8 snap-end"></div>
           </div>
           

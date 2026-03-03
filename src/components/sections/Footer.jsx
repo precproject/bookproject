@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next'; // Adjust this import based on your i18n setup
+import { useTranslation } from 'react-i18next'; 
 import { 
   BookOpen, Facebook, Twitter, Instagram, Linkedin, 
   MapPin, Phone, Mail, ArrowRight, Youtube
@@ -26,14 +26,14 @@ const PaymentBadges = ({ t }) => (
     <div className="bg-white border border-slate-200 dark:border-slate-800 rounded-md flex items-center justify-center h-8 w-12 shadow-sm relative overflow-hidden transition-transform hover:scale-105">
        <img src="https://www.hostinger.com/cdn-cgi/imagedelivery/LqiWLm-3MGbYHtFuUbcBtA/8c07a3ee-6954-4b35-f511-ae9011dbfd00/w=320,sharpen=1" alt="UPI" className="h-full w-full object-contain p-1.5"/>
     </div>
-    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase tracking-wider">
+    <span className="text-[12px] font-bold text-slate-500 dark:text-slate-400 ml-1 tracking-tight">
       {t('footer.andMore')}
     </span>
   </div>
 );
 
 export const Footer = () => {
-  const { t } = useTranslation(); // Standard hook for translations
+  const { t } = useTranslation(); 
   const [recentBlogs, setRecentBlogs] = useState([]);
   const [loadingBlogs, setLoadingBlogs] = useState(true);
 
@@ -69,28 +69,28 @@ export const Footer = () => {
           
           {/* Column 1: About */}
           <div className="lg:pr-8 flex flex-col h-full">
-            <h4 className="font-bold text-slate-900 dark:text-white mb-6 text-[20px] uppercase tracking-[0.2em] opacity-90">
+            <h4 className="font-bold text-slate-900 dark:text-white mb-5 text-lg tracking-tight">
               {t('footer.aboutUs')}
             </h4>
-            <p className="text-[15px] text-slate-600 dark:text-slate-400 leading-relaxed flex-grow max-w-sm">
+            <p className="text-[15px] text-slate-600 dark:text-slate-400 leading-relaxed flex-grow max-w-sm font-medium tracking-normal">
               {t('footer.aboutDesc')}
             </p>
           </div>
           
           {/* Column 2: Explore Links */}
           <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-6 text-[20px] uppercase tracking-[0.2em] opacity-90">
+            <h4 className="font-bold text-slate-900 dark:text-white mb-5 text-lg tracking-tight">
               {t('footer.explore')}
             </h4>
-            <ul className="space-y-4">
+            <ul className="space-y-3.5">
               {exploreLinks.map(link => (
                 <li key={link.name}>
                   {link.path.startsWith('/#') ? (
-                    <a href={link.path} className="text-[15px] font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors inline-block hover:translate-x-1 duration-300">
+                    <a href={link.path} className="text-[15px] font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-all inline-block hover:translate-x-1 duration-300 tracking-normal">
                       {link.name}
                     </a>
                   ) : (
-                    <Link to={link.path} className="text-[15px] font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors inline-block hover:translate-x-1 duration-300">
+                    <Link to={link.path} className="text-[15px] font-medium text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-all inline-block hover:translate-x-1 duration-300 tracking-normal">
                       {link.name}
                     </Link>
                   )}
@@ -104,10 +104,10 @@ export const Footer = () => {
             
             {/* 3A: Dynamic Blog Section */}
             <div>
-              <h4 className="font-bold text-slate-900 dark:text-white mb-6 text-[20px] uppercase tracking-[0.2em] opacity-90">
+              <h4 className="font-bold text-slate-900 dark:text-white mb-5 text-lg tracking-tight">
                 {t('footer.recentArticles')}
               </h4>
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {loadingBlogs ? (
                   <div className="space-y-4 animate-pulse">
                     <div className="h-3.5 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
@@ -117,16 +117,16 @@ export const Footer = () => {
                 ) : recentBlogs.length > 0 ? (
                   recentBlogs.map(blog => (
                     <Link key={blog._id} to={`/blog/${blog.slug}`} className="group block">
-                      <h5 className="text-[15px] font-medium text-slate-700 dark:text-slate-300 group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors line-clamp-2 leading-snug">
+                      <h5 className="text-[15px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors line-clamp-2 leading-snug tracking-normal">
                         {blog.title}
                       </h5>
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-2 flex items-center gap-1 group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors">
-                        {t('footer.readArticle')} <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                      <span className="text-[12px] font-bold text-orange-600/80 dark:text-orange-500/80 mt-1.5 flex items-center gap-1 group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors tracking-tight">
+                        {t('footer.readArticle')} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                       </span>
                     </Link>
                   ))
                 ) : (
-                  <p className="text-[15px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[15px] font-medium text-slate-500 dark:text-slate-400 tracking-normal">
                     {t('footer.noArticles')}
                   </p>
                 )}
@@ -135,21 +135,21 @@ export const Footer = () => {
 
             {/* 3B: Contact Information & Socials */}
             <div>
-              <h4 className="font-bold text-slate-900 dark:text-white mb-5 text-[20px] uppercase tracking-[0.2em] opacity-90">
+              <h4 className="font-bold text-slate-900 dark:text-white mb-5 text-lg tracking-tight">
                 {t('footer.getInTouch')}
               </h4>
               <ul className="space-y-3 mb-6">
-                <li className="flex items-center gap-3 text-[15px] text-slate-600 dark:text-slate-400">
-                  <Mail size={16} className="text-slate-400 dark:text-slate-500" />
+                <li className="flex items-center gap-3 text-[15px] font-medium text-slate-600 dark:text-slate-400 tracking-normal">
+                  <Mail size={18} className="text-slate-400 dark:text-slate-500" />
                   <a href="mailto:hello@sahakarstree.in" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">hello@sahakarstree.in</a>
                 </li>
-                <li className="flex items-center gap-3 text-[15px] text-slate-600 dark:text-slate-400">
-                  <Phone size={16} className="text-slate-400 dark:text-slate-500" />
+                <li className="flex items-center gap-3 text-[15px] font-medium text-slate-600 dark:text-slate-400 tracking-normal">
+                  <Phone size={18} className="text-slate-400 dark:text-slate-500" />
                   <a href="tel:+919876543210" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">+91 98765 43210</a>
                 </li>
               </ul>
 
-              {/* Social Icons moved here */}
+              {/* Social Icons */}
               <div className="flex items-center gap-3">
                 {[
                   { icon: Linkedin, url: '#' },
@@ -176,29 +176,29 @@ export const Footer = () => {
         </div>
         
         {/* --- MIDDLE DIVIDER --- */}
-        <div className="w-full h-px bg-slate-200 dark:bg-slate-800/60 mb-10"></div>
+        <div className="w-full h-px bg-slate-200 dark:bg-slate-800/60 mb-8 md:mb-10"></div>
 
         {/* =========================================
             BOTTOM SECTION: BRAND, PAYMENTS & LEGAL
         ========================================= */}
         
-        {/* Logo Anchored at the Bottom Left */}
-        <div className="mb-8 flex justify-center md:justify-start">
-          <Link to="/" className="text-3xl font-serif font-black flex items-center gap-2 text-slate-900 dark:text-white hover:opacity-90 transition-opacity w-fit">
-            <BookOpen className="text-orange-600 dark:text-orange-500" size={30} strokeWidth={2.5} />
-            <span className="tracking-tight">
-              Sahakar<span className="text-orange-600 dark:text-orange-500">Stree</span>
+        {/* Translated Logo Anchored at the Bottom Left */}
+        <div className="mb-6 md:mb-8 flex justify-center md:justify-start">
+          <Link to="/" className="text-2xl md:text-3xl font-serif font-black flex items-center gap-2.5 text-slate-900 dark:text-white hover:opacity-90 transition-opacity w-fit tracking-tight">
+            <BookOpen className="text-orange-600 dark:text-orange-500" size={28} strokeWidth={2.5} />
+            <span>
+              {t('footer.brandPart1', 'Sahakar')}<span className="text-orange-600 dark:text-orange-500">{t('footer.brandPart2', 'Stree')}</span>
             </span>
           </Link>
         </div>
 
         {/* Row: Payments & Legal Links */}
-        <div className="flex flex-col lg:flex-row justify-between items-center gap-8 mb-10">
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 md:gap-8 mb-8 md:mb-10">
           
           <PaymentBadges t={t} />
 
           {/* Legal Links clustered in the center/right */}
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[14px] font-medium text-slate-600 dark:text-slate-400">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[14px] font-semibold text-slate-500 dark:text-slate-400 tracking-tight">
             <Link to="/privacy-policy" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">{t('footer.privacyPolicy')}</Link>
             <Link to="/refund-policy" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">{t('footer.refundPolicy')}</Link>
             <Link to="/terms-of-service" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">{t('footer.termsOfService')}</Link>
@@ -207,7 +207,7 @@ export const Footer = () => {
         </div>
 
         {/* Final Row: Copyright & Pricing Info */}
-        <div className="flex flex-col md:flex-row justify-between items-center text-[13px] text-slate-500 dark:text-slate-500 mt-2">
+        <div className="flex flex-col md:flex-row justify-between items-center text-[13px] font-medium text-slate-400 dark:text-slate-500 mt-2 tracking-normal">
           <p className="mb-2 md:mb-0 text-center md:text-left">
             {t('footer.copyright').replace('{{year}}', new Date().getFullYear())}
           </p>

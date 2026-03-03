@@ -1,5 +1,7 @@
 {
   "footer": {
+    "brandPart1": "Sahakar",
+    "brandPart2": "Stree",
     "andMore": "And More",
     "aboutUs": "About Us",
     "aboutDesc": "Empowering the next generation of thinkers, entrepreneurs, and leaders through the power of practical knowledge and cooperative building.",
@@ -22,7 +24,7 @@
   },
   "hero": {
     "badge": "National Bestseller",
-    "title": "Chintanatun Chintamuktookade",
+    "title": "Chintanatun Chintamuktikade",
     "subtitle": "(Maratha Samaj)",
     "description": "Break free from the mental traps holding you back. The definitive guide to decoding modern success and finding clarity in chaos.",
     "orderBtn": "Order Hardcopy",
@@ -68,5 +70,40 @@
     "quote": "Writing in Marathi to empower the next generation of local entrepreneurs.",
     "para1": "This literature has been created to provide the Maratha community with the right direction, clear thoughts, and a positive vision. The primary goal is to offer the right ideology to farmers, entrepreneurs, professionals, and the new generation from a business perspective.",
     "para2": "It provides guidance in extremely simple and understandable language on how to correct often misguided attitudes in society, develop a business mindset, and empower everyone to stand strong and capable in their respective fields."
+  },
+  "features": {
+    "heading": "In This Book",
+    "list": [
+      {
+        "title": "Navigating Partnerships & Family Business.",
+        "marathi": "Partnerships",
+        "desc": "Discover the hidden pitfalls of business partnerships and why structured communication is crucial to prevent your business from stagnating.",
+        "image": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        "title": "Keeping Emotions Out of Business.",
+        "marathi": "Management",
+        "desc": "Learn why mixing emotions, friends, and relatives with business is a recipe for disaster. Master the art of practical, ruthless business management.",
+        "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        "title": "Why Good Businesses Eventually Fail.",
+        "marathi": "Hidden Risks",
+        "desc": "Uncover the hidden costs and lack of innovation that cause successful businesses to decline, and learn how to keep your growth graph pointing upward.",
+        "image": "https://images.unsplash.com/photo-1590283603385-18ffb6a8325c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        "title": "The Cost of Anger & Poor Communication.",
+        "marathi": "Communication",
+        "desc": "Master your words and temper. Understand how poor communication damages business relationships and traps your hard-earned money.",
+        "image": "https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        "title": "Breaking the Cycle of Stagnation.",
+        "marathi": "Scaling",
+        "desc": "Learn why relying on a single income stream is dangerous and discover the exact strategies needed to scale and bounce back from failure.",
+        "image": "https://images.unsplash.com/photo-1553877522-43269d4ea984?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+      }
+    ]
   }
 }

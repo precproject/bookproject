@@ -22,90 +22,153 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
 
 export const HomeLayout = () => {
-    const navigate = useNavigate();
-    const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
-    // 2. ADD A STATE TO TRACK IF CHECKOUT IS OPEN
-    const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  // --- CHECKOUT STATE ---
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-    // NEW: Function to dynamically find the book and route to its product page
-    const handleRouteToProduct = async () => {
-        try {
-        const { data } = await apiClient.get('/public/books');
-        if (data && data.length > 0) {
-            // Route to the first/featured book in your database
-            navigate(`/store/book/${data[0]._id}`);
-        } else {
-            // Fallback to the store shelf if no specific book is found
-            navigate('/store');
+  // --- CONFIGURATION STATE ---
+  // Default to TRUE so if the backend fails, the site still works perfectly.
+  const [sections, setSections] = useState({
+    hero: true,
+    features: true,
+    chapters: true,
+    author: true,
+    reviews: true,
+    blog: true,
+    footer: true,
+    // Additional sections not explicitly in DB schema yet, but kept safe here
+    video: true, 
+    creativeHero: true,
+    quotes: true
+  });
+
+  // Fetch Public Configuration
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        // Assuming your apiClient base URL handles the '/api' part
+        const response = await apiClient.get('/config/public');
+        if (response.data && response.data.sections) {
+          // Merge backend config with our safe defaults
+          setSections(prev => ({ ...prev, ...response.data.sections }));
         }
-        } catch (error) {
-        console.error("Failed to fetch book for routing", error);
-        navigate('/store');
-        }
+      } catch (error) {
+        console.error("Failed to fetch section configuration. Using safe defaults.", error);
+      }
     };
+    fetchConfig();
+  }, []);
 
-    // 3. PREVENT BACKGROUND SCROLLING WHEN CHECKOUT IS OPEN
-    useEffect(() => {
+  // Prevent background scrolling when checkout is open
+  useEffect(() => {
     if (isCheckoutOpen) {
-        document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
     } else {
-        document.body.style.overflow = 'unset';
+      document.body.style.overflow = 'unset';
     }
-    }, [isCheckoutOpen]);
-    
-    return (
+  }, [isCheckoutOpen]);
+
+  // Function to dynamically find the book and route to its product page
+  const handleRouteToProduct = async () => {
+    try {
+      const { data } = await apiClient.get('/public/books');
+      if (data && data.length > 0) {
+        // Route to the first/featured book in your database
+        navigate(`/store/book/${data[0]._id}`);
+      } else {
+        // Fallback to the store shelf if no specific book is found
+        navigate('/store');
+      }
+    } catch (error) {
+      console.error("Failed to fetch book for routing", error);
+      navigate('/store');
+    }
+  };
+
+  return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
-        <Navbar theme={theme} setTheme={toggleTheme} />
+      <Navbar theme={theme} setTheme={toggleTheme} />
 
+      <main>
+        
+        {/* HERO SECTION */}
+        {sections.hero && (
+          <Hero onOrderPopup={() => setIsCheckoutOpen(true)} productRoute={handleRouteToProduct}/>
+        )}
 
-        <main>
+        {/* FEATURES SECTION */}
+        {sections.features && (
+          <>
+            <SectionDivider nextSectionId="features" />
+            <Features />
+          </>
+        )}
 
-        <Hero onOrderPopup={() => setIsCheckoutOpen(true)} productRoute={handleRouteToProduct}/>
+        {/* AUTHOR SECTION */}
+        {sections.author && (
+          <>
+            <SectionDivider nextSectionId="author" />
+            <Author />
+          </>
+        )}
 
-        {/* Points to the id="features" inside your Features component */}
-        <SectionDivider nextSectionId="features" />
-        <Features />
+        {/* VIDEO SECTION */}
+        {sections.video && (
+          <>
+            <SectionDivider nextSectionId="video" />
+            <VideoSections />
+          </>
+        )}
 
-        {/* Points to the id="author" inside your Author component */}
-        <SectionDivider nextSectionId="author" />
-        <Author />
+        {/* CHAPTERS SECTION */}
+        {sections.chapters && (
+          <>
+            <SectionDivider nextSectionId="chapters" />
+            <Chapters />
+          </>
+        )}
 
-        {/* Assuming Chapters has id="chapters" */}
-        <SectionDivider nextSectionId="video" />
-        <VideoSections />
+        {/* REVIEWS SECTION */}
+        {sections.reviews && (
+          <>
+            <SectionDivider nextSectionId="reviews" />
+            <Reviews />
+          </>
+        )}
 
-        {/* Assuming Video section has id="video" */}
-        <SectionDivider nextSectionId="chapters" />
-        <Chapters />
+        {/* BLOG SECTION */}
+        {sections.blog && (
+          <>
+            <SectionDivider nextSectionId="blog" />
+            <Blog />
+          </>
+        )}
 
-        {/* Points to the id="reviews" inside your Reviews component */}
-        <SectionDivider nextSectionId="reviews" />
-        <Reviews />
+        {/* CREATIVE HERO SECTION */}
+        {sections.creativeHero && (
+          <HeroCreative onOrderClick={() => setIsCheckoutOpen(true)} />
+        )}
 
-{/*
-        <QuoteMarquee />
-*/}
-        {/* Points to the id="blog" inside your Blog component */}
-        <SectionDivider nextSectionId="blog" />
-        <Blog /> {/* 2. ADD THE BLOG COMPONENT HERE, AFTER REVIEWS */}
+        {/* QUOTES SECTION */}
+        {sections.quotes && (
+          <QuoteSection />
+        )}
 
-        <HeroCreative onOrderClick={() => setIsCheckoutOpen(true)} />
+      </main>
 
-        {/* The Marquee Section acting as a high-energy break */}
-        <QuoteSection/>
+      {/* FOOTER SECTION */}
+      {sections.footer && <Footer />}
 
-        </main>
-        <Footer />
+      {/* POPUPS & MODALS */}
+      <PurchaseAlert />
 
-        {/* Purchase Alert Popup */}
-        <PurchaseAlert />
-
-        {/* 5. ADD THE CHECKOUT COMPONENT HERE */}
-        <Checkout
+      <Checkout
         isOpen={isCheckoutOpen} 
         onClose={() => setIsCheckoutOpen(false)} 
-        />
+      />
+      
     </div>
-    );
-}
+  );
+};
