@@ -12,6 +12,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthModal } from './components/auth/AuthModal';
 import { HomeLayout } from './components/home/HomeLayout';
 import { ScrollToTop } from './components/ui/ScrollToTop';
+import { ConfigProvider } from './context/ConfigContext';
 
 // ============================================================================
 // LAZY LOADED COMPONENTS (Code Splitting)
@@ -46,6 +47,7 @@ const DashboardReferrals = lazy(() => import('./components/dashboard/DashboardRe
 const DashboardConfig = lazy(() => import('./components/dashboard/DashboardConfig').then(m => ({ default: m.DashboardConfig })));
 const DashboardBlogs = lazy(() => import('./components/dashboard/DashboardBlogs').then(m => ({ default: m.DashboardBlogs })));
 
+
 // --- LOADING FALLBACK ---
 // A sleek, theme-aware spinner that shows while a lazy chunk is downloading
 const PageLoader = () => (
@@ -59,6 +61,7 @@ export default function App() {
     <BrowserRouter>
       <ScrollToTop />
       <ThemeProvider>
+        <ConfigProvider> {/* <--- 2. WRAP IT AROUND AUTH & CART */}
         <AuthProvider>
           <CartProvider>
             <AdminProvider>
@@ -111,6 +114,7 @@ export default function App() {
             </AdminProvider>
           </CartProvider>
         </AuthProvider>
+        </ConfigProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

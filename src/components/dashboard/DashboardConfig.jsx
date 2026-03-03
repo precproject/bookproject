@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   CreditCard, Truck, Key, Save, CheckCircle, Eye, EyeOff, 
   Globe, Mail, Phone, Store, Loader2, LayoutTemplate, 
-  ShoppingCart, Receipt, Link as LinkIcon, MapPin, Hash
+  ShoppingCart, Receipt, Link as LinkIcon, MapPin, Hash,
+  Monitor
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 
@@ -85,7 +86,7 @@ export const DashboardConfig = () => {
     shoppingRules: { referralBasedShoppingOnly: true, currency: 'INR', currencySymbol: '₹' },
     taxConfig: { isGstEnabled: true, gstPercentage: 0, hsnCode: '4901' },
     payment: { provider: 'PhonePe', merchantId: '', saltKey: '', saltIndex: 1, isLiveMode: false },
-    delivery: { provider: 'Delhivery', apiToken: '', pickupPincode: '', isLiveMode: false },
+    delivery: { provider: 'Delhivery', apiToken: '', pickupPincode: '', isLiveMode: false, shippingCharge: 50 },
     socialLinks: { facebook: '', twitter: '', instagram: '', linkedin: '', youtube: '' }
   });
 
@@ -238,6 +239,23 @@ export const DashboardConfig = () => {
             </div>
           </ConfigSection>
 
+          {/* --- HOMESCREEN UI ALERTS --- */}
+          <ConfigSection 
+            title="Homescreen Elements" subtitle="Control marketing popups and alerts"
+            icon={Monitor} iconColor="bg-indigo-100 text-indigo-700" btnColor="bg-indigo-600 hover:bg-indigo-700"
+            isSaving={savingSection === 'uiConfig'} onSave={(e) => handleSave(e, 'uiConfig', 'UI settings saved.')}
+          >
+            <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+              <div>
+                <p className="font-bold text-slate-800 text-sm">Recent Sales Popup</p>
+                <p className="text-xs text-slate-500">Show a small popup on the homescreen when someone buys a book.</p>
+              </div>
+              <button type="button" onClick={() => handleUpdate('uiConfig', 'showRecentOrdersPopup', !config.uiConfig.showRecentOrdersPopup)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.uiConfig.showRecentOrdersPopup ? 'bg-indigo-500' : 'bg-slate-300'}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.uiConfig.showRecentOrdersPopup ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          </ConfigSection>
+
         </div>
 
         {/* RIGHT COLUMN */}
@@ -300,6 +318,7 @@ export const DashboardConfig = () => {
             <div className="space-y-4">
               <InputField label="API Token" icon={Key} isSecret={true} value={config.delivery.apiToken} onChange={e => handleUpdate('delivery', 'apiToken', e.target.value)} required />
               <InputField label="Default Pickup Pincode" icon={MapPin} value={config.delivery.pickupPincode} onChange={e => handleUpdate('delivery', 'pickupPincode', e.target.value)} required />
+              <InputField label="Flat Shipping Charge (₹)" type="number" value={config.delivery.shippingCharge} onChange={e => handleUpdate('delivery', 'shippingCharge', Number(e.target.value))} required />
             </div>
           </ConfigSection>
 
@@ -316,6 +335,37 @@ export const DashboardConfig = () => {
                   <input type="url" placeholder={`https://${platform}.com/...`} value={config.socialLinks[platform]} onChange={e => handleUpdate('socialLinks', platform, e.target.value)} className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-500/20 shadow-sm" />
                 </div>
               ))}
+            </div>
+          </ConfigSection>
+
+          {/* --- EMAIL AUTOMATION ALERTS --- */}
+          <ConfigSection 
+            title="Automated Emails" subtitle="Turn specific customer email alerts on or off"
+            icon={Mail} iconColor="bg-rose-100 text-rose-700" btnColor="bg-rose-600 hover:bg-rose-700"
+            isSaving={savingSection === 'emailAlerts'} onSave={(e) => handleSave(e, 'emailAlerts', 'Email settings saved.')}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Reusable Toggle Component for Emails */}
+              {[
+                { key: 'welcome', label: 'Welcome Email', desc: 'Sent when a user registers.' },
+                { key: 'orderPlaced', label: 'Order Placed', desc: 'Sent before payment is completed.' },
+                { key: 'paymentSuccess', label: 'Payment Success', desc: 'Sent with receipt after payment.' },
+                { key: 'orderDispatched', label: 'Order Dispatched', desc: 'Sent with tracking ID.' },
+                { key: 'orderDelivered', label: 'Order Delivered', desc: 'Sent to ask for a review.' },
+                { key: 'paymentReminder', label: 'Payment Reminder', desc: 'Sent by cron job for abandoned carts.' },
+              ].map((alert) => (
+                <div key={alert.key} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div>
+                    <p className="font-bold text-slate-800 text-sm">{alert.label}</p>
+                    <p className="text-xs text-slate-500">{alert.desc}</p>
+                  </div>
+                  <button type="button" onClick={() => handleUpdate('emailAlerts', alert.key, !config.emailAlerts[alert.key])} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.emailAlerts[alert.key] ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.emailAlerts[alert.key] ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              ))}
+              
             </div>
           </ConfigSection>
 

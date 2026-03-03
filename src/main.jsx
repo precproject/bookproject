@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import './i18n';
 import { LazyMotion, domAnimation } from "framer-motion"
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <LazyMotion features={domAnimation}>

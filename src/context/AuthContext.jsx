@@ -6,7 +6,6 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // NEW: State to control the popup
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   useEffect(() => {
@@ -14,27 +13,33 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
+          // Verify if the token is still alive and belongs to a valid user
           const { data } = await apiClient.get('/auth/profile');
           setUser(data);
         } catch (error) {
+          console.warn("Session expired or token invalid. Clearing memory.");
+          // Destroy the dead token from memory
           localStorage.removeItem('token');
+          // Reset user state to trigger the logged-out UI
+          setUser(null);
         }
       }
       setLoading(false);
     };
+    
     fetchUser();
   }, []);
 
   const login = (userData, token) => {
     localStorage.setItem('token', token);
     setUser(userData);
-    setIsAuthModalOpen(false); // Close modal automatically on success
+    setIsAuthModalOpen(false); 
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
-    window.location.href = '/';
+    window.location.href = '/'; // Kick them back to the homepage
   };
 
   const openAuthModal = () => setIsAuthModalOpen(true);

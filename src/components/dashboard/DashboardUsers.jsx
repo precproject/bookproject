@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Search, Mail, Phone, ShoppingBag, ChevronRight, Shield, User, X, CheckCircle, Ban, Gift, Loader2 } from 'lucide-react';
+import { Search, Mail, Phone, ShoppingBag, ChevronRight, Shield, User, X, CheckCircle, Ban, Gift, Loader2, UserPlus, Key } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 import { OrderDetailsModal } from '../shared/OrderDetailsModal';
 import { AdminContext } from '../../context/AdminContext';
@@ -19,7 +19,7 @@ export const DashboardUsers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // --- MODAL & DYNAMIC FETCH STATE ---
+  // --- MODALS & DYNAMIC FETCH STATE ---
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
@@ -31,49 +31,11 @@ export const DashboardUsers = () => {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  const handleOpenOrder = (order) => {
-    setSelectedOrder(order);
-    setIsOrderModalOpen(true);
-  };
-
-  const handleUpdateStatus = async (orderId, newStatus) => {
-    // Make your API call here: await apiClient.put(`/admin/orders/${orderId}`, { status: newStatus });
-    if (newStatus === selectedOrder.status) return;
-    
-    setIsUpdatingStatus(true);
-    try {
-      // 1. Send update to Backend API
-      await adminService.updateOrderStatus(selectedOrder._id, newStatus);
-      
-      // 2. Update global cache. Because `visibleOrders` relies on `orderCache`, the UI updates instantly!
-      updateLocalOrder(selectedOrder._id, { status: newStatus });
-      
-      // 3. Update the modal's internal state
-      setSelectedOrder(prev => ({ ...prev, status: newStatus }));
-      
-      showToast(`Order #${selectedOrder.orderId} updated to ${newStatus}`);
-    } catch (error) {
-      console.log(error)
-      showToast("Failed to update status. " + (error.response?.data?.message || ''));
-    } finally {
-      setIsUpdatingStatus(false);
-      setIsModalOpen(false);
-    }
-    console.log(`Updating order ${orderId} to ${newStatus}`);
-  };
-
-  const handleNotifyUser = (email, type) => {
-    console.log(`Sending ${type} notification to ${email}`);
-  };
-
-  const getStatusBadge = (status) => {
-    switch(status) {
-      case 'Delivered': return <span className="text-[10px] font-bold px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-100 uppercase tracking-wider">Delivered</span>;
-      case 'In Progress': return <span className="text-[10px] font-bold px-2 py-1 bg-blue-50 text-blue-700 rounded-md border border-blue-100 uppercase tracking-wider">In Progress</span>;
-      case 'Cancelled': return <span className="text-[10px] font-bold px-2 py-1 bg-red-50 text-red-700 rounded-md border border-red-100 uppercase tracking-wider">Cancelled</span>;
-      default: return <span className="text-[10px] font-bold px-2 py-1 bg-yellow-50 text-yellow-700 rounded-md border border-yellow-100 uppercase tracking-wider">Pending</span>;
-    }
-  };
+  // --- ADD USER STATE ---
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const defaultUserForm = { name: '', email: '', mobile: '', password: '', role: 'Customer', masterSecret: '' };
+  const [newUser, setNewUser] = useState(defaultUserForm);
 
   // --- TRIGGER API ON FILTER/PAGE CHANGE ---
   useEffect(() => {
@@ -107,6 +69,58 @@ export const DashboardUsers = () => {
   };
 
   // --- ACTION HANDLERS ---
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setIsAddingUser(true);
+
+    try {
+      if (newUser.role === 'Admin') {
+        // Calls the secure POST /api/auth/create-admin route
+        await adminService.createAdmin(newUser); 
+        showToast("Admin account created successfully!");
+      } else {
+        // Calls the standard POST /api/auth/register route
+        await adminService.createCustomer(newUser); 
+        showToast("Customer account created successfully!");
+      }
+      
+      setIsAddUserModalOpen(false);
+      setNewUser(defaultUserForm);
+      loadUsers(); // Refresh the list to show the new user
+    } catch (error) {
+      showToast(error.response?.data?.message || "Failed to add user. Check details and try again.");
+    } finally {
+      setIsAddingUser(false);
+    }
+  };
+
+  const handleOpenOrder = (order) => {
+    setSelectedOrder(order);
+    setIsOrderModalOpen(true);
+  };
+
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    if (newStatus === selectedOrder.status) return;
+    
+    setIsUpdatingStatus(true);
+    try {
+      await adminService.updateOrderStatus(selectedOrder._id, newStatus);
+      updateLocalOrder(selectedOrder._id, { status: newStatus });
+      setSelectedOrder(prev => ({ ...prev, status: newStatus }));
+      
+      showToast(`Order #${selectedOrder.orderId} updated to ${newStatus}`);
+    } catch (error) {
+      showToast("Failed to update status. " + (error.response?.data?.message || ''));
+    } finally {
+      setIsUpdatingStatus(false);
+      setIsModalOpen(false);
+    }
+  };
+
+  const handleNotifyUser = (email, type) => {
+    console.log(`Sending ${type} notification to ${email}`);
+  };
+
   const handleToggleStatus = async (user) => {
     if (user.role === 'Admin') return; // Protection
     
@@ -114,7 +128,6 @@ export const DashboardUsers = () => {
     try {
       await adminService.toggleUserStatus(user._id);
       
-      // Update UI locally without full reload
       const newStatus = user.status === 'Active' ? 'Disabled' : 'Active';
       setUsers(prev => prev.map(u => 
         u._id === user._id ? { ...u, status: newStatus } : u
@@ -134,7 +147,6 @@ export const DashboardUsers = () => {
     setIsOrdersLoading(true);
     try {
       const orders = await adminService.getUserOrders(user._id);
-      console.log(orders)
       setFetchedOrders(orders.orders);
     } catch (error) {
       console.error("Failed to load user orders:", error);
@@ -172,6 +184,12 @@ export const DashboardUsers = () => {
           <h1 className="text-2xl font-bold text-slate-800">Users & Customers</h1>
           <p className="text-sm text-slate-500 mt-1">Manage accounts, permissions, and view histories.</p>
         </div>
+        <button 
+          onClick={() => setIsAddUserModalOpen(true)}
+          className="flex items-center gap-2 bg-emerald-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-900 transition-all shadow-md active:scale-95"
+        >
+          <UserPlus size={18} /> Add User
+        </button>
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
@@ -340,6 +358,113 @@ export const DashboardUsers = () => {
         </div>
       </div>
 
+      {/* --- ADD USER MODAL --- */}
+      {isAddUserModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsAddUserModalOpen(false)}></div>
+          
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-[scaleIn_0.2s_ease-out] flex flex-col max-h-[90vh]">
+            
+            <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Add New User</h2>
+                <p className="text-xs text-slate-500 mt-1">Create an admin or customer account.</p>
+              </div>
+              <button onClick={() => setIsAddUserModalOpen(false)} className="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 shadow-sm border border-slate-100">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUser} className="overflow-y-auto">
+              <div className="p-6 space-y-4">
+                
+                <div className="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <label className="text-sm font-bold text-slate-700">Account Role</label>
+                  <select 
+                    value={newUser.role}
+                    onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm"
+                  >
+                    <option value="Customer">Customer</option>
+                    <option value="Admin">Administrator</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Full Name <span className="text-red-500">*</span></label>
+                  <input 
+                    type="text" required
+                    value={newUser.name}
+                    onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                    placeholder="e.g. John Doe" 
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Email Address <span className="text-red-500">*</span></label>
+                  <input 
+                    type="email" required
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({...newUser, email: e.target.value.toLowerCase()})}
+                    placeholder="e.g. user@example.com" 
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Mobile Number <span className="text-red-500">*</span></label>
+                  <input 
+                    type="tel" required
+                    value={newUser.mobile}
+                    onChange={(e) => setNewUser({...newUser, mobile: e.target.value})}
+                    placeholder="10-digit mobile number" 
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Account Password <span className="text-red-500">*</span></label>
+                  <input 
+                    type="password" required minLength={6}
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                    placeholder="Minimum 6 characters" 
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
+                  />
+                </div>
+
+                {/* --- CONDITIONAL: MASTER SECRET FOR ADMINS --- */}
+                {newUser.role === 'Admin' && (
+                  <div className="space-y-2 bg-amber-50 p-4 rounded-xl border border-amber-200 animate-[fadeIn_0.3s_ease-out]">
+                    <label className="text-sm font-bold text-amber-800 flex items-center gap-1">
+                      <Key size={14} /> Master Admin Secret <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="password" required
+                      value={newUser.masterSecret}
+                      onChange={(e) => setNewUser({...newUser, masterSecret: e.target.value})}
+                      placeholder="Required to authorize admin creation" 
+                      className="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 shadow-sm" 
+                    />
+                    <p className="text-xs text-amber-700 mt-2 font-medium">This secret matches the security key saved in your Dashboard Configuration.</p>
+                  </div>
+                )}
+
+              </div>
+
+              <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 mt-auto shrink-0">
+                <button type="button" onClick={() => setIsAddUserModalOpen(false)} disabled={isAddingUser} className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={isAddingUser} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-900 transition-colors shadow-md disabled:opacity-50">
+                  {isAddingUser ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />} 
+                  {isAddingUser ? 'Creating...' : `Create ${newUser.role}`}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* --- DYNAMIC USER ORDERS MODAL --- */}
       {isModalOpen && selectedUser && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -406,7 +531,7 @@ export const DashboardUsers = () => {
               isOpen={isOrderModalOpen}
               onClose={() => setIsOrderModalOpen(false)}
               order={selectedOrder}
-              isAdmin={true} // True if used in Admin Dashboard, False if used in Customer Dashboard
+              isAdmin={true} 
               onUpdateStatus={handleUpdateStatus}
               onNotifyUser={handleNotifyUser}
             />

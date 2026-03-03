@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag } from 'lucide-react';
 import apiClient from '../../api/client'; 
+import { ConfigContext } from '../../context/ConfigContext'; // Import Context
 
-// Utility to convert ISO date to "2h ago", "10m ago", etc. (Shortened for modern UI)
+// Utility to convert ISO date (NO HOOKS ALLOWED IN HERE)
 const getTimeAgo = (dateString) => {
   const date = new Date(dateString);
   const now = new Date();
@@ -22,6 +23,9 @@ const getTimeAgo = (dateString) => {
 };
 
 export const PurchaseAlert = () => {
+  // 1. Grab the config INSIDE the React Component
+  const { config, isConfigLoading } = useContext(ConfigContext);
+
   const [currentPurchase, setCurrentPurchase] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [purchaseData, setPurchaseData] = useState([]);
@@ -29,8 +33,11 @@ export const PurchaseAlert = () => {
   const indexRef = useRef(0);
   const timerRef = useRef(null);
 
-  // 1. Fetch data on component mount
+  // 2. Fetch data (Optimized: Only fetches if the admin has popups enabled!)
   useEffect(() => {
+    // If it's still loading, or if the admin turned it off, do not fetch anything.
+    if (isConfigLoading || !config?.uiConfig?.showRecentOrdersPopup) return;
+
     let isMounted = true;
 
     const fetchPurchases = async () => {
@@ -49,9 +56,9 @@ export const PurchaseAlert = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [config, isConfigLoading]); // Runs when config finishes loading
 
-  // 2. Handle the 3-second display cycle
+  // 3. Handle the 3-second display cycle
   useEffect(() => {
     if (purchaseData.length === 0) return;
 
@@ -88,6 +95,11 @@ export const PurchaseAlert = () => {
   const handleDismiss = () => {
     setIsVisible(false);
   };
+
+  // 4. CRITICAL: If the admin turned it off in the Dashboard, render absolutely nothing!
+  if (isConfigLoading || !config?.uiConfig?.showRecentOrdersPopup) {
+    return null; 
+  }
 
   return (
     <AnimatePresence>

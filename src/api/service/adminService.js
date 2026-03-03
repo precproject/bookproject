@@ -165,4 +165,22 @@ export const adminService = {
     const { data } = await apiClient.delete(`/admin/blogs/${id}`);
     return data;
   },
+  // Inside adminService.js
+  uploadImage: async (formData) => {
+    const response = await apiClient.post('/upload', formData, {
+      headers: {
+        // This line overrides the global JSON rule and tells the backend a file is coming!
+        'Content-Type': 'multipart/form-data' 
+      }
+    });
+    return response.data;
+  },
+  createAdmin: async (payload) => {
+    const response = await apiClient.post('/auth/create-admin', payload);
+    return response.data;
+  },
+  createCustomer: async (payload) => {
+    const response = await apiClient.post('/auth/register', payload);
+    return response.data;
+  }
 };

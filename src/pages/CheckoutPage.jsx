@@ -9,15 +9,21 @@ import { orderService } from '../api/service/orderService';
 import { Navbar } from '../components/sections/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
+import { useTranslation } from 'react-i18next'; // ADDED
+import { ConfigContext } from '../context/ConfigContext';
 
 export const CheckoutPage = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation(); // ADDED
   const { user, openAuthModal } = useContext(AuthContext);
   const { cartItems, cartSubtotal, requiresShipping, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
 
-  // --- CONFIG (TAX & SHIPPING) STATE ---
-  const [shopConfig, setShopConfig] = useState({ taxRate: 5, shippingCharge: 50 }); // Safe defaults
+  // --- OLD CONFIG (TAX & SHIPPING) STATE ---
+  // const [shopConfig, setShopConfig] = useState({ taxRate: 0, shippingCharge: 50 }); // Updated default to 0
+
+  // <-- 2. GRAB CONFIG FROM CONTEXT -->
+  const { config, isConfigLoading } = useContext(ConfigContext);
 
   // --- ADDRESS MANAGEMENT STATE ---
   const [isSavingAddress, setIsSavingAddress] = useState(false);
@@ -41,26 +47,18 @@ export const CheckoutPage = () => {
   const [error, setError] = useState('');
 
   // --- PRICING CALCULATIONS ---
-  const shipping = requiresShipping ? shopConfig.shippingCharge : 0;
+  const taxRate = config?.taxConfig?.isGstEnabled ? (config?.taxConfig?.gstPercentage || 18) : 18;
+  const baseShippingCharge = config?.delivery?.shippingCharge ?? 50;
+
+  const shipping = requiresShipping ? baseShippingCharge : 0;
+
   const taxableAmount = Math.max(0, cartSubtotal - appliedDiscount);
-  const taxAmount = Math.round(taxableAmount * (shopConfig.taxRate / 100));
+  const taxAmount = Math.round(taxableAmount * (taxRate / 100));
   const finalTotal = taxableAmount + shipping + taxAmount;
 
   // --- FETCH INITIAL DATA (Addresses & Config) ---
   useEffect(() => {
-    const fetchCheckoutData = async () => {
-      // 1. Fetch Dynamic Config (Tax & Shipping) from your backend
-      try {
-        const configRes = await apiClient.get('/public/config');
-        if (configRes.data) {
-          setShopConfig({
-            taxRate: configRes.data.taxRate || 5,
-            shippingCharge: configRes.data.shippingCharge || 50
-          });
-        }
-      } catch (err) {
-        console.log("Using default tax and shipping configuration.");
-      }
+    const fetchUserAddresses = async () => {
 
       // 2. Fetch User Addresses
       if (!user) {
@@ -86,7 +84,7 @@ export const CheckoutPage = () => {
       }
     };
 
-    fetchCheckoutData();
+    fetchUserAddresses();
   }, [user]);
 
   // --- ADDRESS FORM HANDLERS ---
@@ -94,7 +92,7 @@ export const CheckoutPage = () => {
 
   // Pincode Auto-Fill Logic using Indian Postal API
   const handlePincodeChange = async (e) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 6); // Only numbers, max 6 chars
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6); 
     setNewAddress(prev => ({ ...prev, pincode: val }));
 
     if (val.length === 6) {
@@ -123,7 +121,7 @@ export const CheckoutPage = () => {
 
   const handleSaveAddress = async () => {
     if (!newAddress.fullName || !newAddress.phone || !newAddress.street || !newAddress.city || !newAddress.state || !newAddress.pincode) {
-      setAddressError('Please fill in all the details before saving.');
+      setAddressError(t('checkout.errorFillDetails', 'Please fill in all the details before saving.'));
       return;
     }
 
@@ -137,27 +135,25 @@ export const CheckoutPage = () => {
       setIsAddingNewAddress(false);
       setNewAddress({ fullName: '', phone: '', street: '', city: '', state: '', pincode: '' });
     } catch (err) {
-      setAddressError('Failed to save address. Please try again.');
+      setAddressError(t('checkout.errorSaveAddress', 'Failed to save address. Please try again.'));
     } finally {
       setIsSavingAddress(false);
     }
   };
 
   const handleDeleteAddress = async (e, addressId, index) => {
-    e.stopPropagation(); // Prevent selecting the card when clicking trash
+    e.stopPropagation(); 
     if (!window.confirm("Are you sure you want to remove this address?")) return;
 
     try {
-      // Assuming your backend expects the address ID or Index to delete it
       const { data } = await apiClient.delete(`/user/addresses/${addressId || index}`);
       setSavedAddresses(data.addresses);
       
-      // Reset selection if they deleted the currently selected address
       if (selectedAddressIndex === index) setSelectedAddressIndex(null);
       if (data.addresses.length === 0) setIsAddingNewAddress(true);
       
     } catch (err) {
-      alert("Failed to delete address.");
+      alert(t('checkout.errorDeleteAddress', "Failed to delete address."));
     }
   };
   
@@ -170,10 +166,10 @@ export const CheckoutPage = () => {
     try {
       const { data } = await apiClient.post('/discounts/validate', { code: promoCode, subtotal: cartSubtotal });
       setAppliedDiscount(data.discountAmount);
-      setPromoMessage({ text: `Awesome! Saved ₹${data.discountAmount}`, type: 'success' });
+      setPromoMessage({ text: `${t('checkout.savedAmount')} ${data.discountAmount}`, type: 'success' });
     } catch (err) {
       setAppliedDiscount(0);
-      setPromoMessage({ text: err.response?.data?.message || 'Invalid or expired code', type: 'error' });
+      setPromoMessage({ text: err.response?.data?.message || t('checkout.invalidPromo'), type: 'error' });
     } finally {
       setIsVerifyingPromo(false);
     }
@@ -187,14 +183,14 @@ export const CheckoutPage = () => {
     }
 
     if (isAddingNewAddress && requiresShipping) {
-      setError('Please save your shipping address first by clicking the "Save & Select Address" button.');
+      setError(t('checkout.errorSaveFirst'));
       return;
     }
 
     let finalShippingAddress = 'Digital Delivery';
     if (requiresShipping) {
       if (selectedAddressIndex === null || !savedAddresses[selectedAddressIndex]) {
-        setError('Please select a shipping address.');
+        setError(t('checkout.errorSelectAddress'));
         return;
       }
       const addr = savedAddresses[selectedAddressIndex];
@@ -223,12 +219,10 @@ export const CheckoutPage = () => {
       const data = await orderService.checkout(payload);
 
       setPaymentOverlay({ active: true, status: 'waiting', orderId: data.orderId, paymentUrl: data.paymentPayload.redirectUrl });
-      
-      // Safely handle mobile redirections
       window.location.href = data.paymentPayload.redirectUrl;
 
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to initialize checkout. Please try again.');
+      setError(err.response?.data?.message || t('checkout.errorInitCheckout'));
       setLoading(false);
     }
   };
@@ -284,10 +278,10 @@ export const CheckoutPage = () => {
         <div className="max-w-2xl mx-auto p-6 pt-40 text-center">
           <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
             <ShoppingBag size={60} className="text-slate-300 dark:text-slate-700 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Your cart is empty</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 mb-8">Looks like you haven't added any books to your cart yet.</p>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t('checkout.emptyCartTitle')}</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 mb-8">{t('checkout.emptyCartDesc')}</p>
             <div className="flex justify-center">
-              <Button variant="primary" onClick={() => navigate('/store')} className="px-8 py-3">Explore the Store</Button>
+              <Button variant="primary" onClick={() => navigate('/store')} className="px-8 py-3">{t('checkout.exploreStore')}</Button>
             </div>
           </div>
         </div>
@@ -303,7 +297,7 @@ export const CheckoutPage = () => {
       <div className={`max-w-6xl mx-auto p-4 sm:p-6 pt-40 md:pt-32 transition-all duration-300 ${paymentOverlay.active ? 'blur-md pointer-events-none opacity-50' : ''}`}>
         
         <h1 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3 mb-8">
-          <ShoppingBag className="text-orange-600 dark:text-orange-500" /> Secure Checkout
+          <ShoppingBag className="text-orange-600 dark:text-orange-500" /> {t('checkout.secureCheckout')}
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -313,13 +307,13 @@ export const CheckoutPage = () => {
             
             {/* Live Cart Items */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
-              <h2 className="text-lg font-bold mb-4 text-slate-700 dark:text-slate-200">Review Items</h2>
+              <h2 className="text-lg font-bold mb-4 text-slate-700 dark:text-slate-200">{t('checkout.reviewItems')}</h2>
               <div className="space-y-4">
                 {cartItems.map((item) => (
                   <div key={item.bookId} className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 last:border-0 last:pb-0">
                     <div>
                       <h3 className="font-bold text-slate-800 dark:text-white">{item.name}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">{item.type} Edition - ₹{item.price}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{item.type} {t('checkout.edition')} - ₹{item.price}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
@@ -341,21 +335,21 @@ export const CheckoutPage = () => {
               <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-lg font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                    <MapPin size={20} /> Shipping Address
+                    <MapPin size={20} /> {t('checkout.shippingAddress')}
                   </h2>
                   {!isAddingNewAddress && savedAddresses.length > 0 && (
                     <button 
                       onClick={() => setIsAddingNewAddress(true)}
                       className="text-sm font-bold text-orange-600 dark:text-orange-500 hover:text-orange-700 flex items-center gap-1"
                     >
-                      <Plus size={16} /> Add New Address
+                      <Plus size={16} /> {t('checkout.addNewAddress')}
                     </button>
                   )}
                 </div>
 
                 {isFetchingAddresses ? (
                   <div className="flex items-center justify-center py-6 text-slate-400 dark:text-slate-500">
-                    <Loader2 className="animate-spin mr-2" size={20} /> Loading saved addresses...
+                    <Loader2 className="animate-spin mr-2" size={20} /> {t('checkout.loadingAddresses')}
                   </div>
                 ) : (
                   <>
@@ -408,20 +402,19 @@ export const CheckoutPage = () => {
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                          <input type="text" name="fullName" value={newAddress.fullName} placeholder="Full Name" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
-                          <input type="tel" name="phone" value={newAddress.phone} placeholder="Phone Number" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                          <input type="text" name="fullName" value={newAddress.fullName} placeholder={t('checkout.fullName')} onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                          <input type="tel" name="phone" value={newAddress.phone} placeholder={t('checkout.phone')} onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
                           
-                          <input type="text" name="street" value={newAddress.street} placeholder="Street Address / Flat No" onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm md:col-span-2" />
+                          <input type="text" name="street" value={newAddress.street} placeholder={t('checkout.street')} onChange={handleAddressChange} className="p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm md:col-span-2" />
                           
-                          {/* Pincode placed here so it feels natural to auto-fill the rest */}
                           <div className="relative">
-                            <input type="text" name="pincode" value={newAddress.pincode} placeholder="PIN Code" onChange={handlePincodeChange} maxLength={6} className="w-full p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                            <input type="text" name="pincode" value={newAddress.pincode} placeholder={t('checkout.pincode')} onChange={handlePincodeChange} maxLength={6} className="w-full p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
                             {isFetchingLocation && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-orange-500" />}
                           </div>
 
                           <div className="flex gap-4">
-                            <input type="text" name="city" value={newAddress.city} placeholder="City" onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
-                            <input type="text" name="state" value={newAddress.state} placeholder="State" onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                            <input type="text" name="city" value={newAddress.city} placeholder={t('checkout.city')} onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
+                            <input type="text" name="state" value={newAddress.state} placeholder={t('checkout.state')} onChange={handleAddressChange} className="w-1/2 p-3 bg-white dark:bg-slate-800 dark:text-white rounded-xl border border-slate-200 dark:border-slate-600 outline-none focus:border-orange-500 shadow-sm" />
                           </div>
                         </div>
                         
@@ -432,7 +425,7 @@ export const CheckoutPage = () => {
                             className="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
                           >
                             {isSavingAddress ? <Loader2 size={18} className="animate-spin" /> : null}
-                            {isSavingAddress ? 'Saving...' : 'Save & Select Address'}
+                            {isSavingAddress ? t('checkout.saving') : t('checkout.saveSelectAddress')}
                           </button>
                           
                           {savedAddresses.length > 0 && (
@@ -443,7 +436,7 @@ export const CheckoutPage = () => {
                               }}
                               className="px-6 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                             >
-                              Cancel
+                              {t('checkout.cancel')}
                             </button>
                           )}
                         </div>
@@ -456,18 +449,18 @@ export const CheckoutPage = () => {
 
             {/* Promo Code Section */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200"><Tag size={20} /> Apply Promo Code</h2>
+              <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200"><Tag size={20} /> {t('checkout.applyPromo')}</h2>
               <div className="flex gap-3">
                 <div className="relative flex-1">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
                   <input 
-                    type="text" placeholder="Enter Discount Code" 
+                    type="text" placeholder={t('checkout.enterPromo')} 
                     value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                     className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500 uppercase font-mono tracking-wider"
                   />
                 </div>
                 <Button variant="secondary" onClick={handleApplyPromo} disabled={isVerifyingPromo || !promoCode} className="px-6 border border-slate-300 dark:border-slate-600">
-                  {isVerifyingPromo ? <Loader2 size={18} className="animate-spin" /> : 'Apply'}
+                  {isVerifyingPromo ? <Loader2 size={18} className="animate-spin" /> : t('checkout.apply')}
                 </Button>
               </div>
               {promoMessage.text && (
@@ -481,30 +474,30 @@ export const CheckoutPage = () => {
 
           {/* Right Column: Order Summary (Sticky) */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none h-fit lg:sticky top-28 transition-colors duration-300">
-            <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-white">Order Summary</h2>
+            <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-white">{t('checkout.orderSummary')}</h2>
 
             <div className="space-y-3 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
               <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                <span>Subtotal</span> <span className="font-semibold">₹{cartSubtotal}</span>
+                <span>{t('checkout.subtotal')}</span> <span className="font-semibold">₹{cartSubtotal}</span>
               </div>
               
               {appliedDiscount > 0 && (
                 <div className="flex justify-between text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg -mx-2 px-2">
-                  <span className="flex items-center gap-1"><Tag size={14}/> Discount</span> 
+                  <span className="flex items-center gap-1"><Tag size={14}/> {t('checkout.discount')}</span> 
                   <span className="font-bold">-₹{appliedDiscount}</span>
                 </div>
               )}
 
               <div className="flex justify-between text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100/50 dark:border-slate-800/50">
-                <span>Taxes ({shopConfig.taxRate}% GST)</span> <span className="font-semibold">₹{taxAmount}</span>
+                <span>{t('checkout.taxes')} ({taxRate}% {t('checkout.gst')})</span> <span className="font-semibold">₹{taxAmount}</span>
               </div>
 
               <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                <span>Shipping</span> <span className="font-semibold">{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
+                <span>{t('checkout.shipping')}</span> <span className="font-semibold">{shipping === 0 ? t('checkout.free') : `₹${shipping}`}</span>
               </div>
               
               <div className="flex justify-between text-xl font-black text-slate-900 dark:text-white mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                <span>Total to Pay</span> <span className="text-orange-600 dark:text-orange-500">₹{finalTotal}</span>
+                <span>{t('checkout.totalToPay')}</span> <span className="text-orange-600 dark:text-orange-500">₹{finalTotal}</span>
               </div>
             </div>
 
@@ -516,13 +509,13 @@ export const CheckoutPage = () => {
               disabled={loading || (requiresShipping && isAddingNewAddress)}
               className="w-full py-4 text-lg font-bold flex justify-center items-center gap-2 shadow-lg shadow-orange-500/30 rounded-xl"
             >
-              {loading ? <><Loader2 size={20} className="animate-spin"/> Processing...</> : (
-                <>{user ? <CreditCard size={20} /> : <User size={20} />} {user ? 'Proceed to Pay' : 'Login to Checkout'}</>
+              {loading ? <><Loader2 size={20} className="animate-spin"/> {t('checkout.processing')}</> : (
+                <>{user ? <CreditCard size={20} /> : <User size={20} />} {user ? t('checkout.proceedToPay') : t('checkout.loginToCheckout')}</>
               )}
             </Button>
             
             <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4 flex items-center justify-center gap-1">
-              <Lock size={12} /> Secure encrypted payment
+              <Lock size={12} /> {t('checkout.securePayment')}
             </p>
           </div>
         </div>
@@ -536,13 +529,13 @@ export const CheckoutPage = () => {
             {paymentOverlay.status === 'waiting' && (
               <>
                 <Loader2 size={60} className="text-orange-500 animate-spin mx-auto mb-6" />
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Complete your payment</h2>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t('checkout.paymentWaiting')}</h2>
                 <p className="text-slate-500 dark:text-slate-400 mt-3 mb-6">
-                  Please complete the payment in the new tab. <br/>
-                  <strong>Do not close this window.</strong> We are waiting for the bank's confirmation.
+                  {t('checkout.paymentWaitingDesc1')} <br/>
+                  <strong>{t('checkout.paymentWaitingDesc2')}</strong>
                 </p>
                 <a href={paymentOverlay.paymentUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-orange-600 dark:text-orange-500 underline hover:text-orange-700 dark:hover:text-orange-400">
-                  Click here if the payment tab didn't open automatically
+                  {t('checkout.paymentLink')}
                 </a>
               </>
             )}
@@ -550,18 +543,18 @@ export const CheckoutPage = () => {
             {paymentOverlay.status === 'success' && (
               <>
                 <CheckCircle size={70} className="text-green-500 mx-auto mb-6" />
-                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">Payment Successful!</h2>
-                <p className="text-slate-500 dark:text-slate-400 mt-2">Redirecting to your dashboard...</p>
+                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{t('checkout.paymentSuccess')}</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2">{t('checkout.redirecting')}</p>
               </>
             )}
 
             {paymentOverlay.status === 'failed' && (
               <>
                 <div className="text-red-500 text-6xl mx-auto mb-6">⚠️</div>
-                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">Payment Failed</h2>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 mb-6">The payment was declined or cancelled.</p>
+                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{t('checkout.paymentFailed')}</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 mb-6">{t('checkout.paymentDeclined')}</p>
                 <Button onClick={() => setPaymentOverlay({ active: false })} className="w-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-700">
-                  Return to Checkout
+                  {t('checkout.returnToCheckout')}
                 </Button>
               </>
             )}
@@ -569,10 +562,10 @@ export const CheckoutPage = () => {
             {paymentOverlay.status === 'timeout' && (
               <>
                 <Clock size={70} className="text-orange-400 mx-auto mb-6" />
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Taking longer than usual...</h2>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 mb-2">We haven't received the final status from the bank yet.</p>
-                <p className="text-sm font-bold text-slate-800 dark:text-white mb-6">Please check your order status again in a few minutes.</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">Redirecting to your dashboard...</p>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t('checkout.paymentTimeout')}</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 mb-2">{t('checkout.timeoutDesc1')}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-white mb-6">{t('checkout.timeoutDesc2')}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">{t('checkout.redirecting')}</p>
               </>
             )}
 

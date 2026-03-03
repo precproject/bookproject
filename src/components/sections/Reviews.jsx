@@ -1,8 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { SectionHeading } from '../ui/SectionHeading';
+import { useTranslation } from 'react-i18next';
 
 export const Reviews = () => {
+  const { t } = useTranslation();
+  
   // A larger list of reviews to make the scrolling look full
   const reviews = [
     { name: "Sandeep R.", role: "Farmer & Entrepreneur", review: "हे पुस्तक वाचल्यानंतर माझ्या विचारांमध्ये खूप सकारात्मक बदल झाला आहे. खऱ्या अर्थाने चिंतामुक्तीचा मार्ग सापडला." },
@@ -27,7 +30,6 @@ export const Reviews = () => {
             viewport={{ once: true }}
             className="text-orange-600 dark:text-orange-500 font-bold uppercase tracking-widest text-xs md:text-sm block mb-2"
           >
-            Testimonials
           </motion.span>
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
@@ -36,7 +38,7 @@ export const Reviews = () => {
             transition={{ delay: 0.1 }}
             className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-white leading-tight"
           >
-            Readers Love It
+            {t('review.title')}
           </motion.h2>
         </div>
       </div>

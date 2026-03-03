@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Edit, Trash2, Package, Image as ImageIcon, Search, 
   X, Save, CheckCircle, AlertTriangle, XCircle, BookOpen, 
-  Eye, History, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Hash, Loader2 
+  Eye, History, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Hash, Loader2, Upload 
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 
@@ -16,13 +16,16 @@ export const DashboardInventory = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [selectedItem, setSelectedItem] = useState(null);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   
-  // Using _id for the database identifier, and sku for the visual Product ID
-  const defaultForm = { _id: null, sku: '', title: '', description: '', type: 'Physical', price: '', stock: '' };
+  const fileInputRef = useRef(null);
+
+  // Added coverImage to default state
+  const defaultForm = { _id: null, sku: '', title: '', description: '', type: 'Physical', price: '', stock: '', coverImage: '' };
   const [formData, setFormData] = useState(defaultForm);
 
   // --- FETCH LIVE DATA (WITH DEBOUNCE) ---
@@ -56,20 +59,15 @@ export const DashboardInventory = () => {
   const handleOpenEdit = (item) => {
     setFormData({
       _id: item._id, 
-      sku: item.sku || item.id, // Fallback to id if backend uses 'id' instead of 'sku'
+      sku: item.sku || item.id, 
       title: item.title,
       description: item.description,
       type: item.type,
       price: item.price,
-      stock: item.stock === null ? '' : item.stock
+      stock: item.stock === null ? '' : item.stock,
+      coverImage: item.coverImage || '' // Load existing image
     });
     setIsEditModalOpen(true);
-  };
-
-  const handleOpenView = (item) => {
-    setSelectedItem(item);
-    setIsHistoryExpanded(true); 
-    setIsViewModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -84,11 +82,41 @@ export const DashboardInventory = () => {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Frontend Security: Block massive files immediately
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Image size must be smaller than 5MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+
+      // Call your new upload API
+      const response = await adminService.uploadImage(uploadData);
+      
+      // Auto-fill the text box with the returned URL
+      setFormData(prev => ({ ...prev, coverImage: response.imageUrl }));
+      showToast("Image uploaded and optimized securely.");
+    } catch (error) {
+      console.error(error);
+      showToast("Image upload failed. Please check network or file type.");
+    } finally {
+      setIsUploading(false);
+      // Reset the file input so you can upload the same file again if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     
-    // Prevent duplicate SKUs locally before sending to server (Optional but good UX)
     const isDuplicateSKU = inventory.some(item => 
       (item.sku === formData.sku || item.id === formData.sku) && item._id !== formData._id
     );
@@ -107,21 +135,20 @@ export const DashboardInventory = () => {
         description: formData.description,
         type: formData.type,
         price: Number(formData.price),
-        stock: formattedStock
+        stock: formattedStock,
+        coverImage: formData.coverImage // Save image URL to DB
       };
 
       if (formData._id) {
-        // Edit Existing
         await adminService.updateInventory(formData._id, payload);
         showToast('Inventory updated successfully.');
       } else {
-        // Add New
         await adminService.addInventory(payload);
         showToast('New product added to inventory.');
       }
       
       setIsEditModalOpen(false);
-      loadInventory(); // Refresh the list from the server to get accurate stock history
+      loadInventory(); 
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to save product.');
     } finally {
@@ -129,12 +156,17 @@ export const DashboardInventory = () => {
     }
   };
 
+  const handleOpenView = (item) => {
+    setSelectedItem(item);
+    setIsHistoryExpanded(true); 
+    setIsViewModalOpen(true);
+  };
+
   const showToast = (message) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  // --- UI HELPERS ---
   const formatDateTime = (isoString) => {
     if (!isoString) return 'N/A';
     return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(isoString));
@@ -179,7 +211,6 @@ export const DashboardInventory = () => {
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
-        
         {/* Toolbar */}
         <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center">
           <div className="relative w-full max-w-md">
@@ -224,8 +255,15 @@ export const DashboardInventory = () => {
                       <tr key={item._id} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="p-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-16 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 shadow-sm shrink-0">
-                              {item.type === 'Physical' ? <BookOpen size={20} /> : <ImageIcon size={20} />}
+                            {/* Live Thumbnail Update */}
+                            <div className="w-12 h-16 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 shadow-sm shrink-0 overflow-hidden">
+                              {item.coverImage ? (
+                                <img src={item.coverImage} alt={item.title} className="w-full h-full object-cover" />
+                              ) : item.type === 'Physical' ? (
+                                <BookOpen size={20} />
+                              ) : (
+                                <ImageIcon size={20} />
+                              )}
                             </div>
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-800 text-sm">{item.title}</span>
@@ -277,7 +315,6 @@ export const DashboardInventory = () => {
           
           <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-[scaleIn_0.2s_ease-out] flex flex-col max-h-[90vh]">
             
-            {/* Modal Header */}
             <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">
@@ -290,12 +327,10 @@ export const DashboardInventory = () => {
               </button>
             </div>
 
-            {/* Modal Form */}
             <form onSubmit={handleSave} className="overflow-y-auto">
               <div className="p-6 space-y-5">
                 
                 <div className="grid grid-cols-2 gap-4">
-                  {/* EDITABLE SKU/ID FIELD */}
                   <div className="space-y-2 col-span-2 sm:col-span-1">
                     <label className="text-sm font-bold text-slate-700">SKU / Product ID <span className="text-red-500">*</span></label>
                     <div className="relative">
@@ -336,6 +371,50 @@ export const DashboardInventory = () => {
                   />
                 </div>
 
+                {/* --- NEW IMAGE UPLOAD SECTION --- */}
+                <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <label className="text-sm font-bold text-slate-700">Cover Image / File URL</label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input 
+                        type="text" 
+                        value={formData.coverImage}
+                        onChange={(e) => setFormData({...formData, coverImage: e.target.value})}
+                        placeholder="https://yourserver.com/uploads/..." 
+                        className="w-full pl-9 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
+                      />
+                    </div>
+                    
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleImageUpload} 
+                      accept="image/*" 
+                      className="hidden" 
+                    />
+                    
+                    <button 
+                      type="button" 
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="px-4 py-3 bg-emerald-100 text-emerald-800 font-bold rounded-xl hover:bg-emerald-200 transition-colors flex items-center justify-center gap-2 whitespace-nowrap shadow-sm disabled:opacity-50"
+                    >
+                      {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                      {isUploading ? 'Uploading...' : 'Upload'}
+                    </button>
+                  </div>
+                  
+                  {formData.coverImage && (
+                    <div className="mt-3 flex items-start gap-3">
+                      <div className="w-16 h-20 rounded-lg overflow-hidden border border-slate-200 shadow-sm shrink-0 bg-white">
+                        <img src={formData.coverImage} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">Preview generated. The image is securely hosted and linked to this product.</p>
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Short Description <span className="text-red-500">*</span></label>
                   <input 
@@ -348,43 +427,45 @@ export const DashboardInventory = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Price (₹) <span className="text-red-500">*</span></label>
-                  <input 
-                    type="number" 
-                    required
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: e.target.value})}
-                    placeholder="e.g. 350" 
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
-                  />
-                </div>
-
-                <div className={`space-y-2 p-4 rounded-xl border ${formData.type === 'Digital' ? 'bg-slate-50 border-slate-100' : 'bg-emerald-50 border-emerald-100'}`}>
-                  <label className="text-sm font-bold text-slate-700">Inventory Stock <span className="text-red-500">*</span></label>
-                  {formData.type === 'Digital' ? (
-                    <div className="flex items-center gap-2 text-slate-500 font-medium text-sm mt-2">
-                      <Package size={16} /> Digital products have infinite stock.
-                    </div>
-                  ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Price (₹) <span className="text-red-500">*</span></label>
                     <input 
                       type="number" 
                       required
                       min="0"
-                      value={formData.stock}
-                      onChange={(e) => setFormData({...formData, stock: e.target.value})}
-                      placeholder="Enter quantity available..." 
-                      className="w-full px-4 py-3 bg-white border border-emerald-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm mt-1" 
+                      value={formData.price}
+                      onChange={(e) => setFormData({...formData, price: e.target.value})}
+                      placeholder="e.g. 350" 
+                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
                     />
-                  )}
+                  </div>
+
+                  <div className={`space-y-2 p-3 rounded-xl border ${formData.type === 'Digital' ? 'bg-slate-50 border-slate-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                    <label className="text-sm font-bold text-slate-700">Inventory Stock <span className="text-red-500">*</span></label>
+                    {formData.type === 'Digital' ? (
+                      <div className="flex items-center gap-2 text-slate-500 font-medium text-xs mt-2">
+                        <Package size={14} /> Infinite stock
+                      </div>
+                    ) : (
+                      <input 
+                        type="number" 
+                        required
+                        min="0"
+                        value={formData.stock}
+                        onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                        placeholder="Qty" 
+                        className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm mt-1" 
+                      />
+                    )}
+                  </div>
                 </div>
 
               </div>
 
-              <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 mt-auto">
+              <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 mt-auto shrink-0">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} disabled={isSaving} className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50">Cancel</button>
-                <button type="submit" disabled={isSaving} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-900 transition-colors shadow-md disabled:opacity-50">
+                <button type="submit" disabled={isSaving || isUploading} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-900 transition-colors shadow-md disabled:opacity-50">
                   {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} 
                   {isSaving ? 'Saving...' : 'Save Product'}
                 </button>
@@ -403,8 +484,14 @@ export const DashboardInventory = () => {
             
             <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-16 bg-white rounded-lg shadow-sm border border-slate-200 flex items-center justify-center text-slate-500">
-                  {selectedItem.type === 'Physical' ? <BookOpen size={24} /> : <ImageIcon size={24} />}
+                <div className="w-12 h-16 bg-white rounded-lg shadow-sm border border-slate-200 flex items-center justify-center text-slate-500 overflow-hidden">
+                  {selectedItem.coverImage ? (
+                    <img src={selectedItem.coverImage} alt={selectedItem.title} className="w-full h-full object-cover" />
+                  ) : selectedItem.type === 'Physical' ? (
+                    <BookOpen size={24} />
+                  ) : (
+                    <ImageIcon size={24} />
+                  )}
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-slate-800">{selectedItem.title}</h2>
