@@ -16,6 +16,7 @@ i18n
       en: { translation: enTranslations },
       mr: { translation: mrTranslations }
     },
+    lng: 'mr',          // 👈 DEFAULT LANGUAGE
     fallbackLng: 'en', // If a translation is missing in Marathi, it falls back to English
     debug: false,
     interpolation: {
