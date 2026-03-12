@@ -10,7 +10,7 @@ export const ThemeProvider = ({ children }) => {
             if (stored) return stored;
             if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
         }
-        return 'light'; 
+        return 'dark'; 
     });
 
     // YOUR EXACT DOM MANIPULATION LOGIC

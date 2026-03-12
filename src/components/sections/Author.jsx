@@ -5,95 +5,175 @@ import { useTranslation } from 'react-i18next';
 
 import authorImage from '../../assets/author.png';
 
+
+/* --- PEN WRITING TEXT EFFECT (RESTORED & FIXED FOR MARATHI) --- */
+const letterContainer = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.04
+    }
+  }
+};
+
+const letter = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { ease: "easeOut", duration: 0.25 }
+  }
+};
+
+const AnimatedText = ({ text }) => {
+  // Safely split text into correct Marathi characters without breaking vowel signs (◌ै)
+  let characters = [];
+  try {
+    const segmenter = new Intl.Segmenter('mr', { granularity: 'grapheme' });
+    characters = Array.from(segmenter.segment(text)).map(s => s.segment);
+  } catch (e) {
+    // Fallback just in case
+    characters = text.split("");
+  }
+
+  return (
+    <motion.span
+      variants={letterContainer}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true }}
+      className="inline-block"
+    >
+      {characters.map((char, i) => (
+        <motion.span key={i} variants={letter} className="inline-block">
+          {char === " " ? "\u00A0" : char}
+        </motion.span>
+      ))}
+    </motion.span>
+  );
+};
+
+
 export const Author = () => {
   const { t } = useTranslation();
 
   return (
-    // Added overflow-hidden and relative for background elements
-    <section id="author" className="py-24 md:py-32 bg-white dark:bg-slate-950 relative overflow-hidden z-0 transition-colors duration-300">
+    <section id="author" className="py-16 md:py-24 lg:py-32 relative overflow-hidden z-0 transition-colors duration-300">
       
-      {/* PREMIUM BACKGROUND ELEMENTS: Subtle gradient blobs for depth and lighting */}
+      {/* PREMIUM BACKGROUND ELEMENTS */}
       <div className="absolute top-1/4 left-0 w-[500px] h-[500px] bg-orange-100/40 dark:bg-orange-900/10 rounded-full blur-3xl -z-10 pointer-events-none mix-blend-multiply dark:mix-blend-lighten" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-slate-100 dark:bg-slate-800/30 rounded-full blur-3xl -z-10 pointer-events-none" />
 
-      <div className="container mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-16 md:gap-24 lg:gap-32 max-w-7xl relative z-10">
-        
-        {/* === PREMIUM IMAGE CONTAINER === */}
+      {/* RESTORED: Exact gap-16 md:gap-24 lg:gap-32 for spacious desktop layout */}
+      <div className="container mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-12 md:gap-24 lg:gap-32 max-w-7xl relative z-10">
+
+        {/* ---------- MOBILE HEADER (ABOVE IMAGE) ---------- */}
+        <div className="md:hidden text-center w-full flex flex-col items-center mb-4">
+
+          <span className="inline-block mb-4 px-4 py-1.5 rounded-full border border-orange-200 dark:border-orange-800 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-mukta font-bold uppercase tracking-widest shadow-sm">
+            <AnimatedText text={t('author.sectionLabel', 'लेखक')} />
+          </span>
+
+          <h3 className="text-3xl sm:text-4xl gold-gradient-text drop-shadow-sm dark:drop-shadow-none font-rozha font-bold py-1 w-full leading-tight">
+            <AnimatedText text={t('author.name', 'कैलासराव तुकाराम तुरकणे पाटील')} />
+          </h3>
+
+        </div>
+
+
+        {/* ---------- IMAGE CONTAINER ---------- */}
         <motion.div 
           initial={{ opacity: 0, x: -30 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: "-50px" }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="w-full sm:w-3/4 md:w-2/5 lg:w-1/3 relative group"
+          // Perfectly sized for mobile, restores the 1/3 width for desktop
+          className="w-[80%] max-w-[280px] mx-auto md:max-w-none md:w-2/5 lg:w-1/3 relative group shrink-0"
         >
-          {/* Soft Glow behind the image */}
+
           <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/20 to-transparent dark:from-orange-500/10 blur-2xl rounded-[30px] transform rotate-3 scale-105 group-hover:rotate-0 transition-transform duration-700" />
           
-          {/* The Image Frame - Sleek border and colored shadow */}
           <div className="relative rounded-[30px] overflow-hidden shadow-[0_20px_50px_-20px_rgba(249,115,22,0.3)] dark:shadow-[0_20px_50px_-20px_rgba(249,115,22,0.15)] ring-1 ring-slate-100 dark:ring-slate-800/50">
+            
             <img 
               src={authorImage}
               alt={t('author.name')} 
               loading="lazy"
-              className="w-full object-cover aspect-[4/5] scale-100 group-hover:scale-105 transition-all duration-700 ease-in-out" 
+              className="w-full object-cover object-top aspect-[4/5] scale-100 group-hover:scale-105 transition-all duration-700 ease-in-out" 
             />
-            {/* Subtle glossy overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none mix-blend-overlay"></div>
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none mix-blend-overlay"></div>
+
           </div>
+
         </motion.div>
         
-        {/* === PREMIUM TEXT CONTENT === */}
-        <div className="w-full md:w-3/5 lg:w-3/5 text-center md:text-left">
+        {/* ---------- TEXT CONTENT ---------- */}
+        <div className="w-full md:w-3/5 lg:w-3/5 text-center md:text-left mt-8 md:mt-0">
           
-          <motion.div
-             initial={{ opacity: 0, y: 20 }}
-             whileInView={{ opacity: 1, y: 0 }}
-             viewport={{ once: true, margin: "-50px" }}
-             transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            {/* Refined Section Label */}
-            <span className="block text-orange-600 dark:text-orange-500 text-sm font-bold tracking-[0.2em] uppercase mb-4">
-              {t('author.sectionLabel')}
+          {/* DESKTOP HEADER */}
+          <div className="hidden md:block mb-8">
+
+            <span className="inline-block mb-4 px-4 py-1.5 rounded-full border border-orange-200 dark:border-orange-800 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-sm font-mukta font-bold uppercase tracking-widest shadow-sm">
+              <AnimatedText text={t('author.sectionLabel', 'लेखक')} />
             </span>
 
-            {/* Bold, Gradient Author Name */}
-            <h3 className="p-3 text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-6 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-800 to-orange-800 dark:from-white dark:via-slate-200 dark:to-orange-300">
-              {t('author.name')}
+            {/* Title - Uses whitespace-nowrap and exact font sizing so it fits purely on one line with the restored gap */}
+            <h3 className="gold-gradient-text drop-shadow-sm dark:drop-shadow-none py-2 text-3xl md:text-4xl lg:text-[2.5rem] xl:text-[3rem] font-rozha font-bold leading-tight whitespace-nowrap tracking-tight">
+              <AnimatedText text={t('author.name', 'कैलासराव तुकाराम तुरकणे पाटील')} />
             </h3>
 
-            {/* Stylized Quote with decorative icon */}
-            <div className="relative mb-10 p-2">
-              <Quote className="absolute -top-2 -left-4 text-orange-200 dark:text-orange-900/30 w-12 h-12 md:-left-6 md:-top-4 md:w-16 md:h-16 z-0 opacity-50" />
-              <p className="relative z-10 text-xl md:text-2xl text-slate-700 dark:text-slate-300 italic font-serif leading-relaxed font-medium">
-                "{t('author.quote')}"
-              </p>
-            </div>
+          </div>
 
-            {/* Refined Translated Text with better spacing */}
-            <div className="space-y-5 text-slate-600 dark:text-slate-400 mb-10 leading-loose text-base md:text-lg font-light tracking-wide max-w-2xl mx-auto md:mx-0">
-              <p>
-                {t('author.para1')}
-              </p>
-              <p>
-                {t('author.para2')}
-              </p>
-            </div>
+          {/* QUOTE */}
+          <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true }}
+             transition={{ duration: 0.6, delay: 0.3 }}
+             className="relative mb-6 md:mb-8 p-2 md:p-0"
+          >
+            <Quote className="absolute -top-4 -left-2 text-orange-200 dark:text-orange-900/30 w-12 h-12 md:-left-8 md:-top-4 md:w-16 md:h-16 z-0 opacity-50" />
             
-            {/* Minimalist, Sleek Social Icons */}
-            <div className="flex justify-center md:justify-start gap-4">
-              {[Twitter, Linkedin, Instagram, Facebook].map((Icon, i) => (
-                <a 
-                  key={i} 
-                  href="#" 
-                  aria-label="Social Link"
-                  className="group p-3 rounded-full border-2 border-slate-200 dark:border-slate-800 hover:border-orange-500 dark:hover:border-orange-500 text-slate-500 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-all duration-300 active:scale-95 bg-transparent hover:bg-orange-50 dark:hover:bg-slate-900"
-                >
-                  <Icon size={20} className="transition-transform group-hover:-translate-y-1" />
-                </a>
-              ))}
-            </div>
+            <p className="relative z-10 text-[1.1rem] md:text-xl lg:text-2xl text-slate-700 dark:text-slate-300 italic font-serif leading-relaxed font-medium">
+              "{t('author.quote')}"
+            </p>
           </motion.div>
+
+          {/* PARAGRAPHS */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="space-y-4 md:space-y-5 text-slate-600 dark:text-slate-400 mb-8 leading-loose text-sm md:text-[1.05rem] font-mukta tracking-wide max-w-2xl mx-auto md:mx-0 text-left px-4 md:px-0"
+          >
+            <p>{t('author.para1')}</p>
+            <p>{t('author.para2')}</p>
+          </motion.div>
+            
+          {/* SOCIAL ICONS */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="flex justify-center md:justify-start gap-4"
+          >
+            {[Twitter, Linkedin, Instagram, Facebook].map((Icon, i) => (
+              <a 
+                key={i} 
+                href="#" 
+                aria-label="Social Link"
+                className="group p-3 md:p-3.5 rounded-full border-2 border-slate-200 dark:border-slate-800 hover:border-orange-500 dark:hover:border-orange-500 text-slate-500 dark:text-slate-400 hover:text-white dark:hover:text-white transition-all duration-300 active:scale-95 bg-transparent hover:bg-orange-500 dark:hover:bg-orange-500 shadow-sm"
+              >
+                <Icon size={18} className="md:w-5 md:h-5 transition-transform group-hover:-translate-y-1" />
+              </a>
+            ))}
+          </motion.div>
+
         </div>
+
       </div>
     </section>
   );

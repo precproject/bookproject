@@ -1,11 +1,234 @@
+/* ---------------- GOOGLE FONTS ---------------- */
+@import url('https://fonts.googleapis.com/css2?family=Rozha+One&family=Mukta:wght@200;300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+/* ---------------- TAILWIND ---------------- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------- THEME VARIABLES ---------------- */
+@layer base {
+  :root {
+    /* LIGHT MODE (Dimmed / Soft Silver for a premium feel) */
+    --bg-deep: #e2e8f0;       /* Was very light slate, now a deeper Slate-200 */
+    --bg-surface: #f1f5f9;    /* Was pure white, now soft Slate-100 */
+    --bg-highlight: #cbd5e1;  /* Deeper Slate-300 for highlights */
+
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #475569;    /* Darkened slightly for better contrast */
+
+    /* Light mode glass card (adjusted for the darker background) */
+    --glass-bg: rgba(241, 245, 249, 0.75);
+    --glass-border: rgba(0, 0, 0, 0.1);
+
+    /* EXACT ORIGINAL GOLD VARIABLES */
+    --gold: #f59e0b;
+    --gold-glow: #d97706;
+    --gold-light: #fbbf24;
+    --accent-rose: #f43f5e;
+    
+    /* THE FIX: Solid gold center for Light Mode */
+    --gold-mid: #f59e0b;
+  }
+
+  .dark {
+    /* EXACT ORIGINAL DARK BACKGROUNDS & TEXT */
+    --bg-deep: #020617;
+    --bg-surface: #0f172a;
+    --bg-highlight: #1e293b;
+
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+
+    /* EXACT ORIGINAL DARK GLASS CARD */
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+
+    /* EXACT ORIGINAL GOLD VARIABLES */
+    --gold: #f59e0b;
+    --gold-glow: #d97706;
+    --gold-light: #fbbf24;
+    --accent-rose: #f43f5e;
+    
+    /* THE FIX: Bright white-yellow center for Dark Mode */
+    --gold-mid: #fffbeb;
+  }
+}
+
+/* ---------------- GLOBAL ---------------- */
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 80px;
 }
 
 body {
-  @apply antialiased text-slate-900 bg-white dark:bg-slate-950 dark:text-white transition-colors duration-300;
+  font-family: 'Mukta', sans-serif;
+  @apply antialiased transition-colors duration-500;
+
+  background: var(--bg-deep);
+  color: var(--text-primary);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ---------------- RESET ---------------- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ---------------- GRAIN OVERLAY ---------------- */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+}
+
+/* ---------------- SCROLLBAR ---------------- */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gold-glow);
+  border-radius: 3px;
+}
+
+/* ---------------- TYPOGRAPHY ---------------- */
+.font-rozha {
+  font-family: "Rozha One", serif;
+}
+
+.font-mukta {
+  font-family: "Mukta", sans-serif;
+}
+
+.font-playfair {
+  font-family: "Playfair Display", serif;
+}
+
+/* ---------------- TEXT EFFECTS ---------------- */
+.gold-gradient-text {
+  background: linear-gradient(
+    135deg,
+    var(--gold),
+    var(--gold-mid),
+    var(--gold-glow)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---------------- UI EFFECTS ---------------- */
+.glow-btn {
+  transition: all 0.3s ease;
+  box-shadow:
+    0 0 20px rgba(245,158,11,0.3),
+    0 0 60px rgba(245,158,11,0.1);
+}
+
+.glow-btn:hover {
+  box-shadow:
+    0 0 30px rgba(245,158,11,0.5),
+    0 0 80px rgba(245,158,11,0.2);
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  transition: background-color 0.5s ease, border-color 0.5s ease;
+}
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(245,158,11,0.3),
+    transparent
+  );
+}
+
+/* ---------------- ANIMATIONS ---------------- */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%,100% {
+    box-shadow: 0 0 20px rgba(245,158,11,0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(245,158,11,0.4);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes particleDrift {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10%,90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(50px);
+    opacity: 0;
+  }
+}
+
+/* ---------------- DEBUG ---------------- */
+@layer base {
+  [data-debug-wrapper="true"] {
+    display: contents !important;
+  }
+  [data-debug-wrapper="true"] > * {
+    margin: inherit;
+    padding: inherit;
+    gap: inherit;
+    column-gap: inherit;
+    row-gap: inherit;
+  }
 }

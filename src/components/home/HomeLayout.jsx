@@ -79,15 +79,16 @@ export const HomeLayout = () => {
 
         {sections.author && <><SectionDivider nextSectionId="author" /><Author /></>}
 
+{/*
         {sections.video && <><SectionDivider nextSectionId="video" /><VideoSections /></>}
-
+*/}
         {sections.chapters && <><SectionDivider nextSectionId="chapters" /><Chapters /></>}
 
         {sections.reviews && <><SectionDivider nextSectionId="reviews" /><Reviews /></>}
 
         {sections.blog && <><SectionDivider nextSectionId="blog" /><Blog /></>}
 
-        {sections.creativeHero && <HeroCreative onOrderClick={() => setIsCheckoutOpen(true)} />}
+        {sections.creativeHero && <><SectionDivider nextSectionId="creative" /><HeroCreative onOrderClick={() => setIsCheckoutOpen(true)} /></>}
 
         {sections.quotes && <QuoteSection />}
       </main>

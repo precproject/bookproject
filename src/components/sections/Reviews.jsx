@@ -1,12 +1,12 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { SectionHeading } from '../ui/SectionHeading';
-import { useTranslation } from 'react-i18next';
+import React from "react";
+import { motion } from "framer-motion";
+import { Star, Quote } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export const Reviews = () => {
   const { t } = useTranslation();
-  
-  // A larger list of reviews to make the scrolling look full
+
+  // Note: These could also be fetched from your API/DB eventually!
   const reviews = [
     { name: "Sandeep R.", role: "Farmer & Entrepreneur", review: "हे पुस्तक वाचल्यानंतर माझ्या विचारांमध्ये खूप सकारात्मक बदल झाला आहे. खऱ्या अर्थाने चिंतामुक्तीचा मार्ग सापडला." },
     { name: "Priya D.", role: "Student", review: "The language is so simple and relatable. It feels like an elder guiding you through life's challenges." },
@@ -15,70 +15,118 @@ export const Reviews = () => {
     { name: "Vishal M.", role: "Shop Owner", review: "अत्यंत सोप्या भाषेत जीवनाचे तत्त्वज्ञान मांडले आहे. रोजच्या धकाधकीच्या जीवनात हे पुस्तक एक उत्तम मार्गदर्शक आहे." },
   ];
 
-  // We duplicate the array so the scrolling loop is seamless
   const duplicatedReviews = [...reviews, ...reviews];
 
-  return (
-    <section id="reviews" className="py-20 md:py-24 bg-slate-900 overflow-hidden transition-colors duration-300">
-      
-      {/* Container flex adjusted to push header to the left */}
-      <div className="container mx-auto px-4 md:px-6 mb-12 flex justify-start dark:text-orange-500">
-        <div className={`mb-12 md:mb-16 ${'left' === 'center' ? 'text-center' : 'text-left'}`}>
-          <motion.span 
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-orange-600 dark:text-orange-500 font-bold uppercase tracking-widest text-xs md:text-sm block mb-2"
-          >
-          </motion.span>
-          <motion.h2 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-white leading-tight"
-          >
-            {t('review.title')}
-          </motion.h2>
+  const colors = [
+    "from-amber-500 to-orange-600",
+    "from-rose-500 to-pink-600",
+    "from-blue-500 to-indigo-600",
+    "from-emerald-500 to-teal-600",
+    "from-purple-500 to-violet-600",
+  ];
+
+  const ReviewCard = ({ review, index }) => (
+    // UI FIX 1: Used your premium 'glass-card' class and added group-hover for a subtle interaction glow
+    <div className="flex-shrink-0 w-[280px] sm:w-[320px] md:w-[400px] glass-card rounded-[2rem] p-6 md:p-8 mx-3 transition-all duration-300 group hover:-translate-y-1 hover:shadow-xl">
+
+      <Quote className="w-8 h-8 text-amber-500/20 dark:text-amber-500/20 mb-4 transition-colors group-hover:text-amber-500/40" />
+
+      <div className="flex gap-1 mb-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+        ))}
+      </div>
+
+      {/* UI FIX 2: Adaptive text color (slate-700 in light mode, slate-300 in dark mode) */}
+      <p className="font-mukta text-slate-700 dark:text-slate-300 leading-relaxed mb-6 text-sm md:text-base">
+        "{review.review}"
+      </p>
+
+      <div className="flex items-center gap-3">
+        <div
+          className={`w-10 h-10 rounded-full bg-gradient-to-br ${
+            colors[index % colors.length]
+          } flex items-center justify-center shadow-md`}
+        >
+          <span className="font-mukta text-sm font-bold text-white">
+            {review.name.charAt(0)}
+          </span>
+        </div>
+
+        <div>
+          {/* UI FIX 3: Adaptive title and role text colors */}
+          <div className="font-mukta font-bold text-slate-900 dark:text-slate-100 text-sm md:text-base">
+            {review.name}
+          </div>
+          <div className="font-mukta text-xs text-slate-500 dark:text-slate-400 mt-0.5">{review.role}</div>
         </div>
       </div>
 
-      {/* The Scrolling Container */}
-      <div className="relative flex overflow-x-hidden">
-        {/* Gradient fades on the left and right edges for a professional look */}
-        <div className="absolute top-0 bottom-0 left-0 w-24 md:w-48 bg-gradient-to-r from-slate-900 to-transparent z-10 pointer-events-none" />
-        <div className="absolute top-0 bottom-0 right-0 w-24 md:w-48 bg-gradient-to-l from-slate-900 to-transparent z-10 pointer-events-none" />
+    </div>
+  );
 
+  return (
+    <section
+      id="reviews"
+      // UI FIX 4: Removed hardcoded bg-[#0a0f1e] so it inherits the global light/dark background
+      className="relative py-24 md:py-32 overflow-hidden"
+    >
+      {/* Subtle Background Glows */}
+      <div className="absolute top-1/3 right-0 w-96 h-96 bg-amber-500/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/5 blur-[100px] rounded-full pointer-events-none" />
+
+      <div className="relative z-10">
+
+        {/* HEADER */}
         <motion.div
-          animate={{ x: ["0%", "-50%"] }}
-          transition={{ ease: "linear", duration: 30, repeat: Infinity }}
-          className="flex flex-nowrap gap-6 md:gap-8 px-4"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-16 px-4"
         >
-          {duplicatedReviews.map((r, i) => (
-            <div 
-              key={i} 
-              className="bg-slate-800 p-6 md:p-8 rounded-3xl relative w-[300px] md:w-[400px] shrink-0"
-            >
-              <div className="text-orange-500 mb-6">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.0166 21L5.0166 18C5.0166 16.8954 5.91203 16 7.0166 16H10.0166C10.5689 16 11.0166 15.5523 11.0166 15V9C11.0166 8.44772 10.5689 8 10.0166 8H6.0166C5.46432 8 5.0166 8.44772 5.0166 9V11C5.0166 11.5523 4.56889 12 4.0166 12H3.0166V5H13.0166V15C13.0166 18.3137 10.3303 21 7.0166 21H5.0166Z" />
-                </svg>
-              </div>
-              <p className="text-slate-300 italic mb-8 text-sm md:text-base leading-relaxed whitespace-normal">
-                "{r.review}"
-              </p>
-              <div className="flex items-center gap-4 mt-auto">
-                <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center font-bold text-xl text-orange-400 shrink-0">
-                  {r.name.charAt(0)}
-                </div>
-                <div>
-                  <h5 className="font-bold text-white text-sm md:text-base">{r.name}</h5>
-                  <p className="text-xs text-slate-400">{r.role}</p>
-                </div>
-              </div>
-            </div>
-          ))}
+          {/* UI FIX 5: Adaptive badge styling */}
+          <span className="inline-block px-4 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-sm font-mukta font-bold tracking-wide mb-6">
+            {t("review.badge", "वाचकांचे मत")}
+          </span>
+
+          <h2 className="font-rozha text-4xl sm:text-5xl lg:text-6xl gold-gradient-text drop-shadow-sm dark:drop-shadow-none mb-4">
+            {t("review.title", "हजारो उद्योजकांचा विश्वास")}
+          </h2>
+
+          <p className="text-slate-600 dark:text-slate-400 font-mukta text-lg max-w-xl mx-auto">
+            {t("review.subtitle", "हजारो वाचकांच्या जीवनात सकारात्मक बदल घडवणारे पुस्तक")}
+          </p>
         </motion.div>
+
+        {/* MARQUEE */}
+        <div className="relative">
+
+          {/* UI FIX 6: The fade-out edges now perfectly match the background theme variables!
+              (Slate-200 for light mode, Slate-950 for dark mode) */}
+          <div className="absolute left-0 top-0 bottom-0 w-16 md:w-40 bg-gradient-to-r from-slate-200 dark:from-slate-950 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-16 md:w-40 bg-gradient-to-l from-slate-200 dark:from-slate-950 to-transparent z-10 pointer-events-none" />
+
+          <div className="flex animate-marquee mb-6" style={{ width: "max-content" }}>
+            {duplicatedReviews.map((r, i) => (
+              <ReviewCard key={`row1-${i}`} review={r} index={i} />
+            ))}
+          </div>
+
+          <div
+            className="flex animate-marquee"
+            style={{
+              width: "max-content",
+              animationDirection: "reverse",
+              animationDuration: "50s",
+            }}
+          >
+            {[...duplicatedReviews].reverse().map((r, i) => (
+              <ReviewCard key={`row2-${i}`} review={r} index={i + 100} />
+            ))}
+          </div>
+
+        </div>
       </div>
     </section>
   );

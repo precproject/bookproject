@@ -6,9 +6,9 @@ import { useTranslation } from 'react-i18next';
 
 // Make sure to import your actual book cover!
 import bookCoverImg from '../../assets/cover.png'; 
+import backCoverImg from '../../assets/back.png'; 
 
 // Premium Image for the inside right page
-const rightPageImg = "https://images.unsplash.com/photo-1516414447565-b14be0adf13e?auto=format&fit=crop&w=800&q=80";
 
 export const HeroCreative = () => {
   const { t } = useTranslation();
@@ -43,7 +43,7 @@ export const HeroCreative = () => {
   };
 
   return (
-    <section ref={targetRef} className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-slate-900 pt-24 pb-24 lg:pt-16 lg:pb-16">
+    <section id="creative" ref={targetRef} className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-slate-900 pt-24 pb-24 lg:pt-16 lg:pb-16">
       
       {/* === LAYER 1: PREMIUM ANIMATED BACKGROUND === */}
       <div className="absolute inset-0 z-0 pointer-events-none">
@@ -99,7 +99,6 @@ export const HeroCreative = () => {
               >
                 {t('hero.title')}
                 <span className="block text-xl sm:text-2xl md:text-3xl font-light text-teal-100/80 mt-2 md:mt-4 font-sans uppercase">
-                  {t('hero.subtitle')}
                 </span>
               </motion.h1>
             </div>
@@ -169,7 +168,7 @@ export const HeroCreative = () => {
 
                   {/* --- BASE LAYER (Inside Right Page) --- */}
                   <div className="absolute inset-0 bg-slate-100 dark:bg-slate-200 rounded-3xl md:rounded-[3rem] shadow-2xl overflow-hidden border border-slate-300 z-10">
-                     <img src={rightPageImg} alt="Inside Book Image" className="w-full h-full object-cover opacity-95 mix-blend-multiply" />
+                     <img src={backCoverImg} alt="Inside Book Image" className="w-full h-full object-cover opacity-95 mix-blend-multiply" />
                      {/* Deep inner spine shadow */}
                      <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/40 to-transparent pointer-events-none" />
                   </div>
@@ -200,16 +199,16 @@ export const HeroCreative = () => {
                       style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
                     >
                        {/* Subtle Paper Texture */}
-                       <div className="absolute inset-0 opacity-[0.04] bg-[url('https://www.transparenttextures.com/patterns/paper.png')] pointer-events-none mix-blend-multiply" />
+                       <div className="absolute inset-0 opacity-[0.04] bg-[url('back.png')] pointer-events-none mix-blend-multiply" />
                        
                        {/* Classic Book Title Page Text */}
                        <div className="relative z-10 flex flex-col items-center opacity-80 mix-blend-multiply px-4">
                           <div className="w-12 h-px bg-slate-400 mb-6" />
                           <h4 className="text-[10px] md:text-xs uppercase tracking-[0.3em] font-semibold text-slate-500 mb-3">
-                            Written By
+                            {t('author.sectionLabel', 'लेखक')}
                           </h4>
                           <h3 className="font-serif font-bold text-slate-800 text-xl sm:text-2xl md:text-3xl leading-snug">
-                            कैलासराव पाटील
+                            {t('author.name', 'कैलासराव तुकाराम तुरकणे पाटील')} 
                           </h3>
                           <div className="w-12 h-px bg-slate-400 mt-6" />
                        </div>

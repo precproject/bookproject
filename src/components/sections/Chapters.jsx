@@ -1,15 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Map, Sparkles } from 'lucide-react';
-import { SectionHeading } from '../ui/SectionHeading';
 import { useTranslation } from 'react-i18next';
 
 export const Chapters = () => {
   const { t } = useTranslation();
-  
-  // Reference to the section top for smooth scroll restoration
   const sectionRef = useRef(null);
-  
+
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [showAll, setShowAll] = useState(false);
 
@@ -20,43 +17,58 @@ export const Chapters = () => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
-  // The Magic Fix: Intelligently manage scroll position when collapsing
   const handleToggleShowAll = () => {
     if (showAll) {
-      // If we are about to "Show Less", scroll smoothly back to the top of this section first
       if (sectionRef.current) {
-        const yOffset = -100; // Offset to account for your fixed Navbar
+        const yOffset = -100;
         const y = sectionRef.current.getBoundingClientRect().top + window.scrollY + yOffset;
         window.scrollTo({ top: y, behavior: 'smooth' });
       }
     }
-    // Toggle the state
     setShowAll(!showAll);
   };
 
   return (
-    <section ref={sectionRef} id="chapters" className="py-24 bg-slate-50 dark:bg-slate-950 transition-colors duration-300 overflow-hidden">
-      <div className="container mx-auto px-4 md:px-6 max-w-3xl">
+    <section
+      ref={sectionRef}
+      id="chapters"
+      className="relative py-20 md:py-32 overflow-hidden z-0"
+    >
+      {/* Background Glows */}
+      <div className="absolute right-0 top-1/3 w-[400px] h-[400px] bg-amber-500/5 blur-[120px] rounded-full pointer-events-none -z-10" />
+      <div className="absolute left-0 bottom-1/4 w-[300px] h-[300px] bg-orange-500/5 blur-[100px] rounded-full pointer-events-none -z-10" />
+
+      <div className="container mx-auto px-4 md:px-6 max-w-4xl relative z-10">
         
-        {/* Header with Roadmap Metaphor */}
-        <div className="mb-16 flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100/50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold text-xs uppercase tracking-widest mb-4">
-            <Map size={14} /> {t('chapters.subtitle', 'The Journey')}
-          </div>
-          <SectionHeading 
-            title={t('chapters.title', "What's Inside?")} 
-            subtitle="" 
-            align="center" 
-          />
-        </div>
+        {/* HEADER */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-16"
+        >
+          {/* Badge */}
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs md:text-sm font-mukta font-black uppercase tracking-widest mb-6 shadow-sm">
+            <Map className="w-4 h-4" />
+            {t('chapters.subtitle', 'अनुक्रमणिका')}
+          </span>
 
-        {/* --- THE ROADMAP TIMELINE --- */}
-        <div className="relative pl-4 md:pl-8">
+          <h2 className="font-rozha text-4xl sm:text-5xl lg:text-6xl gold-gradient-text drop-shadow-sm dark:drop-shadow-none mb-4">
+            {t('chapters.title', 'पुस्तकात काय आहे?')}
+          </h2>
+
+          <p className="text-slate-600 dark:text-slate-400 font-mukta text-lg tracking-wide">
+            {t('chapters.description', '१५ प्रकरणे — प्रत्येक तुमच्या व्यावसायिक प्रवासासाठी महत्त्वाचे')}
+          </p>
+        </motion.div>
+
+        {/* TIMELINE */}
+        <div className="relative pl-6 md:pl-10">
           
-          {/* The Continuous Vertical Line */}
-          <div className="absolute top-4 bottom-4 left-[27px] md:left-[43px] w-[2px] bg-gradient-to-b from-orange-500/50 via-slate-200 dark:via-slate-800 to-transparent rounded-full" />
+          {/* Glowing Vertical Line */}
+          <div className="absolute top-4 bottom-4 left-[32px] md:left-[46px] w-[2px] bg-gradient-to-b from-amber-500 via-amber-500/20 to-transparent rounded-full" />
 
-          {/* layout prop here ensures smooth height transitions for the whole list */}
           <motion.div layout className="flex flex-col gap-6 md:gap-8">
             <AnimatePresence initial={false}>
               {displayedChapters.map((chapter, i) => {
@@ -64,68 +76,75 @@ export const Chapters = () => {
                 const hasTopics = chapter.topics && chapter.topics.length > 0;
 
                 return (
-                  <motion.div 
+                  <motion.div
                     layout="position"
-                    key={i} 
-                    initial={{ opacity: 0, x: -20, scale: 0.95 }} 
-                    animate={{ opacity: 1, x: 0, scale: 1 }} 
-                    exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                    transition={{ duration: 0.3, delay: showAll ? 0 : i * 0.05 }} // Faster exit, staggered entry
-                    className="relative pl-10 md:pl-16 group"
+                    key={i}
+                    initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.35, delay: i * 0.05 }}
+                    className="relative pl-12 md:pl-16 group"
                   >
-                    {/* Timeline Node (Chapter Number) */}
-                    <div className={`absolute left-0 md:left-3 top-3 w-10 h-10 md:w-12 md:h-12 rounded-full border-4 flex items-center justify-center font-bold font-serif text-sm md:text-base transition-all duration-300 z-10 ${
-                      isExpanded 
-                        ? 'bg-orange-600 border-orange-100 dark:border-orange-900/30 text-white shadow-lg shadow-orange-500/30 scale-110' 
-                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 group-hover:border-orange-200 dark:group-hover:border-orange-500/30 group-hover:text-orange-500'
+                    {/* Timeline Node - Upgraded Font */}
+                    <div className={`absolute left-0 md:left-2 top-3 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-rozha font-bold text-base md:text-lg transition-all duration-300 z-10 ${
+                      isExpanded
+                        ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/40 scale-110 border border-orange-300/50'
+                        : 'glass-card text-slate-500 dark:text-slate-400 group-hover:border-amber-400/50 group-hover:text-amber-500 dark:group-hover:text-amber-400'
                     }`}>
                       {chapter.num}
                     </div>
 
-                    {/* Interactive Chapter Card */}
-                    <div 
+                    {/* Chapter Card */}
+                    <div
                       onClick={() => hasTopics && toggleChapter(i)}
-                      className={`relative p-5 md:p-6 rounded-2xl md:rounded-3xl border transition-all duration-300 ${hasTopics ? 'cursor-pointer' : ''} ${
+                      className={`relative p-6 md:p-8 rounded-2xl md:rounded-[2rem] transition-all duration-300 cursor-pointer glass-card ${
                         isExpanded
-                          ? 'bg-white dark:bg-slate-900 border-orange-200 dark:border-orange-500/30 shadow-xl shadow-slate-200/40 dark:shadow-none'
-                          : 'bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800/80 hover:bg-white dark:hover:bg-slate-900 hover:border-orange-200 dark:hover:border-orange-500/30 shadow-sm hover:shadow-md'
+                          ? 'border-amber-400/50 shadow-[0_8px_30px_rgba(245,158,11,0.15)] bg-white/60 dark:bg-slate-800/60'
+                          : 'hover:border-amber-400/30 hover:shadow-lg hover:-translate-y-1'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="text-xs md:text-sm font-bold text-orange-500 dark:text-orange-400 mb-1 tracking-wider uppercase">
+                          {/* Subtitle - Typo Fix (Mukta, Black, tracking-widest) */}
+                          <p className="font-mukta text-[11px] md:text-xs font-black text-orange-600 dark:text-amber-500 mb-1.5 tracking-widest uppercase">
                             {chapter.sub}
                           </p>
-                          <h4 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-tight">
+                          
+                          {/* Title - Typo Fix (Rozha, larger text, snug line-height) */}
+                          <h4 className="font-rozha text-xl md:text-2xl text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-amber-400 transition-colors leading-snug">
                             {chapter.title}
                           </h4>
                         </div>
-                        
-                        {/* Expand Icon */}
+
                         {hasTopics && (
-                          <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-transform duration-300 bg-slate-50 dark:bg-slate-800 text-slate-400 ${isExpanded ? 'rotate-180 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'group-hover:bg-orange-50 dark:group-hover:bg-orange-900/20 group-hover:text-orange-500'}`}>
+                          <motion.div
+                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="shrink-0 w-8 h-8 rounded-full glass-card flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-orange-600 dark:group-hover:text-amber-400 transition-colors mt-1"
+                          >
                             <ChevronDown size={18} strokeWidth={2.5} />
-                          </div>
+                          </motion.div>
                         )}
                       </div>
 
-                      {/* --- COMPACT TAG CLOUD FOR SUBTOPICS --- */}
+                      {/* Expanded Topics */}
                       <AnimatePresence>
                         {isExpanded && hasTopics && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
+                            transition={{ duration: 0.35 }}
                             className="overflow-hidden"
                           >
-                            <div className="pt-5 mt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-2">
+                            <div className="pt-5 mt-5 border-t border-slate-200/50 dark:border-slate-700/50 flex flex-wrap gap-2.5">
                               {chapter.topics.map((topic, idx) => (
-                                <span 
-                                  key={idx} 
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-[13px] md:text-sm rounded-lg font-medium"
+                                // Topics/Pills - Typo Fix (Mukta, Medium, slightly larger text)
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-700/50 text-slate-700 dark:text-slate-300 text-sm md:text-[15px] font-mukta font-medium rounded-lg shadow-sm"
                                 >
-                                  <Sparkles size={12} className="text-orange-400" />
+                                  <Sparkles size={14} className="text-amber-500" />
                                   {topic}
                                 </span>
                               ))}
@@ -133,7 +152,6 @@ export const Chapters = () => {
                           </motion.div>
                         )}
                       </AnimatePresence>
-
                     </div>
                   </motion.div>
                 );
@@ -142,15 +160,23 @@ export const Chapters = () => {
           </motion.div>
         </div>
 
-        {/* Action Button: Show More / Show Less */}
+        {/* SHOW MORE BUTTON */}
         {chaptersList.length > 6 && (
           <motion.div layout className="mt-12 flex justify-center pl-4 md:pl-8">
             <button
               onClick={handleToggleShowAll}
-              className="px-8 py-3.5 rounded-full font-bold text-sm uppercase tracking-widest border-2 transition-all flex items-center gap-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-orange-600 hover:text-orange-600 dark:hover:border-orange-500 dark:hover:text-orange-400 hover:bg-white dark:hover:bg-slate-900 shadow-sm active:scale-95"
+              // Button - Typo Fix (Mukta, Black, tracking-widest)
+              className="px-8 py-3.5 rounded-full glass-card font-mukta font-black text-xs md:text-sm uppercase tracking-widest transition-all flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:border-amber-400/50 hover:text-orange-600 dark:hover:text-amber-400 hover:shadow-md"
             >
-              {showAll ? t('chapters.showLess', 'Collapse Journey') : t('chapters.showMore', 'Explore Full Journey')}
-              <ChevronDown size={18} strokeWidth={2.5} className={`transition-transform duration-300 ${showAll ? 'rotate-180' : ''}`} />
+              {showAll
+                ? t('chapters.showLess', 'Collapse Journey')
+                : t('chapters.showMore', 'Explore Full Journey')
+              }
+              <ChevronDown
+                size={18}
+                strokeWidth={2.5}
+                className={`transition-transform duration-300 ${showAll ? 'rotate-180' : ''}`}
+              />
             </button>
           </motion.div>
         )}

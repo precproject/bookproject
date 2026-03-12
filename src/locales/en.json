@@ -116,7 +116,7 @@
   "mainHero": {
     "badge": "#1 Bestseller",
     "titlePart1": "Maratha Community",
-    "titlePart2": "From Contemplation to Liberation",
+    "titlePart2": "Chintanatun Chintamuktikade",
     "quote": "!! No matter how powerful our words, thoughts, or ancestors may be... without proving ourselves, these titles have no value. !!",
     "addingToCart": "Loading...",
     "orderBook": "Order Book"
@@ -130,7 +130,9 @@
   },
   "review": {
     "testimonials": "Author",
-    "title": "What Readers Say"
+    "badge": "Reader Feedback",
+    "title": "Trusted by Thousands of Entrepreneurs",
+    "subtitle": "A book that has brought positive change to the lives of thousands of readers."
   },
   "store": {
     "headerTitle1": "Our",
