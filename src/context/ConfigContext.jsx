@@ -4,7 +4,7 @@ import apiClient from '../api/client';
 export const ConfigContext = createContext();
 
 export const ConfigProvider = ({ children }) => {
-  const [config, setConfig] = useState(null);
+  const [config, setConfig] = useState({ isPrebookActive: true });
   const [isConfigLoading, setIsConfigLoading] = useState(true);
 
   useEffect(() => {

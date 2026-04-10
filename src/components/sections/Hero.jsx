@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Star, ChevronRight, ArrowDown, Loader2, ShoppingBag } from 'lucide-react';
+import { Star, ChevronRight, ArrowDown, Loader2, ShoppingBag, BellRing } from 'lucide-react';
 
 import bookCoverImg from '../../assets/cover.png';
 
@@ -9,18 +9,24 @@ import apiClient from '../../api/client';
 import { useNavigate } from 'react-router-dom';
 import { captureAndVerifyReferral } from '../../utils/referralManager';
 import { useTranslation } from 'react-i18next';
+import { ConfigContext } from '../../context/ConfigContext';
+import { PrebookModal } from '../shared/PrebookModal';
 
 export const Hero = ({ onOrderPopup, productRoute }) => {
   const { t } = useTranslation();
-
-  const [referrerName, setReferrerName] = useState(null);
   const navigate = useNavigate();
   const { addToCart } = useContext(CartContext);
-  
+  const { config } = useContext(ConfigContext); // <-- Consume Config
+
+  const [referrerName, setReferrerName] = useState(null);  
   const [isAdding, setIsAdding] = useState(false);
   const [hasReferral, setHasReferral] = useState(false);
+  const [isPrebookOpen, setIsPrebookOpen] = useState(false);
 
   const ref = useRef(null);
+
+  const isPrebookActive = config?.shoppingRules?.isPrebookActive ?? true;
+  const isReferralOnly = config?.shoppingRules?.referralBasedShoppingOnly ?? true;
 
   // Cinematic scroll effects
   const { scrollYProgress } = useScroll({
@@ -71,6 +77,7 @@ export const Hero = ({ onOrderPopup, productRoute }) => {
   };
 
   return (
+    <>
     <section 
       ref={ref} 
       // Tightened top/bottom padding on mobile to keep the book in view
@@ -132,25 +139,39 @@ export const Hero = ({ onOrderPopup, productRoute }) => {
               className="flex flex-row items-stretch justify-center lg:justify-start gap-2 sm:gap-4 pt-2 md:pt-4 w-full"
             >
               
-              {/* PRIMARY ACTION */}
-              {hasReferral && referrerName ? (
-                <button 
-                  onClick={productRoute}
-                  disabled={isAdding}
-                  // Used flex-1 on mobile so it takes up exactly half the space
-                  className="relative overflow-hidden group flex-1 sm:flex-none sm:w-auto px-2 sm:px-8 py-3 md:py-4 bg-gradient-to-r from-orange-500 to-[#FF5A36] text-white rounded-full font-bold text-[13px] sm:text-lg shadow-md transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-1.5 border border-orange-400/50 active:scale-95"
+              {isPrebookActive ? (
+                  /* --- PREBOOK MODE BUTTONS --- */
+                  <button
+                  onClick={() => setIsPrebookOpen(true)}
+                  className="relative overflow-hidden group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-orange-500 to-[#FF5A36] text-white rounded-full font-bold text-lg shadow-[0_10px_30px_rgba(255,90,54,0.3)] hover:shadow-[0_15px_40px_rgba(255,90,54,0.5)] transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-3 border border-orange-400/50 active:scale-95"
                 >
-                  {isAdding ? (
-                    <span className="flex items-center justify-center gap-1.5"><Loader2 size={16} className="animate-spin" /> {t('mainHero.addingToCart', 'प्रक्रिया...')}</span>
-                  ) : (
-                    <span className="relative z-10 flex items-center justify-center gap-1.5 whitespace-nowrap">
-                      <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5"/> {t('mainHero.orderBook', 'आजच मागवा')}
-                    </span>
-                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <BellRing size={20} className="group-hover:rotate-12 transition-transform" /> 
+                    {t('mainHero.prebookBtn', 'प्री-बुक करा')}
+                  </span>
                   <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
                 </button>
               ) : (
-                <></>
+                (!isReferralOnly || (isReferralOnly && hasReferral && referrerName)) && (
+                  <>
+                  {/* PRIMARY ACTION */}
+                  <button 
+                    onClick={productRoute}
+                    disabled={isAdding}
+                    // Used flex-1 on mobile so it takes up exactly half the space
+                    className="relative overflow-hidden group flex-1 sm:flex-none sm:w-auto px-2 sm:px-8 py-3 md:py-4 bg-gradient-to-r from-orange-500 to-[#FF5A36] text-white rounded-full font-bold text-[13px] sm:text-lg shadow-md transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-1.5 border border-orange-400/50 active:scale-95"
+                  >
+                    {isAdding ? (
+                      <span className="flex items-center justify-center gap-1.5"><Loader2 size={16} className="animate-spin" /> {t('mainHero.addingToCart', 'प्रक्रिया...')}</span>
+                    ) : (
+                      <span className="relative z-10 flex items-center justify-center gap-1.5 whitespace-nowrap">
+                        <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5"/> {t('mainHero.orderBook', 'आजच मागवा')}
+                      </span>
+                    )}
+                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+                  </button>
+                  </>
+                )
               )}
 
               {/* SECONDARY ACTION */}
@@ -216,5 +237,8 @@ export const Hero = ({ onOrderPopup, productRoute }) => {
         </div>
       </motion.div>
     </section>
+    {/* Render the Prebook Modal */}
+      <PrebookModal isOpen={isPrebookOpen} onClose={() => setIsPrebookOpen(false)} />
+    </>
   );
 };

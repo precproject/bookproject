@@ -290,5 +290,17 @@
     "subtitle": "Manage your orders, track deliveries, and view your earnings.",
     "myOrders": "My Orders",
     "referralEarnings": "Referral Earnings"
+  },
+  "prebook": {
+    "title": "Secure Your Copy",
+    "subtitle": "Register now to get alerted via SMS and Email as soon as we launch.",
+    "nameLabel": "Full Name",
+    "namePlaceholder": "Enter your name",
+    "phoneLabel": "WhatsApp / Phone Number",
+    "emailLabel": "Email Address",
+    "submitBtn": "Notify Me",
+    "successTitle": "Thank You!",
+    "successDesc": "You are on the list. We will notify you the moment the book is available.",
+    "closeBtn": "Close"
   }
 }
