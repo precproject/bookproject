@@ -237,6 +237,7 @@ export const Hero = ({ onOrderPopup, productRoute }) => {
         </div>
       </motion.div>
     </section>
+
     {/* Render the Prebook Modal */}
       <PrebookModal isOpen={isPrebookOpen} onClose={() => setIsPrebookOpen(false)} />
     </>

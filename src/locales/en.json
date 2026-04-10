@@ -295,12 +295,21 @@
     "title": "Secure Your Copy",
     "subtitle": "Register now to get alerted via SMS and Email as soon as we launch.",
     "nameLabel": "Full Name",
-    "namePlaceholder": "Enter your name",
+    "namePlaceholder": "Enter your Full Name",
     "phoneLabel": "WhatsApp / Phone Number",
     "emailLabel": "Email Address",
     "submitBtn": "Notify Me",
     "successTitle": "Thank You!",
     "successDesc": "You are on the list. We will notify you the moment the book is available.",
-    "closeBtn": "Close"
+    "closeBtn": "Close",
+    "alreadyTitle": "You're Already on the List!",
+    "alreadyDesc": "Don't worry, your spot is secured. We will notify you the moment the book is available!",
+    "gotItBtn": "Got it, thanks!",
+    "errorFallback": "Something went wrong. Please try again."
+  },
+  "banner": {
+    "title": "The Wait is Over!",
+    "desc": "Pre-booking is now live. First come, first served.",
+    "btn": "Register Now"
   }
 }
