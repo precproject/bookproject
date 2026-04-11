@@ -9,20 +9,17 @@ import { orderService } from '../api/service/orderService';
 import { Navbar } from '../components/sections/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
-import { useTranslation } from 'react-i18next'; // ADDED
+import { useTranslation } from 'react-i18next'; 
 import { ConfigContext } from '../context/ConfigContext';
 
 export const CheckoutPage = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const { t } = useTranslation(); // ADDED
+  const { t } = useTranslation(); 
   const { user, openAuthModal } = useContext(AuthContext);
   const { cartItems, cartSubtotal, requiresShipping, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
 
-  // --- OLD CONFIG (TAX & SHIPPING) STATE ---
-  // const [shopConfig, setShopConfig] = useState({ taxRate: 0, shippingCharge: 50 }); // Updated default to 0
-
-  // <-- 2. GRAB CONFIG FROM CONTEXT -->
+  // GRAB CONFIG FROM CONTEXT
   const { config, isConfigLoading } = useContext(ConfigContext);
 
   // --- ADDRESS MANAGEMENT STATE ---
@@ -59,8 +56,6 @@ export const CheckoutPage = () => {
   // --- FETCH INITIAL DATA (Addresses & Config) ---
   useEffect(() => {
     const fetchUserAddresses = async () => {
-
-      // 2. Fetch User Addresses
       if (!user) {
         setIsFetchingAddresses(false);
         return;
@@ -131,7 +126,7 @@ export const CheckoutPage = () => {
     try {
       const { data } = await apiClient.post('/user/addresses', newAddress);
       setSavedAddresses(data.addresses);
-      setSelectedAddressIndex(0);
+      setSelectedAddressIndex(0); // Select the newly added address automatically
       setIsAddingNewAddress(false);
       setNewAddress({ fullName: '', phone: '', street: '', city: '', state: '', pincode: '' });
     } catch (err) {
@@ -187,14 +182,25 @@ export const CheckoutPage = () => {
       return;
     }
 
-    let finalShippingAddress = 'Digital Delivery';
+    // --- FIX: Pass precise structured object to backend instead of string ---
+    let finalShippingAddress = undefined; // Undefined handles Digital Delivery perfectly
+
     if (requiresShipping) {
       if (selectedAddressIndex === null || !savedAddresses[selectedAddressIndex]) {
         setError(t('checkout.errorSelectAddress'));
         return;
       }
+      
       const addr = savedAddresses[selectedAddressIndex];
-      finalShippingAddress = `${addr.fullName}, ${addr.phone}, ${addr.street}, ${addr.city}, ${addr.state} - ${addr.pincode}`;
+      // Pass the exact object layout required by the Mongoose schema
+      finalShippingAddress = {
+        fullName: addr.fullName,
+        phone: addr.phone,
+        street: addr.street,
+        city: addr.city,
+        state: addr.state,
+        pincode: addr.pincode
+      };
     }
 
     setLoading(true);
@@ -204,7 +210,7 @@ export const CheckoutPage = () => {
       const hiddenReferral = getValidReferralCode();
       const payload = {
         orderItems: cartItems.map(item => ({ bookId: item.bookId, qty: item.qty })),
-        shippingAddress: finalShippingAddress,
+        shippingAddress: finalShippingAddress, // <--- Correct Object Data
         priceBreakup: {
           subtotal: cartSubtotal,
           shipping: shipping,

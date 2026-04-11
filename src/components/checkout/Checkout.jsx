@@ -30,7 +30,7 @@ export const Checkout = ({ isOpen, onClose }) => {
 
   // --- STEP 3: ADDRESS STATE ---
   const [savedAddresses, setSavedAddresses] = useState([]);
-  const [selectedAddressIndex, setSelectedAddressIndex] = useState(null);
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState(0); // Default to 0
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [newAddress, setNewAddress] = useState({ fullName: '', phone: '', street: '', city: '', state: '', pincode: '' });
   const [isFetchingAddresses, setIsFetchingAddresses] = useState(false);
@@ -101,8 +101,7 @@ export const Checkout = ({ isOpen, onClose }) => {
     setIsProcessing(true);
     setError('');
     try {
-      await login(email, password); // Assumes AuthContext handles API and sets user
-      // useEffect above will catch the user change and push to Step 3
+      await login(email, password);
     } catch (err) {
       setError('Invalid email or password.');
     } finally {
@@ -136,11 +135,13 @@ export const Checkout = ({ isOpen, onClose }) => {
         setError('Please fill in all shipping details.');
         return;
       }
-      // Save new address
       try {
         await apiClient.post('/user/addresses', newAddress);
+        await fetchAddresses(); // Refresh addresses so selection works properly
       } catch (e) {
         console.error("Failed to save address", e);
+        setError("Could not save address. Please try again.");
+        return;
       }
     }
     setStep(4);
@@ -150,13 +151,29 @@ export const Checkout = ({ isOpen, onClose }) => {
     setIsProcessing(true);
     setError('');
 
-    let finalShippingAddress = 'Digital Delivery';
+    // --- FIX: Pass exact structured object instead of concatenated string ---
+    let finalShippingAddress = undefined;
+
     if (requiresShipping) {
       if (isAddingNewAddress) {
-        finalShippingAddress = `${newAddress.fullName}, ${newAddress.phone}, ${newAddress.street}, ${newAddress.city}, ${newAddress.state} - ${newAddress.pincode}`;
+        finalShippingAddress = {
+          fullName: newAddress.fullName,
+          phone: newAddress.phone,
+          street: newAddress.street,
+          city: newAddress.city,
+          state: newAddress.state,
+          pincode: newAddress.pincode
+        };
       } else {
-        const addr = savedAddresses[selectedAddressIndex];
-        finalShippingAddress = `${addr.fullName}, ${addr.phone}, ${addr.street}, ${addr.city}, ${addr.state} - ${addr.pincode}`;
+        const addr = savedAddresses[selectedAddressIndex || 0];
+        finalShippingAddress = {
+          fullName: addr.fullName,
+          phone: addr.phone,
+          street: addr.street,
+          city: addr.city,
+          state: addr.state,
+          pincode: addr.pincode
+        };
       }
     }
 
@@ -164,21 +181,18 @@ export const Checkout = ({ isOpen, onClose }) => {
       const hiddenReferral = getValidReferralCode();
       const payload = {
         orderItems: cartItems.map(item => ({ bookId: item.bookId, qty: item.qty })),
-        shippingAddress: finalShippingAddress,
+        shippingAddress: finalShippingAddress, // Passes the object directly
         ...(appliedDiscount > 0 ? { discountCode: promoCode } : {}),
         ...(hiddenReferral ? { referralCode: hiddenReferral } : {})
       };
 
       const data = await orderService.checkout(payload);
-      //clearCart();
       
-      // Open PhonePe gateway in a new tab
       const newWindow = window.open(data.paymentPayload.redirectUrl, '_blank');
       if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
         alert("Payment popup blocked! Please click the link on the next screen.");
       }
       
-      // Start polling for success
       setPaymentOverlay({ active: true, status: 'waiting', orderId: data.orderId });
 
     } catch (err) {
@@ -199,7 +213,7 @@ export const Checkout = ({ isOpen, onClose }) => {
           clearInterval(pollInterval);
           setIsProcessing(false);
 
-          clearCart(); // ✅ ADDED HERE: Only clear the cart if the bank says SUCCESS!
+          clearCart();
 
           setStep(5); // Proceed to Success Screen in Modal
         } else if (data.paymentStatus === 'Failed') {
@@ -208,7 +222,6 @@ export const Checkout = ({ isOpen, onClose }) => {
           setIsProcessing(false);
           setError("Payment failed or was cancelled. Your cart has been saved.");
 
-          // Close the overlay after 3 seconds so they can try again
           setTimeout(() => {
              setPaymentOverlay({ active: false, status: 'waiting', orderId: null });
           }, 3000);

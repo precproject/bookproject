@@ -284,13 +284,6 @@
     "noComments": "No reviews yet. Be the first to share your thoughts!",
     "commentError": "Failed to post comment. Please try again."
   },
-  "dashboard": {
-    "loading": "Loading dashboard...",
-    "welcome": "Welcome",
-    "subtitle": "Manage your orders, track deliveries, and view your earnings.",
-    "myOrders": "My Orders",
-    "referralEarnings": "Referral Earnings"
-  },
   "prebook": {
     "title": "Secure Your Copy",
     "subtitle": "Register now to get alerted via SMS and Email as soon as we launch.",
@@ -311,5 +304,54 @@
     "title": "The Wait is Over!",
     "desc": "Pre-booking is now live. First come, first served.",
     "btn": "Register Now"
+  },
+  "dashboard": {
+    "loading": "Loading dashboard...",
+    "welcome": "Welcome",
+    "subtitle": "Manage your orders, track deliveries, and view your earnings.",
+    "myOrders": "My Orders",
+    "referralEarnings": "Referral Earnings",
+    "orders": {
+      "placedLabel": "Order Placed",
+      "totalLabel": "Total",
+      "shipToLabel": "Ship To",
+      "orderIdLabel": "Order ID",
+      "trackBtn": "Track Order",
+      "viewDetailsBtn": "View Details",
+      "processing": "Processing...",
+      "payNowBtn": "Complete Payment",
+      "invoiceBtn": "Invoice",
+      "digital": "Digital Delivery",
+      "noOrdersTitle": "No orders yet",
+      "noOrdersDesc": "When you purchase books, they will appear here.",
+      "paymentError": "Could not connect to payment gateway. Please try again.",
+      "paymentFailed": "Failed to initiate payment retry.",
+      "modalTitle": "Order Summary",
+      "modalId": "ID",
+      "itemsOrdered": "Items Ordered",
+      "qty": "Quantity",
+      "deliveryAddress": "Delivery Address",
+      "referralApplied": "Referral Applied",
+      "paymentInfo": "Payment Information",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "shippingFee": "Shipping",
+      "free": "Free",
+      "discount": "Discount",
+      "grandTotal": "Grand Total",
+      "paymentStatus": "Status",
+      "gateway": "Payment Gateway",
+      "txnId": "Transaction ID",
+      "trackingHistory": "Tracking History",
+      "downloadInvoice": "Download Invoice",
+      "status": {
+        "PendingPayment": "Pending Payment",
+        "InProgress": "In Progress",
+        "Delivered": "Delivered",
+        "Cancelled": "Cancelled",
+        "Success": "Success",
+        "Failed": "Failed"
+      }
+    }
   }
 }
