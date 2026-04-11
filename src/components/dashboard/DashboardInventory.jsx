@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Edit, Trash2, Package, Image as ImageIcon, Search, 
   X, Save, CheckCircle, AlertTriangle, XCircle, BookOpen, 
-  Eye, History, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Hash, Loader2, Upload 
+  Eye, History, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Hash, Loader2, Upload, Scale 
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 
@@ -24,8 +24,11 @@ export const DashboardInventory = () => {
   
   const fileInputRef = useRef(null);
 
-  // Added coverImage to default state
-  const defaultForm = { _id: null, sku: '', title: '', description: '', type: 'Physical', price: '', stock: '', coverImage: '' };
+  // Added weightInGrams to perfectly sync with Delhivery needs
+  const defaultForm = { 
+    _id: null, sku: '', title: '', description: '', 
+    type: 'Physical', price: '', stock: '', weightInGrams: 500, coverImage: '' 
+  };
   const [formData, setFormData] = useState(defaultForm);
 
   // --- FETCH LIVE DATA (WITH DEBOUNCE) ---
@@ -65,19 +68,20 @@ export const DashboardInventory = () => {
       type: item.type,
       price: item.price,
       stock: item.stock === null ? '' : item.stock,
-      coverImage: item.coverImage || '' // Load existing image
+      weightInGrams: item.weightInGrams || 500,
+      coverImage: item.coverImage || '' 
     });
     setIsEditModalOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to remove this item from inventory? This might break existing order records if not handled by the backend.')) {
+    if (window.confirm('Are you sure you want to remove this item from inventory? It may affect past order displays.')) {
       try {
-        await adminService.deleteInventory(id);
+        await adminService.deleteInventory(id); // Calling the new backend route
         setInventory(prev => prev.filter(item => item._id !== id));
         showToast('Item deleted successfully.');
       } catch (error) {
-        showToast('Failed to delete item.');
+        showToast(error.response?.data?.message || 'Failed to delete item.');
       }
     }
   };
@@ -86,7 +90,6 @@ export const DashboardInventory = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Frontend Security: Block massive files immediately
     if (file.size > 5 * 1024 * 1024) {
       showToast("Image size must be smaller than 5MB.");
       return;
@@ -97,10 +100,8 @@ export const DashboardInventory = () => {
       const uploadData = new FormData();
       uploadData.append('image', file);
 
-      // Call your new upload API
       const response = await adminService.uploadImage(uploadData);
       
-      // Auto-fill the text box with the returned URL
       setFormData(prev => ({ ...prev, coverImage: response.imageUrl }));
       showToast("Image uploaded and optimized securely.");
     } catch (error) {
@@ -108,7 +109,6 @@ export const DashboardInventory = () => {
       showToast("Image upload failed. Please check network or file type.");
     } finally {
       setIsUploading(false);
-      // Reset the file input so you can upload the same file again if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -116,27 +116,18 @@ export const DashboardInventory = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    
-    const isDuplicateSKU = inventory.some(item => 
-      (item.sku === formData.sku || item.id === formData.sku) && item._id !== formData._id
-    );
-    
-    if (isDuplicateSKU) {
-      alert("This SKU / ID is already in use by another product. Please enter a unique SKU.");
-      setIsSaving(false);
-      return;
-    }
 
     try {
-      const formattedStock = formData.type === 'Digital' ? null : Number(formData.stock);
+      const isDigital = formData.type === 'Digital';
       const payload = {
         sku: formData.sku.toUpperCase(),
         title: formData.title,
         description: formData.description,
         type: formData.type,
         price: Number(formData.price),
-        stock: formattedStock,
-        coverImage: formData.coverImage // Save image URL to DB
+        stock: isDigital ? null : Number(formData.stock),
+        weightInGrams: isDigital ? 0 : Number(formData.weightInGrams),
+        coverImage: formData.coverImage
       };
 
       if (formData._id) {
@@ -150,6 +141,7 @@ export const DashboardInventory = () => {
       setIsEditModalOpen(false);
       loadInventory(); 
     } catch (error) {
+      // Backend properly throws 400 if SKU is duplicate now
       showToast(error.response?.data?.message || 'Failed to save product.');
     } finally {
       setIsSaving(false);
@@ -255,7 +247,6 @@ export const DashboardInventory = () => {
                       <tr key={item._id} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="p-4">
                           <div className="flex items-center gap-4">
-                            {/* Live Thumbnail Update */}
                             <div className="w-12 h-16 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 shadow-sm shrink-0 overflow-hidden">
                               {item.coverImage ? (
                                 <img src={item.coverImage} alt={item.title} className="w-full h-full object-cover" />
@@ -371,7 +362,7 @@ export const DashboardInventory = () => {
                   />
                 </div>
 
-                {/* --- NEW IMAGE UPLOAD SECTION --- */}
+                {/* --- IMAGE UPLOAD SECTION --- */}
                 <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <label className="text-sm font-bold text-slate-700">Cover Image / File URL</label>
                   <div className="flex flex-col sm:flex-row gap-3">
@@ -386,13 +377,7 @@ export const DashboardInventory = () => {
                       />
                     </div>
                     
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      onChange={handleImageUpload} 
-                      accept="image/*" 
-                      className="hidden" 
-                    />
+                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
                     
                     <button 
                       type="button" 
@@ -410,7 +395,6 @@ export const DashboardInventory = () => {
                       <div className="w-16 h-20 rounded-lg overflow-hidden border border-slate-200 shadow-sm shrink-0 bg-white">
                         <img src={formData.coverImage} alt="Preview" className="w-full h-full object-cover" />
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">Preview generated. The image is securely hosted and linked to this product.</p>
                     </div>
                   )}
                 </div>
@@ -461,6 +445,28 @@ export const DashboardInventory = () => {
                   </div>
                 </div>
 
+                {/* --- WEIGHT IN GRAMS (FOR DELHIVERY) --- */}
+                {formData.type === 'Physical' && (
+                  <div className="space-y-2 bg-orange-50/50 p-4 rounded-xl border border-orange-100">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <Scale size={16} className="text-orange-500"/> Product Weight (Grams) <span className="text-red-500">*</span>
+                    </label>
+                    <p className="text-xs text-slate-500 mb-2">Required for accurate Delhivery shipping rate calculations.</p>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        required
+                        min="1"
+                        value={formData.weightInGrams}
+                        onChange={(e) => setFormData({...formData, weightInGrams: e.target.value})}
+                        placeholder="e.g. 500" 
+                        className="w-full pl-4 pr-12 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 shadow-sm" 
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">g</span>
+                    </div>
+                  </div>
+                )}
+
               </div>
 
               <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 mt-auto shrink-0">
@@ -484,7 +490,7 @@ export const DashboardInventory = () => {
             
             <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-16 bg-white rounded-lg shadow-sm border border-slate-200 flex items-center justify-center text-slate-500 overflow-hidden">
+                <div className="w-12 h-16 bg-white rounded-lg shadow-sm border border-slate-200 flex items-center justify-center text-slate-500 overflow-hidden shrink-0">
                   {selectedItem.coverImage ? (
                     <img src={selectedItem.coverImage} alt={selectedItem.title} className="w-full h-full object-cover" />
                   ) : selectedItem.type === 'Physical' ? (
@@ -505,7 +511,7 @@ export const DashboardInventory = () => {
 
             <div className="p-6 overflow-y-auto bg-slate-50/30 flex-1 space-y-6">
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Current Stock</p>
                   <p className="text-2xl font-black text-slate-800 flex items-center gap-2">
@@ -517,7 +523,13 @@ export const DashboardInventory = () => {
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Price</p>
                   <p className="text-2xl font-black text-slate-800 flex items-center gap-2">
                     ₹{selectedItem.price}
-                    <span className="text-sm font-medium text-slate-500">Per unit</span>
+                    <span className="text-sm font-medium text-slate-500">/ unit</span>
+                  </p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center col-span-2 lg:col-span-1">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Ship Weight</p>
+                  <p className="text-2xl font-black text-slate-800 flex items-center gap-2">
+                    {selectedItem.type === 'Digital' ? '-' : `${selectedItem.weightInGrams || 500}g`}
                   </p>
                 </div>
               </div>
@@ -535,8 +547,8 @@ export const DashboardInventory = () => {
                 </button>
                 
                 {isHistoryExpanded && (
-                  <div className="p-0">
-                    <table className="w-full text-left">
+                  <div className="p-0 overflow-x-auto">
+                    <table className="w-full text-left min-w-[500px]">
                       <thead className="bg-slate-50/50">
                         <tr>
                           <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Date & Time</th>
