@@ -14,6 +14,7 @@ import { HomeLayout } from './components/home/HomeLayout';
 import { ScrollToTop } from './components/ui/ScrollToTop';
 import { ConfigProvider } from './context/ConfigContext';
 import { DashboardReviews } from './components/dashboard/DashboardReviews';
+import { DeliveryPolicy } from './components/ui/DeliveryPolicy';
 
 // ============================================================================
 // LAZY LOADED COMPONENTS (Code Splitting)
@@ -85,6 +86,7 @@ export default function App() {
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/refund-policy" element={<RefundPolicy />} />
                   <Route path="/terms-of-service" element={<TermsOfService />} />
+                  <Route path="/delivery-policy" element={<DeliveryPolicy />} />
 
                   {/* --- CUSTOMER PROTECTED ROUTE --- */}
                   <Route path="/dashboard" element={<CustomerDashboard />} />

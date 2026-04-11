@@ -19,6 +19,7 @@
     "privacyPolicy": "Privacy policy",
     "refundPolicy": "Refund policy",
     "termsOfService": "Terms of service",
+    "deliveryPolicy": "Terms of service",
     "copyright": "© {{year}} SahakarStree",
     "pricingInfo": "**Prices are listed inclusive of GST"
   },
@@ -352,6 +353,59 @@
         "Success": "Success",
         "Failed": "Failed"
       }
+    }
+  },
+  "legal": {
+    "lastUpdated": "Last Updated: April 2026",
+    "privacy": {
+      "title": "Privacy Policy",
+      "s1Title": "1. Information We Collect",
+      "s1Desc": "When you visit SahakarStree, register, pre-book, or make a purchase, we collect personal information including your name, email, phone number, shipping address, and order history. We do not collect or store raw payment details (like credit card numbers).",
+      "s2Title": "2. How We Use Your Information",
+      "s2Desc1": "To process and fulfill physical and digital book orders.",
+      "s2Desc2": "To communicate shipping updates via SMS/WhatsApp and Email.",
+      "s2Desc3": "To manage your Referral Code payouts and tracking.",
+      "s3Title": "3. Data Protection & Security",
+      "s3Desc": "We implement strict security measures. Payment processing is handled by secure, PCI-compliant gateways (PhonePe). Shipping addresses are shared securely with our logistics partner (Delhivery) solely for delivery purposes.",
+      "s4Title": "4. Cookies",
+      "s4Desc": "We use cookies to maintain your session, keep items in your cart, and analyze site traffic securely.",
+      "s5Title": "5. Contact Us",
+      "s5Desc": "For privacy concerns, email us at privacy@sahakarstree.in."
+    },
+    "refund": {
+      "title": "Refund & Cancellation Policy",
+      "s1Title": "1. Physical Book Returns",
+      "s1Desc": "We accept returns for physical books within 7 days of delivery ONLY if the book is damaged or misprinted. Please contact us with photographic proof for a free replacement. Standard buyer's remorse returns are not accepted.",
+      "s2Title": "2. Digital Products (E-Books)",
+      "s2Desc": "Due to the nature of digital goods, all sales of E-Books and downloadable materials are strictly final and non-refundable once accessed or downloaded.",
+      "s3Title": "3. Refund Processing",
+      "s3Desc": "Approved refunds will be processed automatically to your original payment method (via PhonePe) within 5-7 business days.",
+      "s4Title": "4. Order Cancellations",
+      "s4Desc": "You may cancel a physical order before it has been dispatched (manifested by Delhivery). Once an AWB tracking number is generated, the order cannot be canceled."
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "s1Title": "1. Agreement to Terms",
+      "s1Desc": "By accessing SahakarStree, pre-booking, or purchasing, you agree to these Terms. If you do not agree, please do not use our services.",
+      "s2Title": "2. Intellectual Property",
+      "s2Desc": "All content, book text, excerpts, and branding are the property of the Author and SahakarStree. Unauthorized distribution, piracy, or sharing of digital copies is strictly prohibited and legally actionable.",
+      "s3Title": "3. Referrals & Earnings",
+      "s3Desc": "The SahakarStree referral program tracks successful purchases. Payouts or discounts earned through referrals are subject to verification. We reserve the right to cancel referral earnings in cases of fraud or abuse.",
+      "s4Title": "4. Pricing & Availability",
+      "s4Desc": "Prices, shipping rates, and stock availability are subject to change dynamically. We reserve the right to modify or cancel orders in the event of stock inaccuracies."
+    },
+    "delivery": {
+      "title": "Shipping & Delivery Policy",
+      "s1Title": "1. Processing Time",
+      "s1Desc": "All physical book orders are typically processed and handed over to our logistics partner within 1-2 business days.",
+      "s2Title": "2. Shipping Partners & Tracking",
+      "s2Desc": "We proudly partner with Delhivery for nationwide fulfillment. Once dispatched, you will receive an AWB tracking number on your dashboard and via email to track your package live.",
+      "s3Title": "3. Estimated Delivery Time (TAT)",
+      "s3Desc": "Standard delivery takes 3 to 7 business days depending on your pin code. Remote areas may take longer.",
+      "s4Title": "4. Shipping Fees",
+      "s4Desc": "Shipping charges are calculated dynamically at checkout based on your delivery pin code and the weight of the package. Digital products have no shipping fees.",
+      "s5Title": "5. RTO (Return to Origin)",
+      "s5Desc": "If a package is returned to us due to an incorrect address provided by the user, or if the user is unavailable after multiple delivery attempts, the user will be responsible for the secondary shipping charge to resend the item."
     }
   }
 }

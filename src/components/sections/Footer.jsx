@@ -203,6 +203,7 @@ export const Footer = () => {
             <Link to="/privacy-policy" className="hover:text-orange-600 dark:hover:text-amber-400 transition-colors">{t('footer.privacyPolicy', 'Privacy Policy')}</Link>
             <Link to="/refund-policy" className="hover:text-orange-600 dark:hover:text-amber-400 transition-colors">{t('footer.refundPolicy', 'Refund Policy')}</Link>
             <Link to="/terms-of-service" className="hover:text-orange-600 dark:hover:text-amber-400 transition-colors">{t('footer.termsOfService', 'Terms of Service')}</Link>
+            <Link to="/delivery-policy" className="hover:text-orange-600 dark:hover:text-amber-400 transition-colors">{t('legal.delivery.title', 'Delivery Policy')}</Link>
           </div>
 
         </div>
