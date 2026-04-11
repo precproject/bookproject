@@ -3,7 +3,7 @@ import {
   CreditCard, Truck, Key, Save, CheckCircle, Eye, EyeOff, 
   Globe, Mail, Phone, Store, Loader2, LayoutTemplate, 
   ShoppingCart, Receipt, Link as LinkIcon, MapPin, Hash,
-  Monitor
+  Monitor, Package
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 
@@ -83,19 +83,24 @@ export const DashboardConfig = () => {
   const [config, setConfig] = useState({
     general: { storeName: '', supportEmail: '', supportPhone: '', businessAddress: '' },
     sections: { hero: true, features: true, chapters: true, author: true, reviews: true, blog: true, footer: true },
-    shoppingRules: { referralBasedShoppingOnly: true, currency: 'INR', currencySymbol: '₹' },
+    shoppingRules: { isPrebookActive: true, referralBasedShoppingOnly: true, currency: 'INR', currencySymbol: '₹' },
     taxConfig: { isGstEnabled: true, gstPercentage: 0, hsnCode: '4901' },
     payment: { provider: 'PhonePe', merchantId: '', saltKey: '', saltIndex: 1, isLiveMode: false },
-    delivery: { provider: 'Delhivery', apiToken: '', pickupPincode: '', isLiveMode: false, shippingCharge: 50 },
-    socialLinks: { facebook: '', twitter: '', instagram: '', linkedin: '', youtube: '' }
+    delivery: { 
+      provider: 'Delhivery', apiToken: '', pickupPincode: '', isLiveMode: false, shippingCharge: 50,
+      pickupLocationName: '', originPincode: '', originCity: '', originState: '', defaultWeightGrams: 500,
+      returnAddress: { name: '', address: '', pincode: '', city: '', state: '' }
+    },
+    socialLinks: { facebook: '', twitter: '', instagram: '', linkedin: '', youtube: '' },
+    emailAlerts: { welcome: true, orderPlaced: true, paymentSuccess: true, orderDispatched: true, orderDelivered: true, paymentReminder: true },
+    uiConfig: { showRecentOrdersPopup: true }
   });
 
-  // --- FETCH INITIAL DATA ---
   useEffect(() => {
     const loadConfig = async () => {
       try {
         const data = await adminService.getConfig();
-        // Merge fetched data with default structure to prevent undefined errors
+        // Deep merge to avoid undefined object errors on nested fields
         setConfig(prev => ({
           ...prev,
           ...data,
@@ -104,11 +109,16 @@ export const DashboardConfig = () => {
           shoppingRules: { ...prev.shoppingRules, ...data.shoppingRules },
           taxConfig: { ...prev.taxConfig, ...data.taxConfig },
           payment: { ...prev.payment, ...data.payment },
-          delivery: { ...prev.delivery, ...data.delivery },
+          delivery: { 
+            ...prev.delivery, 
+            ...data.delivery,
+            returnAddress: { ...prev.delivery.returnAddress, ...(data.delivery?.returnAddress || {}) }
+          },
           socialLinks: { ...prev.socialLinks, ...data.socialLinks },
+          emailAlerts: { ...prev.emailAlerts, ...data.emailAlerts },
+          uiConfig: { ...prev.uiConfig, ...data.uiConfig }
         }));
       } catch (error) {
-        console.error("Failed to load configurations", error);
         showToast('Failed to connect to configuration server.');
       } finally {
         setIsFetching(false);
@@ -117,7 +127,6 @@ export const DashboardConfig = () => {
     loadConfig();
   }, []);
 
-  // --- HANDLERS ---
   const handleUpdate = (section, field, value) => {
     setConfig(prev => ({
       ...prev,
@@ -129,8 +138,6 @@ export const DashboardConfig = () => {
     e.preventDefault();
     setSavingSection(sectionKey);
     try {
-      // Backend expects the specific nested object updated.
-      // E.g., { payment: { provider: "...", ... } }
       await adminService.updateConfig(sectionKey, { [sectionKey]: config[sectionKey] });
       showToast(successMsg);
     } catch (error) {
@@ -171,7 +178,9 @@ export const DashboardConfig = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         
+        {/* ================================================================= */}
         {/* LEFT COLUMN */}
+        {/* ================================================================= */}
         <div className="space-y-6">
           
           {/* 1. GENERAL SETTINGS */}
@@ -192,11 +201,22 @@ export const DashboardConfig = () => {
 
           {/* 3. SHOPPING & REFERRAL RULES */}
           <ConfigSection 
-            title="Shopping Rules" subtitle="Control how users buy your products"
+            title="Sales & Funnel Rules" subtitle="Control how users buy your products"
             icon={ShoppingCart} iconColor="bg-rose-100 text-rose-700" btnColor="bg-rose-600 hover:bg-rose-700"
             isSaving={savingSection === 'shoppingRules'} onSave={(e) => handleSave(e, 'shoppingRules', 'Shopping rules updated.')}
           >
             <div className="space-y-4">
+              {/* THE MAGIC LAUNCH SWITCH */}
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl mb-4">
+                <ToggleSwitch 
+                  label="Enable 'Pre-book' Lead Capture Phase" 
+                  checked={config.shoppingRules.isPrebookActive} 
+                  onChange={() => handleUpdate('shoppingRules', 'isPrebookActive', !config.shoppingRules.isPrebookActive)} 
+                  activeColor="bg-orange-500" 
+                />
+                <p className="text-xs text-orange-700 mt-2 font-medium">Turn this OFF on launch day to replace the Pre-book button with 'Add to Cart'.</p>
+              </div>
+
               <ToggleSwitch 
                 label="Require Referral Code to Buy" 
                 checked={config.shoppingRules.referralBasedShoppingOnly} 
@@ -217,11 +237,11 @@ export const DashboardConfig = () => {
             isSaving={savingSection === 'payment'} onSave={(e) => handleSave(e, 'payment', 'Payment settings saved.')}
             headerRight={
               <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-                <span className={`text-xs font-bold ${!config.payment.isLiveMode ? 'text-amber-600' : 'text-slate-400'}`}>UAT (Test)</span>
+                <span className={`text-xs font-bold ${!config.payment.isLiveMode ? 'text-amber-600' : 'text-slate-400'}`}>Test</span>
                 <button type="button" onClick={() => handleUpdate('payment', 'isLiveMode', !config.payment.isLiveMode)} className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-300 ${config.payment.isLiveMode ? 'bg-emerald-500' : 'bg-amber-400'}`}>
                   <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${config.payment.isLiveMode ? 'translate-x-6' : 'translate-x-1.5'}`} />
                 </button>
-                <span className={`text-xs font-bold ${config.payment.isLiveMode ? 'text-emerald-600' : 'text-slate-400'}`}>PROD (Live)</span>
+                <span className={`text-xs font-bold ${config.payment.isLiveMode ? 'text-emerald-600' : 'text-slate-400'}`}>Live</span>
               </div>
             }
           >
@@ -233,32 +253,44 @@ export const DashboardConfig = () => {
                   <option value="Razorpay">Razorpay</option>
                 </select>
               </div>
-              <InputField label="Merchant ID" icon={Key} value={config.payment.merchantId} onChange={e => handleUpdate('payment', 'merchantId', e.target.value)} required />
-              <InputField label="Salt Key / Secret" icon={Key} isSecret={true} value={config.payment.saltKey} onChange={e => handleUpdate('payment', 'saltKey', e.target.value)} required />
-              <InputField label="Salt Index" icon={Hash} type="number" value={config.payment.saltIndex} onChange={e => handleUpdate('payment', 'saltIndex', e.target.value)} required />
+              <InputField label="Merchant ID" icon={Key} value={config.payment.merchantId} onChange={e => handleUpdate('payment', 'merchantId', e.target.value)} />
+              <InputField label="Salt Key / Secret" icon={Key} isSecret={true} value={config.payment.saltKey} onChange={e => handleUpdate('payment', 'saltKey', e.target.value)} />
+              <InputField label="Salt Index" icon={Hash} type="number" value={config.payment.saltIndex} onChange={e => handleUpdate('payment', 'saltIndex', e.target.value)} />
             </div>
           </ConfigSection>
 
-          {/* --- HOMESCREEN UI ALERTS --- */}
+          {/* --- EMAIL AUTOMATION ALERTS --- */}
           <ConfigSection 
-            title="Homescreen Elements" subtitle="Control marketing popups and alerts"
-            icon={Monitor} iconColor="bg-indigo-100 text-indigo-700" btnColor="bg-indigo-600 hover:bg-indigo-700"
-            isSaving={savingSection === 'uiConfig'} onSave={(e) => handleSave(e, 'uiConfig', 'UI settings saved.')}
+            title="Automated Emails" subtitle="Turn specific customer email alerts on or off"
+            icon={Mail} iconColor="bg-sky-100 text-sky-700" btnColor="bg-sky-600 hover:bg-sky-700"
+            isSaving={savingSection === 'emailAlerts'} onSave={(e) => handleSave(e, 'emailAlerts', 'Email settings saved.')}
           >
-            <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
-              <div>
-                <p className="font-bold text-slate-800 text-sm">Recent Sales Popup</p>
-                <p className="text-xs text-slate-500">Show a small popup on the homescreen when someone buys a book.</p>
-              </div>
-              <button type="button" onClick={() => handleUpdate('uiConfig', 'showRecentOrdersPopup', !config.uiConfig.showRecentOrdersPopup)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.uiConfig.showRecentOrdersPopup ? 'bg-indigo-500' : 'bg-slate-300'}`}>
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.uiConfig.showRecentOrdersPopup ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
+            <div className="flex flex-col gap-3">
+              {[
+                { key: 'welcome', label: 'Welcome Email', desc: 'Sent when a user registers or pre-books.' },
+                { key: 'orderPlaced', label: 'Order Placed', desc: 'Sent before payment is completed.' },
+                { key: 'paymentSuccess', label: 'Payment Success', desc: 'Sent with receipt after payment.' },
+                { key: 'orderDispatched', label: 'Order Dispatched', desc: 'Sent with Delhivery tracking ID.' },
+                { key: 'orderDelivered', label: 'Order Delivered', desc: 'Sent to ask for a review.' }
+              ].map((alert) => (
+                <div key={alert.key} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100/50 transition-colors">
+                  <div>
+                    <p className="font-bold text-slate-800 text-sm">{alert.label}</p>
+                    <p className="text-xs text-slate-500">{alert.desc}</p>
+                  </div>
+                  <button type="button" onClick={() => handleUpdate('emailAlerts', alert.key, !config.emailAlerts[alert.key])} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${config.emailAlerts[alert.key] ? 'bg-sky-500' : 'bg-slate-300'}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.emailAlerts[alert.key] ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              ))}
             </div>
           </ConfigSection>
 
         </div>
 
+        {/* ================================================================= */}
         {/* RIGHT COLUMN */}
+        {/* ================================================================= */}
         <div className="space-y-6">
 
           {/* 2. SECTION VISIBILITY */}
@@ -294,7 +326,7 @@ export const DashboardConfig = () => {
                 activeColor="bg-orange-500" 
               />
               <div className="grid grid-cols-2 gap-4">
-                <InputField label="GST %" type="number" value={config.taxConfig.gstPercentage} onChange={e => handleUpdate('taxConfig', 'gstPercentage', e.target.value)} disabled={!config.taxConfig.isGstEnabled} />
+                <InputField label="GST %" type="number" value={config.taxConfig.gstPercentage} onChange={e => handleUpdate('taxConfig', 'gstPercentage', Number(e.target.value))} disabled={!config.taxConfig.isGstEnabled} />
                 <InputField label="HSN Code" value={config.taxConfig.hsnCode} onChange={e => handleUpdate('taxConfig', 'hsnCode', e.target.value)} />
               </div>
             </div>
@@ -302,7 +334,7 @@ export const DashboardConfig = () => {
 
           {/* 6. DELIVERY API */}
           <ConfigSection 
-            title="Logistics API" subtitle="Automated shipping via Delhivery"
+            title="Logistics & Delivery" subtitle="Automated shipping via Delhivery"
             icon={Truck} iconColor="bg-blue-100 text-blue-700" btnColor="bg-blue-600 hover:bg-blue-700"
             isSaving={savingSection === 'delivery'} onSave={(e) => handleSave(e, 'delivery', 'Delivery config saved.')}
             headerRight={
@@ -311,61 +343,44 @@ export const DashboardConfig = () => {
                  <button type="button" onClick={() => handleUpdate('delivery', 'isLiveMode', !config.delivery.isLiveMode)} className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-300 ${config.delivery.isLiveMode ? 'bg-blue-500' : 'bg-amber-400'}`}>
                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${config.delivery.isLiveMode ? 'translate-x-6' : 'translate-x-1.5'}`} />
                  </button>
-                 <span className={`text-xs font-bold ${config.delivery.isLiveMode ? 'text-blue-600' : 'text-slate-400'}`}>Prod</span>
+                 <span className={`text-xs font-bold ${config.delivery.isLiveMode ? 'text-blue-600' : 'text-slate-400'}`}>Live</span>
                </div>
             }
           >
-            <div className="space-y-4">
-              <InputField label="API Token" icon={Key} isSecret={true} value={config.delivery.apiToken} onChange={e => handleUpdate('delivery', 'apiToken', e.target.value)} required />
-              <InputField label="Default Pickup Pincode" icon={MapPin} value={config.delivery.pickupPincode} onChange={e => handleUpdate('delivery', 'pickupPincode', e.target.value)} required />
-              <InputField label="Flat Shipping Charge (₹)" type="number" value={config.delivery.shippingCharge} onChange={e => handleUpdate('delivery', 'shippingCharge', Number(e.target.value))} required />
-            </div>
-          </ConfigSection>
-
-          {/* 7. SOCIAL LINKS */}
-          <ConfigSection 
-            title="Social Media Links" subtitle="Footer redirects"
-            icon={LinkIcon} iconColor="bg-pink-100 text-pink-700" btnColor="bg-slate-800 hover:bg-slate-900"
-            isSaving={savingSection === 'socialLinks'} onSave={(e) => handleSave(e, 'socialLinks', 'Social links saved.')}
-          >
-            <div className="space-y-3">
-              {Object.keys(config.socialLinks).map(platform => (
-                <div key={platform} className="flex items-center gap-3">
-                  <span className="w-24 text-sm font-bold text-slate-600 capitalize">{platform}</span>
-                  <input type="url" placeholder={`https://${platform}.com/...`} value={config.socialLinks[platform]} onChange={e => handleUpdate('socialLinks', platform, e.target.value)} className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-500/20 shadow-sm" />
+            <div className="space-y-6">
+              {/* API Credentials */}
+              <div className="space-y-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">API Credentials</h4>
+                <InputField label="Delhivery API Token" icon={Key} isSecret={true} value={config.delivery.apiToken} onChange={e => handleUpdate('delivery', 'apiToken', e.target.value)} />
+                <div className="grid grid-cols-2 gap-4">
+                  <InputField label="Flat Ship Charge (₹)" type="number" value={config.delivery.shippingCharge} onChange={e => handleUpdate('delivery', 'shippingCharge', Number(e.target.value))} />
+                  <InputField label="Default Weight (g)" type="number" value={config.delivery.defaultWeightGrams} onChange={e => handleUpdate('delivery', 'defaultWeightGrams', Number(e.target.value))} />
                 </div>
-              ))}
-            </div>
-          </ConfigSection>
+              </div>
 
-          {/* --- EMAIL AUTOMATION ALERTS --- */}
-          <ConfigSection 
-            title="Automated Emails" subtitle="Turn specific customer email alerts on or off"
-            icon={Mail} iconColor="bg-rose-100 text-rose-700" btnColor="bg-rose-600 hover:bg-rose-700"
-            isSaving={savingSection === 'emailAlerts'} onSave={(e) => handleSave(e, 'emailAlerts', 'Email settings saved.')}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              {/* Reusable Toggle Component for Emails */}
-              {[
-                { key: 'welcome', label: 'Welcome Email', desc: 'Sent when a user registers.' },
-                { key: 'orderPlaced', label: 'Order Placed', desc: 'Sent before payment is completed.' },
-                { key: 'paymentSuccess', label: 'Payment Success', desc: 'Sent with receipt after payment.' },
-                { key: 'orderDispatched', label: 'Order Dispatched', desc: 'Sent with tracking ID.' },
-                { key: 'orderDelivered', label: 'Order Delivered', desc: 'Sent to ask for a review.' },
-                { key: 'paymentReminder', label: 'Payment Reminder', desc: 'Sent by cron job for abandoned carts.' },
-              ].map((alert) => (
-                <div key={alert.key} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div>
-                    <p className="font-bold text-slate-800 text-sm">{alert.label}</p>
-                    <p className="text-xs text-slate-500">{alert.desc}</p>
-                  </div>
-                  <button type="button" onClick={() => handleUpdate('emailAlerts', alert.key, !config.emailAlerts[alert.key])} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.emailAlerts[alert.key] ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.emailAlerts[alert.key] ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
+              {/* Origin / Warehouse Details */}
+              <div className="space-y-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Warehouse Details</h4>
+                <InputField label="Registered Pickup Location Name" icon={Package} value={config.delivery.pickupLocationName} onChange={e => handleUpdate('delivery', 'pickupLocationName', e.target.value)} placeholder="e.g., Mumbai_Warehouse" />
+                <div className="grid grid-cols-3 gap-4">
+                  <InputField label="Pincode" value={config.delivery.originPincode} onChange={e => handleUpdate('delivery', 'originPincode', e.target.value)} />
+                  <InputField label="City" value={config.delivery.originCity} onChange={e => handleUpdate('delivery', 'originCity', e.target.value)} />
+                  <InputField label="State" value={config.delivery.originState} onChange={e => handleUpdate('delivery', 'originState', e.target.value)} />
                 </div>
-              ))}
-              
+              </div>
+
+              {/* Return Address */}
+              <div className="space-y-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Return Address (RTO)</h4>
+                <InputField label="Return Contact Name" value={config.delivery.returnAddress.name} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, name: e.target.value })} />
+                <InputField label="Full Street Address" value={config.delivery.returnAddress.address} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, address: e.target.value })} />
+                <div className="grid grid-cols-3 gap-4">
+                  <InputField label="Pincode" value={config.delivery.returnAddress.pincode} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, pincode: e.target.value })} />
+                  <InputField label="City" value={config.delivery.returnAddress.city} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, city: e.target.value })} />
+                  <InputField label="State" value={config.delivery.returnAddress.state} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, state: e.target.value })} />
+                </div>
+              </div>
+
             </div>
           </ConfigSection>
 
