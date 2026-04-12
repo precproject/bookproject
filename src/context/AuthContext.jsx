@@ -8,19 +8,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  // Define logout here so we can use it in the event listener
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    window.location.href = '/'; 
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          // Verify if the token is still alive and belongs to a valid user
           const { data } = await apiClient.get('/auth/profile');
           setUser(data);
         } catch (error) {
           console.warn("Session expired or token invalid. Clearing memory.");
-          // Destroy the dead token from memory
           localStorage.removeItem('token');
-          // Reset user state to trigger the logged-out UI
           setUser(null);
         }
       }
@@ -28,18 +32,23 @@ export const AuthProvider = ({ children }) => {
     };
     
     fetchUser();
+
+    // ---> CRITICAL FIX: Listen for Axios telling us the token died <---
+    const handleUnauthorized = () => {
+      console.warn("Axios detected expired token. Logging out via Context.");
+      logout();
+    };
+
+    window.addEventListener('auth-unauthorized', handleUnauthorized);
+
+    // Cleanup listener when app unmounts
+    return () => window.removeEventListener('auth-unauthorized', handleUnauthorized);
   }, []);
 
   const login = (userData, token) => {
     localStorage.setItem('token', token);
     setUser(userData);
     setIsAuthModalOpen(false); 
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    window.location.href = '/'; // Kick them back to the homepage
   };
 
   const openAuthModal = () => setIsAuthModalOpen(true);

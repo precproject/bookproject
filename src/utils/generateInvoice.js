@@ -23,8 +23,17 @@ export const downloadInvoice = (order, storeName = "Sahakar Stree") => {
   
   doc.setFontSize(10);
   doc.setTextColor(100);
+
+  // ---> CRITICAL FIX: Handle new backend schema safely <---
+  let addressText = 'Digital Delivery';
+  if (order.shipping && order.shipping.street) {
+    addressText = `${order.shipping.fullName}\nPhone: ${order.shipping.phone}\n${order.shipping.street}, ${order.shipping.city}, ${order.shipping.state} - ${order.shipping.pincode}`;
+  } else if (order.shipping && order.shipping.address) {
+    addressText = order.shipping.address; // Fallback just in case
+  }
+
   // Split long addresses into multiple lines
-  const splitAddress = doc.splitTextToSize(order.shipping.address || 'Digital Delivery', 80);
+  const splitAddress = doc.splitTextToSize(addressText, 80);
   doc.text(splitAddress, 14, 66);
 
   // 3. Table of Items

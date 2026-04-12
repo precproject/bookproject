@@ -1,7 +1,8 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import apiClient from '../api/client';
 
-export const ConfigContext = createContext();
+// Also exporting the hook directly from here is a great pattern!
+export const ConfigContext = createContext(null);
 
 export const ConfigProvider = ({ children }) => {
   const [config, setConfig] = useState({ isPrebookActive: true });
@@ -14,7 +15,7 @@ export const ConfigProvider = ({ children }) => {
         setConfig(data);
       } catch (error) {
         console.error("Failed to load store configuration:", error);
-        // Safe fallback so your app never crashes if the server has a hiccup
+        // Safe fallback
         setConfig({
           uiConfig: { showRecentOrdersPopup: true },
           taxConfig: { isGstEnabled: false, gstPercentage: 0 },
@@ -27,12 +28,8 @@ export const ConfigProvider = ({ children }) => {
     };
 
     fetchConfig();
-
-    // 2. Fetch again whenever they switch tabs and come back to your website!
-    window.addEventListener('focus', fetchConfig);
-
-    // Clean up
-    return () => window.removeEventListener('focus', fetchConfig);
+    // CRITICAL FIX: Removed the window 'focus' event listener. 
+    // Config only needs to load once per session!
   }, []);
 
   return (
@@ -41,3 +38,5 @@ export const ConfigProvider = ({ children }) => {
     </ConfigContext.Provider>
   );
 };
+
+export const useConfig = () => useContext(ConfigContext);

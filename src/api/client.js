@@ -52,12 +52,16 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('token');
       
       // 2. Only redirect them to the home page if they aren't already there!
-      if (window.location.pathname !== '/') {
-        window.location.href = '/'; 
-      } else {
-        // If they are already on the home page, just refresh the page once so the screen updates
-        window.location.reload();
-      }
+      // if (window.location.pathname !== '/') {
+      //   window.location.href = '/'; 
+      // } else {
+      //   // If they are already on the home page, just refresh the page once so the screen updates
+      //   window.location.reload();
+      // }
+
+      // 2. CRITICAL FIX: Dispatch a custom event instead of hard-reloading
+      // Your AuthContext will listen for this and update the state gracefully!
+      window.dispatchEvent(new CustomEvent('auth-unauthorized'));
     }
     
     return Promise.reject(error);
