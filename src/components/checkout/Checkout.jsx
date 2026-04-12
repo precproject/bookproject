@@ -11,6 +11,7 @@ import { Button } from '../ui/Button';
 // Contexts & API
 import { CartContext } from '../../context/CartContext';
 import { AuthContext } from '../../context/AuthContext';
+import { useConfig } from '../../context/ConfigContext'; // <-- CRITICAL FIX: Import Config
 import apiClient from '../../api/client';
 import { getValidReferralCode } from '../../utils/referralManager';
 import { orderService } from '../../api/service/orderService';
@@ -18,6 +19,11 @@ import { orderService } from '../../api/service/orderService';
 export const Checkout = ({ isOpen, onClose }) => {
   const { cartItems, cartSubtotal, requiresShipping, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
   const { user, login } = useContext(AuthContext);
+
+    // --- CRITICAL FIX: DYNAMIC PRICING ---
+  const { config } = useConfig();
+  const gstPercentage = config?.taxConfig?.isGstEnabled ? (config?.taxConfig?.gstPercentage || 5) : 0;
+  const configShippingCharge = config?.delivery?.shippingCharge || 50;
 
   // --- NAVIGATION STATE ---
   const [step, setStep] = useState(1);
@@ -45,9 +51,9 @@ export const Checkout = ({ isOpen, onClose }) => {
   const [paymentOverlay, setPaymentOverlay] = useState({ active: false, status: 'waiting', orderId: null });
 
   // --- PRICING CALCULATIONS ---
-  const shipping = requiresShipping && cartSubtotal > 0 ? 50 : 0;
+  const shipping = requiresShipping && cartSubtotal > 0 ? configShippingCharge : 0;
   const taxableAmount = Math.max(0, cartSubtotal - appliedDiscount);
-  const taxAmount = Math.round(taxableAmount * 0.05); // 5% GST
+  const taxAmount = Math.round(taxableAmount * (gstPercentage / 100));
   const finalTotal = Math.round(taxableAmount + shipping + taxAmount);
 
   // --- EFFECTS ---
@@ -81,7 +87,6 @@ export const Checkout = ({ isOpen, onClose }) => {
         setIsAddingNewAddress(true);
       }
     } catch (err) {
-      console.error("Failed to fetch addresses:", err);
       setIsAddingNewAddress(true);
     } finally {
       setIsFetchingAddresses(false);
@@ -139,7 +144,6 @@ export const Checkout = ({ isOpen, onClose }) => {
         await apiClient.post('/user/addresses', newAddress);
         await fetchAddresses(); // Refresh addresses so selection works properly
       } catch (e) {
-        console.error("Failed to save address", e);
         setError("Could not save address. Please try again.");
         return;
       }
@@ -151,19 +155,20 @@ export const Checkout = ({ isOpen, onClose }) => {
     setIsProcessing(true);
     setError('');
 
+    // --- CRITICAL FIX: POPUP BLOCKER BYPASS ---
+    // Open the window IMMEDIATELY on click, before any async/await happens.
+    // Give it a generic loading name or message.
+    const paymentWindow = window.open('', '_blank');
+    if (paymentWindow) {
+      paymentWindow.document.write('<h2>Securely connecting to payment gateway... Please wait.</h2>');
+    }
+
     // --- FIX: Pass exact structured object instead of concatenated string ---
     let finalShippingAddress = undefined;
 
     if (requiresShipping) {
       if (isAddingNewAddress) {
-        finalShippingAddress = {
-          fullName: newAddress.fullName,
-          phone: newAddress.phone,
-          street: newAddress.street,
-          city: newAddress.city,
-          state: newAddress.state,
-          pincode: newAddress.pincode
-        };
+        finalShippingAddress = { ...newAddress };
       } else {
         const addr = savedAddresses[selectedAddressIndex || 0];
         finalShippingAddress = {
@@ -188,14 +193,17 @@ export const Checkout = ({ isOpen, onClose }) => {
 
       const data = await orderService.checkout(payload);
       
-      const newWindow = window.open(data.paymentPayload.redirectUrl, '_blank');
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        alert("Payment popup blocked! Please click the link on the next screen.");
+      // Update the safely opened window with the actual payment URL
+      if (paymentWindow) {
+        paymentWindow.location.href = data.paymentPayload.redirectUrl;
+      } else {
+        alert("Payment popup blocked! Please disable your popup blocker and try again.");
       }
       
       setPaymentOverlay({ active: true, status: 'waiting', orderId: data.orderId });
 
     } catch (err) {
+      if (paymentWindow) paymentWindow.close(); // Close the blank window if API fails
       setError(err.response?.data?.message || 'Failed to initialize checkout.');
       setIsProcessing(false);
     }
@@ -349,7 +357,11 @@ export const Checkout = ({ isOpen, onClose }) => {
                     <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
                       <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm"><span>Subtotal</span><span>₹{cartSubtotal}</span></div>
                       {appliedDiscount > 0 && <div className="flex justify-between text-green-600 font-medium text-sm"><span>Discount</span><span>-₹{appliedDiscount}</span></div>}
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm"><span>Tax (5% GST)</span><span>₹{taxAmount}</span></div>
+                      
+                      {gstPercentage > 0 && (
+                        <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm"><span>Tax ({gstPercentage}% GST)</span><span>₹{taxAmount}</span></div>
+                      )}
+
                       <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm"><span>Delivery</span><span>{shipping === 0 ? 'Free' : `₹${shipping}`}</span></div>
                       <div className="h-px w-full bg-slate-100 dark:bg-slate-700 my-2" />
                       <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white"><span>Total</span><span className="text-orange-600">₹{finalTotal}</span></div>
@@ -400,7 +412,7 @@ export const Checkout = ({ isOpen, onClose }) => {
                     {!isAddingNewAddress && savedAddresses.length > 0 && (
                       <div className="grid grid-cols-1 gap-3 mb-4">
                         {savedAddresses.map((addr, idx) => (
-                          <div key={idx} onClick={() => setSelectedAddressIndex(idx)} className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedAddressIndex === idx ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-orange-300'}`}>
+                          <div key={addr._id || idx} onClick={() => setSelectedAddressIndex(idx)} className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedAddressIndex === idx ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-orange-300'}`}>
                             <div className="flex items-start gap-3">
                               <Home size={18} className={`mt-0.5 ${selectedAddressIndex === idx ? 'text-orange-500' : 'text-slate-400'}`} />
                               <div>
