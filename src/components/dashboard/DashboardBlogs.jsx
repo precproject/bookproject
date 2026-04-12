@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Edit, Trash2, Eye, Loader2, X, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Loader2, X, Save, Image as ImageIcon  } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 import JoditEditor from 'jodit-react'; // 🔥 The Modern React 19 Alternative
+import apiClient from '../../api/client';
 
 export const DashboardBlogs = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+  const [isUploading, setIsUploading] = useState(false);
+
   const editor = useRef(null); // Required for Jodit
   
   const defaultForm = {
@@ -52,12 +54,38 @@ export const DashboardBlogs = () => {
     }
   };
 
+    // --- NATIVE IMAGE UPLOADER FOR FEATURED IMAGE ---
+  const handleFeaturedImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+      
+      const response = await adminService.uploadImage(uploadData);
+      setFormData({ ...formData, featuredImage: response.imageUrl });
+    } catch (error) {
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     try {
+      // AUTO-GENERATE SLUG FROM TITLE
+      const generatedSlug = formData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');  
+
       const payload = {
         ...formData,
+        slug: formData.slug || generatedSlug,
         tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
         author: { name: formData.authorName }
       };
@@ -71,6 +99,33 @@ export const DashboardBlogs = () => {
       alert(error.response?.data?.message || "Failed to save.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+
+  // --- JODIT EDITOR SECURE BACKEND UPLOAD CONFIG ---
+  const editorConfig = {
+    height: 500,
+    theme: 'default',
+    placeholder: 'Start writing your amazing article here...',
+    uploader: {
+      url: `${apiClient.defaults.baseURL}/upload`, // Connect directly to our secure backend
+      format: 'json',
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}` // Pass the admin token
+      },
+      filesVariableName: 'image',
+      isSuccess: function (resp) { return !resp.error; },
+      process: function (resp) {
+        return {
+          files: [resp.imageUrl],
+          path: resp.imageUrl,
+          baseurl: '',
+          error: 0,
+          msg: resp.message
+        };
+      }
     }
   };
 
@@ -167,12 +222,7 @@ export const DashboardBlogs = () => {
                       <JoditEditor
                         ref={editor}
                         value={formData.content}
-                        config={{ 
-                          height: 500,
-                          theme: 'default',
-                          placeholder: 'Start writing your amazing article here...',
-                          uploader: { insertImageAsBase64URI: true } // Allows dragging/dropping images directly into the text!
-                        }}
+                        config={editorConfig}
                         onBlur={newContent => setFormData({...formData, content: newContent})}
                         onChange={() => {}} // Keep empty for performance, rely on onBlur
                       />
@@ -202,8 +252,30 @@ export const DashboardBlogs = () => {
 
                   <div className="bg-white p-4 border border-slate-200 rounded-xl shadow-sm">
                     <h3 className="font-bold text-slate-800 mb-3 text-sm">Featured Image</h3>
-                    <input required type="url" value={formData.featuredImage} onChange={e => setFormData({...formData, featuredImage: e.target.value})} className="w-full p-2.5 mt-1 mb-3 border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500" placeholder="Image URL (https://...)" />
-                    {formData.featuredImage && <img src={formData.featuredImage} alt="Preview" className="w-full h-32 object-cover rounded-lg" />}
+
+                    {formData.featuredImage ? (
+                      <div className="relative mb-3">
+                        <img src={formData.featuredImage} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-slate-200" />
+                        <button type="button" onClick={() => setFormData({...formData, featuredImage: ''})} className="absolute top-2 right-2 bg-white text-red-500 p-1 rounded-md shadow-md hover:bg-red-50">
+                          <Trash2 size={14}/>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center mb-3 bg-slate-50">
+                        {isUploading ? (
+                          <div className="flex flex-col items-center text-emerald-600"><Loader2 className="animate-spin mb-2" size={24} /><span className="text-xs font-bold">Uploading...</span></div>
+                        ) : (
+                          <>
+                            <ImageIcon className="mx-auto text-slate-400 mb-2" size={24} />
+                            <label className="cursor-pointer text-sm font-bold text-emerald-600 hover:text-emerald-700">
+                              Browse File
+                              <input type="file" accept="image/*" className="hidden" onChange={handleFeaturedImageUpload} />
+                            </label>
+                          </>
+                        )}
+                      </div>
+                    )}
+
                   </div>
 
                   <div className="bg-white p-4 border border-slate-200 rounded-xl shadow-sm flex justify-between items-center">
