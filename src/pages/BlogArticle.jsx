@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import DOMPurify from 'dompurify'; // <-- CRITICAL SECURITY FIX
 import { 
   ArrowLeft, Calendar, Share2, Tag as TagIcon, 
   Facebook, Twitter, Linkedin, Link as LinkIcon, Loader2, MessageCircle, ThumbsUp
@@ -65,37 +66,39 @@ export const BlogArticle = () => {
       }
     };
 
-    fetchArticle();
-    return () => { document.title = 'SahakarStree'; };
+    // Clean up SEO tags when user leaves the page
+    return () => { 
+      document.title = 'SahakarStree'; 
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) metaDesc.content = "स्वतःला सिद्ध केल्याखेरीज या सर्व उपाध्यांना काहीच किंमत नसते. आपले शब्द, विचार, पूर्वज कितीही प्रबळ असले तरी... !!";
+    };
   }, [slug]);
-
-  // --- GOOGLE TRANSLATE INJECTION ---
-  useEffect(() => {
-    if (!window.googleTranslateElementInit) {
-      window.googleTranslateElementInit = () => {
-        new window.google.translate.TranslateElement(
-          { pageLanguage: 'en', layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE },
-          'google_translate_element'
-        );
-      };
-      const script = document.createElement('script');
-      script.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, []);
 
   // --- SMART CONTENT PARSER ---
   const parseContent = (htmlContent) => {
     if (!htmlContent) return '';
-    return htmlContent.replace(
+
+    // 1. Transform YouTube links into iframes
+    const withVideos = htmlContent.replace(
       /<p>\s*(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})\s*<\/p>/gi,
       '<div class="video-container"><iframe src="https://www.youtube.com/embed/$1" frameborder="0" allowfullscreen></iframe></div>'
     );
+
+    // 2. CRITICAL FIX: Sanitize the HTML to prevent XSS attacks before rendering
+    return DOMPurify.sanitize(withVideos, {
+      ADD_TAGS: ['iframe'], // Allow iframes for youtube videos
+      ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
+    });
   };
 
   // --- INTERACTIVE ACTIONS (REAL API) ---
   const handleLike = async () => {
+
+    if (!user) {
+      alert(t('blog.loginToLike', 'Please log in to like this article.'));
+      return;
+    }
+
     // Optimistic UI update
     const previousHasLiked = hasLiked;
     setHasLiked(!hasLiked);
@@ -113,22 +116,29 @@ export const BlogArticle = () => {
   };
 
   const handleCommentSubmit = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !user) {
+      if (!user) alert(t('blog.loginToComment', 'Please log in to leave a review.'));
+      return;
+    }
+
     setIsSubmittingComment(true);
     try {
-      // Send comment to your real backend
       const response = await apiClient.post(`/blogs/${post._id}/comments`, { text: newComment });
       
-      // Assume backend returns the newly created comment object, or the whole updated list
-      const addedComment = response.data.comment || {
-        _id: Date.now().toString(),
-        user: { name: user?.name || 'Guest User' },
-        text: newComment,
-        createdAt: new Date().toISOString()
-      };
-      
-      setComments([addedComment, ...comments]);
-      setNewComment('');
+      // const addedComment = response.data.comment || {
+      //   _id: Date.now().toString(),
+      //   user: { name: user?.name || 'Guest User' },
+      //   text: newComment,
+      //   createdAt: new Date().toISOString()
+      // };
+      // setComments([addedComment, ...comments]);
+      // setNewComment('');
+
+      if (response.data && response.data.comment) {
+        setComments([response.data.comment, ...comments]);
+        setNewComment('');
+      }
+
     } catch (error) {
       console.error("Failed to post comment", error);
       alert(t('blog.commentError', 'Failed to post comment. Please try again.'));
@@ -177,6 +187,9 @@ export const BlogArticle = () => {
     window.open(shareUrl, `${platform}-share`, 'width=600,height=400');
   };
 
+  // Helper to safely get author initial
+  const authorInitial = post.author?.name ? post.author.name.charAt(0).toUpperCase() : 'S';
+
   // --- LOADING & ERROR STATES ---
   if (loading) return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
@@ -214,36 +227,38 @@ export const BlogArticle = () => {
             {post.title}
           </h1>
 
-{/* Combined Author + Actions Row */}
-{/* Author + Meta Single Row */}
-<div className="flex items-center justify-between border-y border-slate-100 dark:border-slate-800 py-4 mb-8">
+        {/* Combined Author + Actions Row */}
+        {/* Author + Meta Single Row */}
+        <div className="flex items-center justify-between border-y border-slate-100 dark:border-slate-800 py-4 mb-8">
 
-  {/* Left Side → Avatar + Author */}
-  <div className="flex items-center gap-3">
-    <img
-      src={post.author?.avatar || 'https://via.placeholder.com/150'}
-      alt={post.author?.name}
-      className="w-10 h-10 rounded-full object-cover bg-slate-100"
-    />
+          {/* Left Side → Avatar + Author */}
+          <div className="flex items-center gap-3">
+            {/* NO MOCK DATA: Native Fallback UI for avatars */}
+            {post.author?.avatar ? (
+              <img src={post.author.avatar} alt={post.author.name} className="w-10 h-10 rounded-full object-cover bg-slate-100" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 font-bold">
+                {authorInitial}
+              </div>
+            )}
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              {post.author?.name || 'SahakarStree Admin'}
+            </p>
+          </div>
 
-    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-      {post.author?.name || 'Admin'}
-    </p>
-  </div>
+          {/* Right Side → Read Time + Date */}
+          <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            <span>{post.readTime || '5 min read'}</span>
+            <span>·</span>
+            <span>
+              {new Date(post.publishedAt || post.createdAt).toLocaleDateString(
+                t('locale', 'en-IN'),
+                { month: 'short', day: 'numeric', year: 'numeric' }
+              )}
+            </span>
+          </div>
 
-  {/* Right Side → Read Time + Date */}
-  <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-    <span>{post.readTime || '5 min read'}</span>
-    <span>·</span>
-    <span>
-      {new Date(post.publishedAt || post.createdAt).toLocaleDateString(
-        t('locale', 'en-IN'),
-        { month: 'short', day: 'numeric', year: 'numeric' }
-      )}
-    </span>
-  </div>
-
-</div>
+        </div>
 
         </header>
 
@@ -294,13 +309,14 @@ export const BlogArticle = () => {
               rows="3"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder={t('blog.addCommentPlaceholder', 'What did you think about this article?')}
-              className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 dark:text-white resize-none mb-3"
+              placeholder={user ? t('blog.addCommentPlaceholder', 'What did you think about this article?') : t('blog.loginToCommentPlaceholder', 'Please log in to share your thoughts.')}
+              disabled={!user}
+              className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 dark:text-white resize-none mb-3 disabled:opacity-50"
             ></textarea>
             <div className="flex justify-end">
               <button 
                 onClick={handleCommentSubmit}
-                disabled={isSubmittingComment || !newComment.trim()}
+                disabled={isSubmittingComment || !newComment.trim() || !user}
                 className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2"
               >
                 {isSubmittingComment && <Loader2 size={14} className="animate-spin" />}

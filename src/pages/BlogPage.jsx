@@ -21,9 +21,18 @@ export const BlogPage = () => {
   // Filters & Pagination
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(""); // PERFORMANCE FIX
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 6;
+
+    // --- PERFORMANCE FIX: Debounce only the search input, not category clicks ---
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // --- REAL API FETCH ---
   useEffect(() => {
@@ -34,7 +43,7 @@ export const BlogPage = () => {
         const params = {
           page: currentPage,
           limit: itemsPerPage,
-          search: searchQuery.trim() || undefined,
+          search: debouncedSearch.trim() || undefined,
           category: activeCategory !== "All" ? activeCategory : undefined
         };
 
@@ -61,7 +70,7 @@ export const BlogPage = () => {
 
     return () => clearTimeout(timer);
     
-  }, [activeCategory, searchQuery, currentPage]);
+  }, [activeCategory, debouncedSearch, currentPage]);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
@@ -70,7 +79,7 @@ export const BlogPage = () => {
 
   const handleCategoryClick = (cat) => {
     setActiveCategory(cat);
-    setSearchQuery(""); 
+    setDebouncedSearch("");
     setCurrentPage(1);
   };
 
@@ -132,50 +141,60 @@ export const BlogPage = () => {
             </div>
           ) : posts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {posts.map((post) => (
-                <Link 
-                  key={post._id} 
-                  to={`/blog/${post.slug}`}
-                  className="group bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-none hover:shadow-xl hover:shadow-orange-500/5 dark:hover:border-orange-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full"
-                >
-                  <div className="relative h-48 overflow-hidden">
-                    <img 
-                      src={post.featuredImage} 
-                      alt={post.title} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute top-4 left-4">
-                      <span className="px-3 py-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-slate-900 dark:text-white rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                        {t(`blog.categories.${post.category}`, post.category)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-6 flex flex-col flex-1">
-                    <div className="flex items-center gap-4 text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-3">
-                      <span className="flex items-center gap-1.5"><Calendar size={12}/> {new Date(post.publishedAt).toLocaleDateString(t('locale', 'en-IN'), { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                      <span className="flex items-center gap-1.5"><Clock size={12}/> {post.readTime}</span>
-                    </div>
-
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 leading-tight group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors line-clamp-2">
-                      {post.title}
-                    </h2>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-5 line-clamp-3 flex-1">
-                      {post.excerpt}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
-                      <div className="flex items-center gap-2">
-                        <img src={post.author?.avatar || 'https://via.placeholder.com/50'} alt={post.author?.name} className="w-6 h-6 rounded-full bg-slate-100 object-cover" />
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{post.author?.name || 'Admin'}</span>
+              {posts.map((post) => {
+                const authorInitial = post.author?.name ? post.author.name.charAt(0).toUpperCase() : 'S';
+                return (
+                  <Link 
+                    key={post._id} 
+                    to={`/blog/${post.slug}`}
+                    className="group bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-none hover:shadow-xl hover:shadow-orange-500/5 dark:hover:border-orange-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full"
+                  >
+                    <div className="relative h-48 overflow-hidden">
+                      <img 
+                        src={post.featuredImage} 
+                        alt={post.title} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute top-4 left-4">
+                        <span className="px-3 py-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-slate-900 dark:text-white rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                          {t(`blog.categories.${post.category}`, post.category)}
+                        </span>
                       </div>
-                      <span className="text-orange-600 dark:text-orange-500 flex items-center gap-1 text-xs font-bold group-hover:translate-x-1 transition-transform">
-                        {t('blog.read', 'Read')} <ArrowRight size={14} />
-                      </span>
                     </div>
-                  </div>
-                </Link>
-              ))}
+
+                    <div className="p-6 flex flex-col flex-1">
+                      <div className="flex items-center gap-4 text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-3">
+                        <span className="flex items-center gap-1.5"><Calendar size={12}/> {new Date(post.publishedAt || post.createdAt).toLocaleDateString(t('locale', 'en-IN'), { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span className="flex items-center gap-1.5"><Clock size={12}/> {post.readTime || '5 min'}</span>
+                      </div>
+
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 leading-tight group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors line-clamp-2">
+                        {post.title}
+                      </h2>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-5 line-clamp-3 flex-1">
+                        {post.excerpt}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                        <div className="flex items-center gap-2">
+                          {/* NO MOCK DATA: Native Fallback UI */}
+                          {post.author?.avatar ? (
+                            <img src={post.author.avatar} alt={post.author.name} className="w-6 h-6 rounded-full bg-slate-100 object-cover" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 text-[10px] font-bold">
+                              {authorInitial}
+                            </div>
+                          )}
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{post.author?.name || 'Admin'}</span>
+                        </div>
+                        <span className="text-orange-600 dark:text-orange-500 flex items-center gap-1 text-xs font-bold group-hover:translate-x-1 transition-transform">
+                          {t('blog.read', 'Read')} <ArrowRight size={14} />
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
@@ -183,7 +202,7 @@ export const BlogPage = () => {
               <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">{t('blog.emptyTitle', 'No articles found')}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">{t('blog.emptyDesc', 'Try adjusting your search query or selecting a different category.')}</p>
               <button 
-                onClick={() => { setSearchQuery(''); setActiveCategory('All'); }}
+                onClick={() => { setSearchQuery(''); setActiveCategory('All'); setDebouncedSearch(''); }}
                 className="mt-5 text-sm text-orange-600 font-bold hover:underline"
               >
                 {t('blog.clearFilters', 'Clear all filters')}
