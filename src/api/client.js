@@ -1,10 +1,29 @@
 import axios from 'axios';
 
+const hostname = window.location.hostname;
+
+let baseURL;
+
+// LOCAL DEVELOPMENT
+if (hostname === 'localhost' || hostname === '127.0.0.1') {
+  baseURL = 'http://localhost:5001/api';
+}
+
+// VERCEL DEPLOYMENT
+else if (hostname.includes('vercel.app')) {
+  baseURL = 'https://bookappbackend-ten.vercel.app/api';
+}
+
+// VPS / CUSTOM DOMAIN
+else {
+  baseURL = 'https://api.sahakarstree.com/api';
+}
+
 // Auto-detect if you are testing on your computer or running the live website
-const baseURL =
-  window.location.hostname === 'localhost'
-    ? 'http://localhost:5001/api'
-    : `https://api.sahakarstree.com/api`;
+// const baseURL =
+//   window.location.hostname === 'localhost'
+//     ? 'http://localhost:5001/api'
+//     : `https://api.sahakarstree.com/api`;
 
 const apiClient = axios.create({
   baseURL,
