@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import apiClient from '../../api/client';
 
 export const Blog = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +38,8 @@ export const Blog = () => {
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    const locale = i18n.language === 'mr' ? 'mr-IN' : 'en-IN';
+    return new Date(dateString).toLocaleDateString(locale, options);
   };
 
   return (

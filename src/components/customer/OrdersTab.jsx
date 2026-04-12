@@ -10,6 +10,8 @@ import {
   AlertCircle, X, MapPin, CheckCircle, FileText, ChevronRight, Loader2, ShieldCheck,
   Gift, Map
 } from 'lucide-react';
+const { t, i18n } = useTranslation();
+const dateLocale = i18n.language === 'mr' ? 'mr-IN' : 'en-IN';
 
 const OrdersTab = () => {
   const { t } = useTranslation();
