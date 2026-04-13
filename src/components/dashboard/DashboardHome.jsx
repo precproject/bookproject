@@ -8,9 +8,9 @@ export const DashboardHome = () => {
   const navigate = useNavigate();
   const [toastMessage, setToastMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  
-  // NEW: Prevent spam-clicking the reminder button
-  const [sendingReminderId, setSendingReminderId] = useState(null); 
+
+  // Prevention for spam-clicking the reminder button
+  const [sendingReminderId, setSendingReminderId] = useState(null);
 
   // Live Data States
   const [stats, setStats] = useState({ revenue: 0, totalOrders: 0, activeDeliveries: 0, totalUsers: 0 });
@@ -25,11 +25,13 @@ export const DashboardHome = () => {
 
   const fetchLiveDashboardData = async () => {
     try {
+      // Fetch stats and latest 100 orders concurrently for maximum performance
       const [dashboardData, recentOrdersData] = await Promise.all([
         adminService.getDashboardStats(),
         adminService.getOrdersPaginated({ limit: 100 }) 
       ]);
 
+      // 1. Populate Top Cards & Lists
       if (dashboardData) {
         setStats({
           revenue: dashboardData.stats?.totalEarnings || 0,
@@ -38,13 +40,17 @@ export const DashboardHome = () => {
           totalUsers: dashboardData.stats?.totalUsers || 0
         });
 
-        setRecentPurchasers((dashboardData.recentPurchasers || []).map(p => ({
-          id: p._id,
-          name: p.user?.name || 'Guest Customer',
-          initial: (p.user?.name || 'G').charAt(0).toUpperCase(),
-          time: new Date(p.createdAt).toLocaleDateString(),
-          status: p.status === 'Success' ? 'Paid' : p.status
-        })));
+        // Ensure we handle the status properly (mapping Success to Paid)
+        setRecentPurchasers((dashboardData.recentPurchasers || []).map(p => {
+          const actualStatus = p.payment?.status || p.status; // Fallback safely
+          return {
+            id: p._id,
+            name: p.user?.name || 'Guest Customer',
+            initial: (p.user?.name || 'G').charAt(0).toUpperCase(),
+            time: new Date(p.createdAt).toLocaleDateString(),
+            status: actualStatus === 'Success' ? 'Paid' : actualStatus
+          };
+        }));
 
         setPendingPayments((dashboardData.pendingPayments || []).map(p => ({
           id: p.orderId,
@@ -53,16 +59,19 @@ export const DashboardHome = () => {
         })));
       }
 
+      // 2. Process Order Data for Charts
       let statusCounts = { 'Success': 0, 'Pending Order': 0, 'Pending Payment': 0 };
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weekCounts = { 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0 };
 
       if (recentOrdersData && recentOrdersData.orders) {
         recentOrdersData.orders.forEach(order => {
+          // Bar Chart: Group by Day of Week
           const orderDay = days[new Date(order.createdAt).getDay()];
           weekCounts[orderDay] += 1;
 
-          if (order.status === 'Delivered' || order.status === 'Success') statusCounts['Success'] += 1;
+          // Pie Chart: Group by Status
+          if (order.status === 'Delivered' || order.payment?.status === 'Success') statusCounts['Success'] += 1;
           if (order.status === 'In Progress') statusCounts['Pending Order'] += 1;
           if (order.status === 'Pending Payment') statusCounts['Pending Payment'] += 1;
         });
@@ -75,7 +84,7 @@ export const DashboardHome = () => {
         { name: 'Sun', orders: weekCounts['Sun'] }
       ]);
 
-      // OPTIMIZATION: Removed the falsified `|| 1` so the chart only shows real data
+      // Only include slices in the pie chart that actually have data (> 0)
       const chartData = [
         { name: 'Success', value: statusCounts['Success'], color: '#1B5E20' }, 
         { name: 'In Progress', value: statusCounts['Pending Order'], color: '#6EE7B7' }, 
@@ -91,13 +100,14 @@ export const DashboardHome = () => {
     }
   };
 
-  // OPTIMIZATION: Added async state to prevent multiple emails firing
   const handleNotify = async (orderId, email) => {
+    // Lock the specific button being clicked
     setSendingReminderId(orderId);
+    
     try {
-      // NOTE: Replace this timeout with your actual API call when ready
+      // NOTE: Replace this setTimeout with your actual backend API call later
       // await apiClient.post(`/admin/orders/${orderId}/remind`);
-      await new Promise(res => setTimeout(res, 800)); // Simulated delay
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simulated network delay
       
       setToastMessage(`Payment reminder sent to ${email}`);
     } catch (error) {
@@ -120,6 +130,7 @@ export const DashboardHome = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
       
+      {/* --- TOAST NOTIFICATION --- */}
       {toastMessage && (
         <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
           <CheckCircle size={18} className="text-emerald-400" />
@@ -127,13 +138,16 @@ export const DashboardHome = () => {
         </div>
       )}
 
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Dashboard Overview</h1>
         <p className="text-sm text-slate-500 mt-1">Plan, track, and manage your book orders with ease.</p>
       </div>
 
+      {/* --- STATS ROW --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         
+        {/* Total Earnings */}
         <div className="bg-emerald-800 p-5 rounded-3xl text-white relative overflow-hidden flex flex-col justify-between shadow-sm hover:-translate-y-1 transition-transform duration-300">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
           <div className="flex justify-between items-start mb-4 relative z-10">
@@ -145,7 +159,11 @@ export const DashboardHome = () => {
           </div>
         </div>
 
-        <div onClick={() => navigate('/admin/orders')} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+        {/* Total Orders */}
+        <div 
+          onClick={() => navigate('/admin/orders')}
+          className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
+        >
           <div className="flex justify-between items-start mb-4">
             <span className="text-sm font-medium text-slate-500 group-hover:text-emerald-700 transition-colors">Total Orders</span>
             <div className="p-2 bg-slate-50 rounded-full text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors"><Package size={16} /></div>
@@ -155,7 +173,11 @@ export const DashboardHome = () => {
           </div>
         </div>
 
-        <div onClick={() => navigate('/admin/users')} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+        {/* Total Users */}
+        <div 
+          onClick={() => navigate('/admin/users')}
+          className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
+        >
           <div className="flex justify-between items-start mb-4">
             <span className="text-sm font-medium text-slate-500 group-hover:text-emerald-700 transition-colors">Total Customers</span>
             <div className="p-2 bg-slate-50 rounded-full text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors"><Users size={16} /></div>
@@ -165,7 +187,11 @@ export const DashboardHome = () => {
           </div>
         </div>
 
-        <div onClick={() => navigate('/admin/delivery')} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+        {/* Active Deliveries */}
+        <div 
+          onClick={() => navigate('/admin/delivery')}
+          className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
+        >
           <div className="flex justify-between items-start mb-4">
             <span className="text-sm font-medium text-slate-500 group-hover:text-emerald-700 transition-colors">Active Deliveries</span>
             <div className="p-2 bg-slate-50 rounded-full text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors"><Clock size={16} /></div>
@@ -181,8 +207,10 @@ export const DashboardHome = () => {
         </div>
       </div>
 
+      {/* --- VISUALIZATION ROW --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
+        {/* Bar Chart: Daily Orders */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm lg:col-span-2">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-base font-bold text-slate-800">Weekly Orders Overview</h3>
@@ -202,6 +230,7 @@ export const DashboardHome = () => {
           </div>
         </div>
 
+        {/* Pie Chart: Overall Breakdown */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
           <h3 className="text-base font-bold text-slate-800 mb-2">Order Status Trends</h3>
           <p className="text-xs text-slate-500 mb-4">Based on latest 100 orders</p>
@@ -233,6 +262,7 @@ export const DashboardHome = () => {
             )}
           </div>
           
+          {/* Custom Legend */}
           {last24hData.length > 0 && (
             <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs font-medium text-slate-600">
               {last24hData.map(item => (
@@ -246,8 +276,10 @@ export const DashboardHome = () => {
         </div>
       </div>
 
+      {/* --- RECENT LISTS ROW --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
+        {/* Recent Purchasers List */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-base font-bold text-slate-800">Recent Purchasers</h3>
@@ -267,7 +299,14 @@ export const DashboardHome = () => {
                     <p className="text-xs text-slate-500">Order Placed • {user.time}</p>
                   </div>
                 </div>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md">Paid</span>
+                {/* DYNAMIC BADGE COLORING BASED ON STATUS */}
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
+                  user.status === 'Paid' 
+                    ? 'text-emerald-700 bg-emerald-50' 
+                    : 'text-amber-700 bg-amber-50'
+                }`}>
+                  {user.status}
+                </span>
               </div>
             )) : (
                <div className="text-center text-slate-400 py-10 text-sm font-medium">No recent purchases found.</div>
@@ -275,6 +314,7 @@ export const DashboardHome = () => {
           </div>
         </div>
 
+        {/* Pending Payments Alert List */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-base font-bold text-slate-800">Action Required</h3>
