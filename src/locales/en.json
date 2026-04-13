@@ -21,7 +21,35 @@
     "termsOfService": "Terms of service",
     "deliveryPolicy": "Terms of service",
     "copyright": "© {{year}} SahakarStree",
-    "pricingInfo": "**Prices are listed inclusive of GST"
+    "pricingInfo": "**Prices are listed inclusive of GST",
+    "securePayment": "100% Secure Checkout"
+  },
+  "alerts": {
+    "success": "Success!",
+    "error": "Error",
+    "warning": "Wait a moment",
+    "copied": "Link copied to your clipboard!",
+    "loginRequired": "Please log in to continue.",
+    "loginToReview": "Please log in to submit a review.",
+    "loginToComment": "Please log in to leave a comment.",
+    "loginToLike": "Please log in to like this.",
+    "addedToCart": "Book added to your cart.",
+    "removedFromCart": "Item removed from cart.",
+    "promoApplied": "Discount code applied successfully!",
+    "promoInvalid": "This discount code is invalid or expired.",
+    "orderPlaced": "Your order has been placed successfully!",
+    "paymentFailed": "Payment failed. Please try again.",
+    "reviewSubmitted": "Thank you! Your review has been submitted.",
+    "reviewSubmitFailed": "Failed to submit your review. Please try again.",
+    "reviewDeleted": "Your review has been removed.",
+    "reviewDeleteFailed": "Failed to remove your review.",
+    "addressSaved": "Delivery address saved successfully.",
+    "addressDeleteFailed": "Failed to remove address.",
+    "fillAllFields": "Please fill in all the required details.",
+    "popupBlocked": "Payment window blocked! Please allow popups for this site and try again.",
+    "storeConnectionError": "Something went wrong connecting to the store.",
+    "outOfStock": "Sorry! The physical book is currently out of stock.",
+    "confirmDeleteReview": "Are you sure you want to remove your review?"
   },
   "hero": {
     "badge": "National Bestseller",
@@ -42,7 +70,7 @@
   },
   "chapters": {
     "title": "What's Inside?",
-    "subtitle": "Book Index",
+    "subtitle": "Book Chapters",
     "showMore": "Show More Chapters",
     "showLess": "Show Less",
     "list": [
@@ -110,7 +138,7 @@
     "chapters": "Chapters",
     "login": "Login",
     "logout": "Logout",
-    "dashboard": "Dashboard",
+    "dashboard": "My Account",
     "checkout": "Checkout",
     "loggedInAs": "Logged in as"
   },
@@ -120,7 +148,9 @@
     "titlePart2": "Chintanatun Chintamuktikade",
     "quote": "!! No matter how powerful our words, thoughts, or ancestors may be... without proving ourselves, these titles have no value. !!",
     "addingToCart": "Loading...",
-    "orderBook": "Order Book"
+    "orderBook": "Order Book",
+    "prebookBtn": "Pre-book Now",
+    "learnMore": "Learn More"
   },
   "author": {
     "sectionLabel": "Author",
@@ -130,7 +160,7 @@
     "para2": "It provides guidance in extremely simple and understandable language on how to correct often misguided attitudes in society, develop a business mindset, and empower everyone to stand strong and capable in their respective fields."
   },
   "review": {
-    "testimonials": "Author",
+    "testimonials": "Feedback",
     "badge": "Reader Feedback",
     "title": "Trusted by Thousands of Entrepreneurs",
     "subtitle": "A book that has brought positive change to the lives of thousands of readers."
@@ -172,7 +202,7 @@
     "fastDelivery": "Fast Delivery",
     "acrossMh": "Across Maharashtra",
     "securePayment": "Secure Payment",
-    "encrypted": "100% Encrypted",
+    "encrypted": "100% Safe & Encrypted",
     "discover": "What you'll discover inside",
     "benefit1Title": "Build Better Habits",
     "benefit1Desc": "Learn actionable techniques to break bad habits and consistently stick to good ones.",
@@ -212,15 +242,15 @@
     "loadingAddresses": "Loading saved addresses...",
     "fullName": "Full Name",
     "phone": "Phone Number",
-    "street": "Street Address / Flat No",
+    "street": "House No, Building, Street Area",
     "pincode": "PIN Code",
     "city": "City",
     "state": "State",
     "saving": "Saving...",
     "saveSelectAddress": "Save & Select Address",
     "cancel": "Cancel",
-    "applyPromo": "Apply Promo Code",
-    "enterPromo": "Enter Discount Code",
+    "applyPromo": "Apply Discount Code",
+    "enterPromo": "Enter Code Here",
     "apply": "Apply",
     "savedAmount": "Awesome! Saved ₹",
     "invalidPromo": "Invalid or expired code",
@@ -229,7 +259,7 @@
     "discount": "Discount",
     "taxes": "Taxes",
     "gst": "GST",
-    "shipping": "Shipping",
+    "shipping": "Delivery Charge",
     "free": "Free",
     "totalToPay": "Total to Pay",
     "processing": "Processing...",
@@ -307,7 +337,7 @@
     "btn": "Register Now"
   },
   "dashboard": {
-    "loading": "Loading dashboard...",
+    "loading": "Loading your account...",
     "welcome": "Welcome",
     "subtitle": "Manage your orders, track deliveries, and view your earnings.",
     "myOrders": "My Orders",
@@ -354,6 +384,21 @@
         "Failed": "Failed"
       }
     }
+  },
+    "referralDashboard": {
+    "title": "Your Referral Program",
+    "subtitle": "Share your unique link and earn rewards when friends make a purchase.",
+    "yourLink": "Your Invite Link",
+    "copyBtn": "Copy Link",
+    "statsTitle": "Your Earnings",
+    "totalUses": "Total Uses",
+    "totalEarned": "Total Earned",
+    "pendingPayout": "Pending Payout",
+    "howItWorks": "How it works:",
+    "step1": "Copy your link and share it with friends.",
+    "step2": "They get exclusive access to buy the book.",
+    "step3": "You earn a reward for every successful delivery!",
+    "noReferralActive": "You do not have an active referral code right now."
   },
   "legal": {
     "lastUpdated": "Last Updated: April 2026",
