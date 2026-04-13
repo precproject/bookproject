@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Receipt, X, Package, Tag, Gift, CreditCard, BellRing, User, 
-  MapPin, Truck, CheckCircle, ChevronUp, ChevronDown, Save, Loader2 
+  MapPin, Truck, CheckCircle, ChevronUp, ChevronDown, Save, Loader2, AlertCircle, Clock 
 } from 'lucide-react';
+import apiClient from '../../api/client';
 
 export const OrderDetailsModal = ({ 
   isOpen, 
@@ -10,32 +11,54 @@ export const OrderDetailsModal = ({
   order, 
   isAdmin = false, 
   onUpdateStatus, 
-  onNotifyUser 
+  onNotifyUser,
+  isUpdating = false // Added to accept loading state from parent
 }) => {
   const [isTransitExpanded, setIsTransitExpanded] = useState(false);
   const [newStatus, setNewStatus] = useState('');
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  
+  // --- LIVE TRACKING STATE ---
+  const [liveTracking, setLiveTracking] = useState(null);
+  const [isTrackingLoading, setIsTrackingLoading] = useState(false);
 
-  // Sync internal status state when a new order is passed
+  // Sync internal status state and fetch live tracking when a new order is passed
   useEffect(() => {
     if (order) {
       setNewStatus(order.status);
       setIsTransitExpanded(false);
+      
+      // Fetch live tracking if we have a tracking ID
+      if (order.shipping?.trackingId && order.shipping.trackingId !== '-' && order.shipping.trackingId !== 'N/A') {
+         fetchLiveTracking(order.orderId);
+      } else {
+        setLiveTracking(null);
+      }
     }
   }, [order]);
+
+  const fetchLiveTracking = async (orderId) => {
+    setIsTrackingLoading(true);
+    try {
+      const { data } = await apiClient.get(`/delivery/track/${orderId}`);
+      setLiveTracking(data.tracking);
+    } catch (error) {
+      console.error('Failed to fetch live tracking', error);
+      setLiveTracking(null);
+    } finally {
+      setIsTrackingLoading(false);
+    }
+  };
 
   if (!isOpen || !order) return null;
 
   const handleSaveStatus = async () => {
     if (!onUpdateStatus) return;
-    setIsUpdatingStatus(true);
     try {
       await onUpdateStatus(order.orderId, newStatus);
-      onClose();
+      // We rely on the parent component to close the modal if needed, 
+      // or keep it open to show the updated status.
     } catch (error) {
       console.error("Status update failed:", error);
-    } finally {
-      setIsUpdatingStatus(false);
     }
   };
 
@@ -46,6 +69,68 @@ export const OrderDetailsModal = ({
       case 'Cancelled': return <span className="text-[10px] font-bold px-2 py-1 bg-red-50 text-red-700 rounded-md border border-red-100 uppercase tracking-wider">Cancelled</span>;
       default: return <span className="text-[10px] font-bold px-2 py-1 bg-yellow-50 text-yellow-700 rounded-md border border-yellow-100 uppercase tracking-wider">Pending</span>;
     }
+  };
+
+  // --- REUSABLE TRACKING TIMELINE COMPONENT ---
+  const renderTrackingTimeline = () => {
+    if (isTrackingLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-6 text-slate-500">
+          <Loader2 className="animate-spin text-blue-500 mb-3" size={24} />
+          <p className="text-sm font-medium">Fetching live location...</p>
+        </div>
+      );
+    }
+
+    if (liveTracking && liveTracking.scans?.length > 0) {
+      return (
+        <div className="relative pl-6 border-l-2 border-slate-100 space-y-6 pt-2">
+          {liveTracking.scans.map((scan, idx) => {
+            const isLast = idx === 0; 
+            const isDelivered = scan.ScanDetail.Instructions.includes('Delivered');
+            return (
+              <div key={idx} className="relative">
+                <div className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full ring-4 ring-white ${isLast ? (isDelivered ? 'bg-emerald-500' : 'bg-blue-500') : 'bg-slate-300'}`} />
+                <p className={`text-sm font-bold ${isLast ? (isDelivered ? 'text-emerald-700' : 'text-blue-700') : 'text-slate-600'}`}>
+                  {scan.ScanDetail.Instructions}
+                </p>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  {scan.ScanDetail.ScannedLocation}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {new Date(scan.ScanDetail.ScanDateTime).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (order.transitHistory && order.transitHistory.length > 0) {
+      // Fallback to static history
+      return (
+        <div className="relative pl-6 border-l-2 border-slate-100 space-y-6 pt-2">
+          {[...order.transitHistory].reverse().map((step, idx) => {
+            const isLast = idx === 0;
+            const isDelivered = step.stage === 'Delivered';
+            return (
+              <div key={step._id || idx} className="relative">
+                <div className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full ring-4 ring-white ${isLast ? (isDelivered ? 'bg-emerald-500' : 'bg-orange-500') : 'bg-slate-300'}`} />
+                <p className={`text-sm font-bold ${isLast ? (isDelivered ? 'text-emerald-700' : 'text-orange-600') : 'text-slate-600'}`}>{step.stage}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{new Date(step.time || step.timestamp).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    return (
+      <div className="text-center py-6">
+        <p className="text-sm text-slate-500 font-medium">No tracking history available yet.</p>
+      </div>
+    );
   };
 
   return (
@@ -65,7 +150,7 @@ export const OrderDetailsModal = ({
                 <h2 className="text-xl font-bold text-slate-800">Order #{order.orderId}</h2>
                 {getStatusBadge(order.status)}
               </div>
-              <p className="text-xs text-slate-500 mt-1">Placed on {new Date(order.createdAt).toLocaleString()}</p>
+              <p className="text-xs text-slate-500 mt-1">Placed on {new Date(order.createdAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 shadow-sm border border-slate-100 transition-colors">
@@ -90,8 +175,12 @@ export const OrderDetailsModal = ({
                   {order.items?.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-start">
                       <div className="flex gap-3">
-                        <div className="w-12 h-16 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-slate-400">
-                          <Package size={20} />
+                        <div className="w-12 h-16 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-slate-400 shrink-0 overflow-hidden">
+                           {item.book?.coverImage ? (
+                                <img src={item.book.coverImage} alt={item.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Package size={20} />
+                           )}
                         </div>
                         <div>
                           <p className="text-sm font-bold text-slate-800">{item.name}</p>
@@ -128,7 +217,7 @@ export const OrderDetailsModal = ({
                       </div>
                     )}
                     <div className="flex justify-between text-base font-black text-slate-800 pt-2 border-t border-slate-200">
-                      <p>Final Total</p><p>₹{order.priceBreakup?.total || 0}</p>
+                      <p>Final Total</p><p className="text-emerald-600">₹{order.priceBreakup?.total || 0}</p>
                     </div>
                   </div>
                 </div>
@@ -210,11 +299,11 @@ export const OrderDetailsModal = ({
               </div>
 
               {/* Transit History Expandable */}
-              {order.transitHistory && order.transitHistory.length > 0 && (
+              {((order.transitHistory && order.transitHistory.length > 0) || order.shipping?.trackingId) && (
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                   <button 
                     onClick={() => setIsTransitExpanded(!isTransitExpanded)}
-                    className="w-full p-4 flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition-colors border-b border-slate-100"
+                    className="w-full p-4 flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition-colors border-b border-slate-100 outline-none"
                   >
                     <div className="flex items-center gap-2">
                       <Truck size={16} className="text-slate-500"/>
@@ -225,19 +314,7 @@ export const OrderDetailsModal = ({
                   
                   {isTransitExpanded && (
                     <div className="p-6">
-                      <div className="relative pl-6 border-l-2 border-slate-100 space-y-6">
-                        {order.transitHistory.map((step, idx) => {
-                          const isLast = idx === order.transitHistory.length - 1;
-                          const isDelivered = step.stage === 'Delivered';
-                          return (
-                            <div key={step._id || idx} className="relative">
-                              <div className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full ring-4 ring-white ${isLast ? (isDelivered ? 'bg-emerald-500' : 'bg-orange-500') : 'bg-slate-300'}`} />
-                              <p className={`text-sm font-bold ${isLast ? (isDelivered ? 'text-emerald-700' : 'text-orange-600') : 'text-slate-600'}`}>{step.stage}</p>
-                              <p className="text-xs text-slate-500 mt-0.5">{new Date(step.time || step.timestamp).toLocaleString()}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
+                       {renderTrackingTimeline()}
                     </div>
                   )}
                 </div>
@@ -269,11 +346,11 @@ export const OrderDetailsModal = ({
             
             <button 
               onClick={handleSaveStatus}
-              disabled={newStatus === order.status || isUpdatingStatus}
+              disabled={newStatus === order.status || isUpdating} // Uses prop passed from parent
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-900 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px]"
             >
-              {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              {isUpdatingStatus ? 'Saving...' : 'Save Changes'}
+              {isUpdating ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {isUpdating ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}
