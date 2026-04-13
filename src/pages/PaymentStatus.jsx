@@ -9,73 +9,77 @@ export const PaymentStatus = () => {
   const { t } = useTranslation(); 
   const navigate = useNavigate();
   
-  const [isPopup, setIsPopup] = useState(false);
+  // Initialize synchronously to avoid double-renders
+  const [isPopup] = useState(!!window.opener);
   
   // Read the URL parameters PhonePe sends back to determine success/failure
   const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get('code'); // PhonePe appends ?code=PAYMENT_SUCCESS
+  const code = urlParams.get('code'); 
 
   const isSuccess = code === 'PAYMENT_SUCCESS';
 
   useEffect(() => {
-    // Check if this window was opened by another tab/window
-    if (window.opener) {
-      setIsPopup(true);
+    // If it's a popup, notify the parent window of the result instantly
+    if (isPopup) {
+      window.opener.postMessage({
+        type: 'PAYMENT_CALLBACK',
+        status: isSuccess ? 'SUCCESS' : 'FAILED',
+        orderId: orderId
+      }, window.location.origin);
     }
 
-    // Optional: Auto-close this tab after 5 seconds ONLY if it's a popup
+    // Auto-close this tab after 5 seconds ONLY if it's a popup
     const timer = setTimeout(() => {
-      if (window.opener) {
+      if (isPopup) {
         window.close();
       }
     }, 5000);
+
     return () => clearTimeout(timer);
-  }, []);
+  }, [isPopup, isSuccess, orderId]);
 
   const handleAction = () => {
-    if (window.opener) {
-      // It was opened in a new tab -> close it
+    if (isPopup) {
       window.close();
     } else {
-      // It was opened in the same tab -> go back in history
-      // If history length is very small (e.g. user pasted the link directly), safely fallback to homepage
-      if (window.history.length > 2) {
-        navigate(-1);
-      } else {
-        navigate('/');
-      }
+      // Avoid navigate(-1) due to unpredictable gateway redirect chains.
+      // Send them to a safe, deterministic route.
+      navigate('/dashboard', { replace: true });
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-      <div className="max-w-md w-full bg-white p-10 rounded-3xl shadow-xl text-center">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 transition-colors duration-300">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 text-center">
         
         {isSuccess ? (
           <>
             <CheckCircle size={80} className="text-green-500 mx-auto mb-6" />
-            <h2 className="text-3xl font-bold text-slate-800">
+            <h2 className="text-3xl font-bold text-slate-800 dark:text-white">
               {t('paymentStatus.successTitle', 'Payment Processed!')}
             </h2>
-            <p className="text-slate-500 mt-4 mb-8">
-              {t('paymentStatus.successMsg1', 'Order ')}<strong>#{orderId}</strong>{t('paymentStatus.successMsg2', ' has been processed successfully. Your main window has been updated.')}
+            <p className="text-slate-500 dark:text-slate-400 mt-4 mb-8">
+              {t('paymentStatus.successMsg1', 'Order ')}
+              <strong className="text-slate-700 dark:text-slate-300">#{orderId}</strong>
+              {t('paymentStatus.successMsg2', ' has been processed successfully. Your main window has been updated.')}
             </p>
           </>
         ) : (
           <>
             <XCircle size={80} className="text-red-500 mx-auto mb-6" />
-            <h2 className="text-3xl font-bold text-slate-800">
+            <h2 className="text-3xl font-bold text-slate-800 dark:text-white">
               {t('paymentStatus.failedTitle', 'Payment Failed')}
             </h2>
-            <p className="text-slate-500 mt-4 mb-8">
-              {t('paymentStatus.failedMsg1', 'The payment for order ')}<strong>#{orderId}</strong>{t('paymentStatus.failedMsg2', ' was not successful. Please return to your main window to try again.')}
+            <p className="text-slate-500 dark:text-slate-400 mt-4 mb-8">
+              {t('paymentStatus.failedMsg1', 'The payment for order ')}
+              <strong className="text-slate-700 dark:text-slate-300">#{orderId}</strong>
+              {t('paymentStatus.failedMsg2', ' was not successful. Please return to your main window to try again.')}
             </p>
           </>
         )}
 
         <Button onClick={handleAction} variant="primary" className="w-full py-3 text-lg">
-          {/* Dynamically show "Close Tab" OR "Go Back" based on window state */}
-          {isPopup ? t('paymentStatus.closeTab', 'Close This Tab') : t('paymentStatus.goBack', 'Go Back')}
+          {isPopup ? t('paymentStatus.closeTab', 'Close This Tab') : t('paymentStatus.goBack', 'Go to Dashboard')}
         </Button>
       </div>
     </div>

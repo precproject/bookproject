@@ -7,9 +7,9 @@ import apiClient from '../api/client';
 import bookCoverImg from '../assets/cover.png'; // Fallback
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
-import { useTranslation } from 'react-i18next'; // ADDED
+import { useTranslation } from 'react-i18next';
 
-// 👉 1. Import your referral utility
+// Referral utility
 import { captureAndVerifyReferral } from '../utils/referralManager';
 
 import { 
@@ -23,7 +23,7 @@ export const ProductPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { t } = useTranslation(); // ADDED
+  const { t } = useTranslation();
   
   const { addToCart, cartItems, updateQuantity } = useContext(CartContext);
   const { user } = useContext(AuthContext);
@@ -33,7 +33,7 @@ export const ProductPage = () => {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
 
-  // 👉 2. Add Referral State
+  // Referral State
   const [hasReferral, setHasReferral] = useState(false);
   const [referrerName, setReferrerName] = useState(null);
 
@@ -42,7 +42,7 @@ export const ProductPage = () => {
 
   const cartItem = book ? cartItems.find(item => item.bookId === book._id) : null;
 
-  // 👉 3. Check for referral on page load
+  // Check for referral on page load
   useEffect(() => {
     const checkReferral = async () => {
       const name = await captureAndVerifyReferral();
@@ -101,7 +101,6 @@ export const ProductPage = () => {
 
     try {
       await apiClient.delete(`/public/books/${id}/reviews/${reviewId}`);
-      
       // Instantly remove the deleted review from the screen
       setReviews(reviews.filter(review => review._id !== reviewId));
     } catch (error) {
@@ -110,8 +109,8 @@ export const ProductPage = () => {
   };
 
   const getSafeImageUrl = (book) => {
-    if (!book.coverImage) return bookCoverImg; // Catches null, undefined
-    if (book.coverImage.trim() === '') return bookCoverImg; // Catches empty strings
+    if (!book.coverImage) return bookCoverImg; 
+    if (book.coverImage.trim() === '') return bookCoverImg; 
     return book.coverImage;
   };
 
@@ -184,9 +183,10 @@ export const ProductPage = () => {
                 <h1 className="text-4xl sm:text-5xl font-serif font-bold text-slate-900 dark:text-white leading-tight mb-2">
                   {book.title}
                 </h1>
-                <p className="text-lg text-slate-500 dark:text-slate-400 mb-6">{t('product.by', 'by')} <span className="font-semibold text-slate-700 dark:text-slate-300">{book.author || 'SahakarStree'}</span></p>
+                <p className="text-lg text-slate-500 dark:text-slate-400 mb-6">
+                  {t('product.by', 'by')} <span className="font-semibold text-slate-700 dark:text-slate-300">{book.author || 'SahakarStree'}</span>
+                </p>
 
-                {/* 👉 4. Show VIP Badge if Unlocked */}
                 {hasReferral && referrerName && (
                   <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-xl text-sm font-bold border border-green-200 dark:border-green-800/50 shadow-sm animate-[fadeIn_0.5s_ease-out]">
                     <Award size={18} /> {t('product.accessUnlocked', 'Access Unlocked by')} {referrerName}
@@ -212,7 +212,7 @@ export const ProductPage = () => {
                   {book.description || t('product.descFallback', "Transform your mindset and achieve lasting success through structured, practical wisdom. The definitive guide to building habits that stick, written specifically for the modern Marathi entrepreneur and thinker.")}
                 </p>
 
-                {/* 👉 5. INVITE-ONLY LOGIC AREA */}
+                {/* INVITE-ONLY & CART LOGIC AREA */}
                 <div className="mb-10">
                   {!hasReferral ? (
                     /* Locked State */
@@ -236,9 +236,16 @@ export const ProductPage = () => {
                         <span className="w-12 text-center font-bold text-slate-900 dark:text-white">
                           {cartItem.qty}
                         </span>
+                        
+                        {/* CRITICAL FIX: Disable (+) if user tries to exceed physical stock */}
                         <button 
                           onClick={() => updateQuantity(book._id, cartItem.qty + 1)} 
-                          className="w-10 h-10 flex items-center justify-center text-slate-500 hover:text-orange-600 dark:hover:text-orange-500 transition-colors font-bold text-xl"
+                          disabled={book.type === 'Physical' && cartItem.qty >= book.stock}
+                          className={`w-10 h-10 flex items-center justify-center font-bold text-xl transition-colors ${
+                            book.type === 'Physical' && cartItem.qty >= book.stock 
+                              ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' 
+                              : 'text-slate-500 hover:text-orange-600 dark:hover:text-orange-500'
+                          }`}
                         >
                           +
                         </button>
@@ -284,7 +291,8 @@ export const ProductPage = () => {
                   <div className="flex flex-col gap-1">
                     <Award className="text-slate-400 dark:text-slate-500 mb-1" size={20} />
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">{t('product.publisher', 'Publisher')}</span>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">SahakarStree</span>
+                    {/* CRITICAL FIX: Render dynamic publisher matching the backend schema */}
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">{book.publisher || 'Independent'}</span>
                   </div>
                 </div>
 
@@ -375,7 +383,6 @@ export const ProductPage = () => {
                 </div>
               ) : (
                 reviews.map((review, idx) => {
-                  // 👉 Check if the logged-in user owns this review or is an Admin
                   const isOwner = user && review.user && (user._id === review.user._id || user.id === review.user._id);
                   const isAdmin = user && user.role === 'Admin';
                   const canDelete = isOwner || isAdmin;
@@ -386,8 +393,6 @@ export const ProductPage = () => {
                       key={review._id || idx} 
                       className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-none relative group"
                     >
-                      
-                      {/* 👉 DELETE BUTTON (Only shows if they own it or are Admin) */}
                       {canDelete && (
                         <button 
                           onClick={() => handleDeleteReview(review._id)}
