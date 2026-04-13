@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   CreditCard, Truck, Key, Save, CheckCircle, Eye, EyeOff, 
   Globe, Mail, Phone, Store, Loader2, LayoutTemplate, 
-  ShoppingCart, Receipt, Link as LinkIcon, MapPin, Hash,
-  Monitor, Package
+  ShoppingCart, Receipt, MapPin, Hash, Package, Link as LinkIcon,
+  Facebook, Twitter, Instagram, Linkedin, Youtube
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 
@@ -48,7 +48,7 @@ const InputField = ({ label, icon: Icon, type = "text", isSecret = false, ...pro
         {Icon && <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />}
         <input 
           type={inputType} 
-          className={`w-full ${Icon ? 'pl-11' : 'pl-4'} ${isSecret ? 'pr-12' : 'pr-4'} py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-500/20 shadow-sm transition-all`} 
+          className={`w-full ${Icon ? 'pl-11' : 'pl-4'} ${isSecret ? 'pr-12' : 'pr-4'} py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`} 
           {...props} 
         />
         {isSecret && (
@@ -64,7 +64,7 @@ const InputField = ({ label, icon: Icon, type = "text", isSecret = false, ...pro
 const ToggleSwitch = ({ label, checked, onChange, activeColor = "bg-emerald-500" }) => (
   <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100/50 transition-colors">
     <span className="text-sm font-bold text-slate-700">{label}</span>
-    <button type="button" onClick={onChange} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${checked ? activeColor : 'bg-slate-300'}`}>
+    <button type="button" onClick={onChange} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-300 ${checked ? activeColor : 'bg-slate-300'}`}>
       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   </div>
@@ -79,7 +79,6 @@ export const DashboardConfig = () => {
   const [isFetching, setIsFetching] = useState(true);
   const [savingSection, setSavingSection] = useState(null);
 
-  // Centralized State mirroring the backend schema perfectly
   const [config, setConfig] = useState({
     general: { storeName: '', supportEmail: '', supportPhone: '', businessAddress: '' },
     sections: { hero: true, features: true, chapters: true, author: true, reviews: true, blog: true, footer: true },
@@ -100,7 +99,6 @@ export const DashboardConfig = () => {
     const loadConfig = async () => {
       try {
         const data = await adminService.getConfig();
-        // Deep merge to avoid undefined object errors on nested fields
         setConfig(prev => ({
           ...prev,
           ...data,
@@ -130,7 +128,11 @@ export const DashboardConfig = () => {
   const handleUpdate = (section, field, value) => {
     setConfig(prev => ({
       ...prev,
-      [section]: { ...prev[section], [field]: value }
+      [section]: { 
+        ...prev[section], 
+        // Allow functional updates for deeply nested objects (like returnAddress)
+        [field]: typeof value === 'function' ? value(prev[section][field]) : value 
+      }
     }));
   };
 
@@ -183,30 +185,28 @@ export const DashboardConfig = () => {
         {/* ================================================================= */}
         <div className="space-y-6">
           
-          {/* 1. GENERAL SETTINGS */}
           <ConfigSection 
             title="General Store Settings" subtitle="Public contact info and branding"
             icon={Globe} iconColor="bg-purple-100 text-purple-700" btnColor="bg-purple-700 hover:bg-purple-800"
             isSaving={savingSection === 'general'} onSave={(e) => handleSave(e, 'general', 'General settings saved.')}
           >
             <div className="space-y-4">
-              <InputField label="Store Name" icon={Store} value={config.general.storeName} onChange={e => handleUpdate('general', 'storeName', e.target.value)} required />
+              {/* CRITICAL FIX: Added || '' to prevent React Uncontrolled Component Warnings */}
+              <InputField label="Store Name" icon={Store} value={config.general.storeName || ''} onChange={e => handleUpdate('general', 'storeName', e.target.value)} required />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputField label="Support Email" icon={Mail} type="email" value={config.general.supportEmail} onChange={e => handleUpdate('general', 'supportEmail', e.target.value)} required />
-                <InputField label="Support Phone" icon={Phone} value={config.general.supportPhone} onChange={e => handleUpdate('general', 'supportPhone', e.target.value)} required />
+                <InputField label="Support Email" icon={Mail} type="email" value={config.general.supportEmail || ''} onChange={e => handleUpdate('general', 'supportEmail', e.target.value)} required />
+                <InputField label="Support Phone" icon={Phone} value={config.general.supportPhone || ''} onChange={e => handleUpdate('general', 'supportPhone', e.target.value)} required />
               </div>
-              <InputField label="Business Address" icon={MapPin} value={config.general.businessAddress} onChange={e => handleUpdate('general', 'businessAddress', e.target.value)} />
+              <InputField label="Business Address" icon={MapPin} value={config.general.businessAddress || ''} onChange={e => handleUpdate('general', 'businessAddress', e.target.value)} />
             </div>
           </ConfigSection>
 
-          {/* 3. SHOPPING & REFERRAL RULES */}
           <ConfigSection 
             title="Sales & Funnel Rules" subtitle="Control how users buy your products"
             icon={ShoppingCart} iconColor="bg-rose-100 text-rose-700" btnColor="bg-rose-600 hover:bg-rose-700"
             isSaving={savingSection === 'shoppingRules'} onSave={(e) => handleSave(e, 'shoppingRules', 'Shopping rules updated.')}
           >
             <div className="space-y-4">
-              {/* THE MAGIC LAUNCH SWITCH */}
               <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl mb-4">
                 <ToggleSwitch 
                   label="Enable 'Pre-book' Lead Capture Phase" 
@@ -224,13 +224,12 @@ export const DashboardConfig = () => {
                 activeColor="bg-rose-500" 
               />
               <div className="grid grid-cols-2 gap-4">
-                <InputField label="Currency Code" value={config.shoppingRules.currency} onChange={e => handleUpdate('shoppingRules', 'currency', e.target.value)} />
-                <InputField label="Currency Symbol" value={config.shoppingRules.currencySymbol} onChange={e => handleUpdate('shoppingRules', 'currencySymbol', e.target.value)} />
+                <InputField label="Currency Code" value={config.shoppingRules.currency || ''} onChange={e => handleUpdate('shoppingRules', 'currency', e.target.value)} />
+                <InputField label="Currency Symbol" value={config.shoppingRules.currencySymbol || ''} onChange={e => handleUpdate('shoppingRules', 'currencySymbol', e.target.value)} />
               </div>
             </div>
           </ConfigSection>
 
-          {/* 5. PAYMENT CONFIGURATION */}
           <ConfigSection 
             title="Payment Gateway" subtitle="Manage transaction credentials"
             icon={CreditCard} iconColor="bg-emerald-100 text-emerald-700" btnColor="bg-emerald-700 hover:bg-emerald-800"
@@ -238,7 +237,7 @@ export const DashboardConfig = () => {
             headerRight={
               <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
                 <span className={`text-xs font-bold ${!config.payment.isLiveMode ? 'text-amber-600' : 'text-slate-400'}`}>Test</span>
-                <button type="button" onClick={() => handleUpdate('payment', 'isLiveMode', !config.payment.isLiveMode)} className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-300 ${config.payment.isLiveMode ? 'bg-emerald-500' : 'bg-amber-400'}`}>
+                <button type="button" onClick={() => handleUpdate('payment', 'isLiveMode', !config.payment.isLiveMode)} className={`relative inline-flex h-5 w-10 shrink-0 items-center rounded-full transition-colors duration-300 ${config.payment.isLiveMode ? 'bg-emerald-500' : 'bg-amber-400'}`}>
                   <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${config.payment.isLiveMode ? 'translate-x-6' : 'translate-x-1.5'}`} />
                 </button>
                 <span className={`text-xs font-bold ${config.payment.isLiveMode ? 'text-emerald-600' : 'text-slate-400'}`}>Live</span>
@@ -248,18 +247,17 @@ export const DashboardConfig = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Provider</label>
-                <select value={config.payment.provider} onChange={e => handleUpdate('payment', 'provider', e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-500/20">
+                <select value={config.payment.provider || 'PhonePe'} onChange={e => handleUpdate('payment', 'provider', e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                   <option value="PhonePe">PhonePe (UPI & Cards)</option>
                   <option value="Razorpay">Razorpay</option>
                 </select>
               </div>
-              <InputField label="Merchant ID" icon={Key} value={config.payment.merchantId} onChange={e => handleUpdate('payment', 'merchantId', e.target.value)} />
-              <InputField label="Salt Key / Secret" icon={Key} isSecret={true} value={config.payment.saltKey} onChange={e => handleUpdate('payment', 'saltKey', e.target.value)} />
-              <InputField label="Salt Index" icon={Hash} type="number" value={config.payment.saltIndex} onChange={e => handleUpdate('payment', 'saltIndex', e.target.value)} />
+              <InputField label="Merchant ID" icon={Key} value={config.payment.merchantId || ''} onChange={e => handleUpdate('payment', 'merchantId', e.target.value)} />
+              <InputField label="Salt Key / Secret" icon={Key} isSecret={true} value={config.payment.saltKey || ''} onChange={e => handleUpdate('payment', 'saltKey', e.target.value)} />
+              <InputField label="Salt Index" icon={Hash} type="number" value={config.payment.saltIndex || 1} onChange={e => handleUpdate('payment', 'saltIndex', e.target.value)} />
             </div>
           </ConfigSection>
 
-          {/* --- EMAIL AUTOMATION ALERTS --- */}
           <ConfigSection 
             title="Automated Emails" subtitle="Turn specific customer email alerts on or off"
             icon={Mail} iconColor="bg-sky-100 text-sky-700" btnColor="bg-sky-600 hover:bg-sky-700"
@@ -293,7 +291,6 @@ export const DashboardConfig = () => {
         {/* ================================================================= */}
         <div className="space-y-6">
 
-          {/* 2. SECTION VISIBILITY */}
           <ConfigSection 
             title="Landing Page Sections" subtitle="Hide or show specific blocks"
             icon={LayoutTemplate} iconColor="bg-indigo-100 text-indigo-700" btnColor="bg-indigo-600 hover:bg-indigo-700"
@@ -312,7 +309,6 @@ export const DashboardConfig = () => {
             </div>
           </ConfigSection>
 
-          {/* 4. TAX & COMPLIANCE */}
           <ConfigSection 
             title="Tax Settings (GST)" subtitle="Configure pricing and compliance"
             icon={Receipt} iconColor="bg-orange-100 text-orange-700" btnColor="bg-orange-600 hover:bg-orange-700"
@@ -326,13 +322,12 @@ export const DashboardConfig = () => {
                 activeColor="bg-orange-500" 
               />
               <div className="grid grid-cols-2 gap-4">
-                <InputField label="GST %" type="number" value={config.taxConfig.gstPercentage} onChange={e => handleUpdate('taxConfig', 'gstPercentage', Number(e.target.value))} disabled={!config.taxConfig.isGstEnabled} />
-                <InputField label="HSN Code" value={config.taxConfig.hsnCode} onChange={e => handleUpdate('taxConfig', 'hsnCode', e.target.value)} />
+                <InputField label="GST %" type="number" value={config.taxConfig.gstPercentage || 0} onChange={e => handleUpdate('taxConfig', 'gstPercentage', Number(e.target.value))} disabled={!config.taxConfig.isGstEnabled} />
+                <InputField label="HSN Code" value={config.taxConfig.hsnCode || ''} onChange={e => handleUpdate('taxConfig', 'hsnCode', e.target.value)} />
               </div>
             </div>
           </ConfigSection>
 
-          {/* 6. DELIVERY API */}
           <ConfigSection 
             title="Logistics & Delivery" subtitle="Automated shipping via Delhivery"
             icon={Truck} iconColor="bg-blue-100 text-blue-700" btnColor="bg-blue-600 hover:bg-blue-700"
@@ -340,7 +335,7 @@ export const DashboardConfig = () => {
             headerRight={
                <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
                  <span className={`text-xs font-bold ${!config.delivery.isLiveMode ? 'text-amber-600' : 'text-slate-400'}`}>Test</span>
-                 <button type="button" onClick={() => handleUpdate('delivery', 'isLiveMode', !config.delivery.isLiveMode)} className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-300 ${config.delivery.isLiveMode ? 'bg-blue-500' : 'bg-amber-400'}`}>
+                 <button type="button" onClick={() => handleUpdate('delivery', 'isLiveMode', !config.delivery.isLiveMode)} className={`relative inline-flex h-5 w-10 shrink-0 items-center rounded-full transition-colors duration-300 ${config.delivery.isLiveMode ? 'bg-blue-500' : 'bg-amber-400'}`}>
                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${config.delivery.isLiveMode ? 'translate-x-6' : 'translate-x-1.5'}`} />
                  </button>
                  <span className={`text-xs font-bold ${config.delivery.isLiveMode ? 'text-blue-600' : 'text-slate-400'}`}>Live</span>
@@ -348,39 +343,51 @@ export const DashboardConfig = () => {
             }
           >
             <div className="space-y-6">
-              {/* API Credentials */}
               <div className="space-y-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">API Credentials</h4>
-                <InputField label="Delhivery API Token" icon={Key} isSecret={true} value={config.delivery.apiToken} onChange={e => handleUpdate('delivery', 'apiToken', e.target.value)} />
+                <InputField label="Delhivery API Token" icon={Key} isSecret={true} value={config.delivery.apiToken || ''} onChange={e => handleUpdate('delivery', 'apiToken', e.target.value)} />
                 <div className="grid grid-cols-2 gap-4">
-                  <InputField label="Flat Ship Charge (₹)" type="number" value={config.delivery.shippingCharge} onChange={e => handleUpdate('delivery', 'shippingCharge', Number(e.target.value))} />
-                  <InputField label="Default Weight (g)" type="number" value={config.delivery.defaultWeightGrams} onChange={e => handleUpdate('delivery', 'defaultWeightGrams', Number(e.target.value))} />
+                  <InputField label="Flat Ship Charge (₹)" type="number" value={config.delivery.shippingCharge ?? 50} onChange={e => handleUpdate('delivery', 'shippingCharge', Number(e.target.value))} />
+                  <InputField label="Default Weight (g)" type="number" value={config.delivery.defaultWeightGrams ?? 500} onChange={e => handleUpdate('delivery', 'defaultWeightGrams', Number(e.target.value))} />
                 </div>
               </div>
 
-              {/* Origin / Warehouse Details */}
               <div className="space-y-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Warehouse Details</h4>
-                <InputField label="Registered Pickup Location Name" icon={Package} value={config.delivery.pickupLocationName} onChange={e => handleUpdate('delivery', 'pickupLocationName', e.target.value)} placeholder="e.g., Mumbai_Warehouse" />
+                <InputField label="Registered Pickup Location Name" icon={Package} value={config.delivery.pickupLocationName || ''} onChange={e => handleUpdate('delivery', 'pickupLocationName', e.target.value)} placeholder="e.g., Mumbai_Warehouse" />
                 <div className="grid grid-cols-3 gap-4">
-                  <InputField label="Pincode" value={config.delivery.originPincode} onChange={e => handleUpdate('delivery', 'originPincode', e.target.value)} />
-                  <InputField label="City" value={config.delivery.originCity} onChange={e => handleUpdate('delivery', 'originCity', e.target.value)} />
-                  <InputField label="State" value={config.delivery.originState} onChange={e => handleUpdate('delivery', 'originState', e.target.value)} />
+                  <InputField label="Pincode" value={config.delivery.originPincode || ''} onChange={e => handleUpdate('delivery', 'originPincode', e.target.value)} />
+                  <InputField label="City" value={config.delivery.originCity || ''} onChange={e => handleUpdate('delivery', 'originCity', e.target.value)} />
+                  <InputField label="State" value={config.delivery.originState || ''} onChange={e => handleUpdate('delivery', 'originState', e.target.value)} />
                 </div>
               </div>
 
-              {/* Return Address */}
               <div className="space-y-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Return Address (RTO)</h4>
-                <InputField label="Return Contact Name" value={config.delivery.returnAddress.name} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, name: e.target.value })} />
-                <InputField label="Full Street Address" value={config.delivery.returnAddress.address} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, address: e.target.value })} />
+                {/* CRITICAL FIX: Safe nested functional state update */}
+                <InputField label="Return Contact Name" value={config.delivery.returnAddress?.name || ''} onChange={e => handleUpdate('delivery', 'returnAddress', (prev) => ({ ...prev, name: e.target.value }))} />
+                <InputField label="Full Street Address" value={config.delivery.returnAddress?.address || ''} onChange={e => handleUpdate('delivery', 'returnAddress', (prev) => ({ ...prev, address: e.target.value }))} />
                 <div className="grid grid-cols-3 gap-4">
-                  <InputField label="Pincode" value={config.delivery.returnAddress.pincode} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, pincode: e.target.value })} />
-                  <InputField label="City" value={config.delivery.returnAddress.city} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, city: e.target.value })} />
-                  <InputField label="State" value={config.delivery.returnAddress.state} onChange={e => handleUpdate('delivery', 'returnAddress', { ...config.delivery.returnAddress, state: e.target.value })} />
+                  <InputField label="Pincode" value={config.delivery.returnAddress?.pincode || ''} onChange={e => handleUpdate('delivery', 'returnAddress', (prev) => ({ ...prev, pincode: e.target.value }))} />
+                  <InputField label="City" value={config.delivery.returnAddress?.city || ''} onChange={e => handleUpdate('delivery', 'returnAddress', (prev) => ({ ...prev, city: e.target.value }))} />
+                  <InputField label="State" value={config.delivery.returnAddress?.state || ''} onChange={e => handleUpdate('delivery', 'returnAddress', (prev) => ({ ...prev, state: e.target.value }))} />
                 </div>
               </div>
+            </div>
+          </ConfigSection>
 
+          {/* CRITICAL FIX: THE MISSING SOCIAL LINKS SECTION */}
+          <ConfigSection 
+            title="Social Media Links" subtitle="Connect your footer to your socials"
+            icon={LinkIcon} iconColor="bg-fuchsia-100 text-fuchsia-700" btnColor="bg-fuchsia-600 hover:bg-fuchsia-700"
+            isSaving={savingSection === 'socialLinks'} onSave={(e) => handleSave(e, 'socialLinks', 'Social links updated.')}
+          >
+            <div className="space-y-4">
+              <InputField label="Facebook URL" icon={Facebook} value={config.socialLinks.facebook || ''} onChange={e => handleUpdate('socialLinks', 'facebook', e.target.value)} placeholder="https://facebook.com/..." />
+              <InputField label="Twitter (X) URL" icon={Twitter} value={config.socialLinks.twitter || ''} onChange={e => handleUpdate('socialLinks', 'twitter', e.target.value)} placeholder="https://twitter.com/..." />
+              <InputField label="Instagram URL" icon={Instagram} value={config.socialLinks.instagram || ''} onChange={e => handleUpdate('socialLinks', 'instagram', e.target.value)} placeholder="https://instagram.com/..." />
+              <InputField label="LinkedIn URL" icon={Linkedin} value={config.socialLinks.linkedin || ''} onChange={e => handleUpdate('socialLinks', 'linkedin', e.target.value)} placeholder="https://linkedin.com/..." />
+              <InputField label="YouTube URL" icon={Youtube} value={config.socialLinks.youtube || ''} onChange={e => handleUpdate('socialLinks', 'youtube', e.target.value)} placeholder="https://youtube.com/..." />
             </div>
           </ConfigSection>
 
