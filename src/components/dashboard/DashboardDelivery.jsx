@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { 
   Search, MapPin, Truck, ExternalLink, PackageCheck, PackageSearch, 
-  Calendar, ChevronDown, X, Save, CheckCircle, Loader2 
+  Calendar, ChevronDown, X, Save, CheckCircle, Loader2, Eye, Map 
 } from 'lucide-react';
-import { AdminContext } from '../../context/AdminContext'; // <-- Import the Global Cache
+import { AdminContext } from '../../context/AdminContext'; 
 import { adminService } from '../../api/service/adminService';
+import apiClient from '../../api/client';
 
 export const DashboardDelivery = () => {
   // --- CONSUME GLOBAL CACHE ---
@@ -19,6 +20,7 @@ export const DashboardDelivery = () => {
   // --- FILTER & SORT STATE ---
   const [activeStatus, setActiveStatus] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState(''); // Performance Fix
   const [sortOrder, setSortOrder] = useState('newest'); 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -32,46 +34,55 @@ export const DashboardDelivery = () => {
   const [editForm, setEditForm] = useState({ partner: '', trackingId: '', status: '' });
   const [toastMessage, setToastMessage] = useState('');
 
+  // --- VIEW DETAILS MODAL STATE ---
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [liveTracking, setLiveTracking] = useState(null);
+  const [isTrackingLoading, setIsTrackingLoading] = useState(false);
+
   // --- TRIGGER API ON FILTER/PAGE CHANGE ---
+  
+  // 1. Debounce only the search input
   useEffect(() => {
-    // Debounce to prevent API spam while typing
-    const delayDebounceFn = setTimeout(() => {
-      loadData();
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
     }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [activeStatus, searchQuery, sortOrder, startDate, endDate, currentPage]);
+  // 2. Fetch data instantly on tab, page, or debounced search change
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoadingList(true);
+      try {
+        const params = {
+          page: currentPage,
+          limit: itemsPerPage,
+          search: debouncedSearch,
+          sort: sortOrder,
+          startDate: startDate || '',
+          endDate: endDate || '',
+          isDeliveryView: true, 
+          deliveryStatus: activeStatus !== 'All' ? activeStatus : ''
+        };
 
-  const loadData = async () => {
-    setIsLoadingList(true);
-    try {
-      // Pass specific delivery parameters to the backend
-      const params = {
-        page: currentPage,
-        limit: itemsPerPage,
-        search: searchQuery,
-        sort: sortOrder,
-        startDate: startDate || '',
-        endDate: endDate || '',
-        isDeliveryView: true, // Tells backend to ignore 'Pending Payment' and 'Cancelled'
-        deliveryStatus: activeStatus !== 'All' ? activeStatus : ''
-      };
+        const response = await fetchAdminOrders(params);
 
-      // Call context -> hits API -> saves to global cache
-      const response = await fetchAdminOrders(params);
-
-      if (response && response.orders) {
-        setCurrentDeliveryIds(response.orders.map(o => o._id));
-        setTotalItems(response.totalItems);
-        setTotalPages(response.totalPages);
+        if (response && response.orders) {
+          setCurrentDeliveryIds(response.orders.map(o => o._id));
+          setTotalItems(response.totalItems);
+          setTotalPages(response.totalPages);
+        }
+      } catch (error) {
+        console.error("Error loading paginated deliveries:", error);
+        showToast("Failed to load delivery data from server.");
+      } finally {
+        setIsLoadingList(false);
       }
-    } catch (error) {
-      console.error("Error loading paginated deliveries:", error);
-      showToast("Failed to load delivery data from server.");
-    } finally {
-      setIsLoadingList(false);
-    }
-  };
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStatus, debouncedSearch, sortOrder, startDate, endDate, currentPage]);
 
   // --- MAP IDs TO ACTUAL DATA FROM CACHE ---
   const visibleDeliveries = useMemo(() => {
@@ -79,7 +90,6 @@ export const DashboardDelivery = () => {
       const order = orderCache[id];
       if (!order) return null;
 
-      // Extract a short location (City, State) from the full address
       const addressParts = order.shippingAddress && order.shippingAddress !== 'Digital Delivery' 
         ? order.shippingAddress.split(',') 
         : ['Digital'];
@@ -87,7 +97,6 @@ export const DashboardDelivery = () => {
         ? addressParts.slice(-3, -1).join(', ').trim() 
         : addressParts[0];
 
-      // Determine internal delivery status based on backend data
       let delStatus = 'Initiated';
       if (order.status === 'Delivered') {
         delStatus = 'Delivered';
@@ -105,7 +114,7 @@ export const DashboardDelivery = () => {
         status: delStatus,
         date: order.createdAt
       };
-    }).filter(Boolean); // Filter out nulls if cache is temporarily out of sync
+    }).filter(Boolean); 
   }, [currentDeliveryIds, orderCache]);
 
   // --- ACTION HANDLERS ---
@@ -124,10 +133,29 @@ export const DashboardDelivery = () => {
     setIsModalOpen(true);
   };
 
+  const handleViewDetails = async (delivery) => {
+    setSelectedDelivery(delivery);
+    setIsViewModalOpen(true);
+    setIsTrackingLoading(true);
+    setLiveTracking(null);
+  
+    const fullOrder = orderCache[delivery.id];
+  
+    try {
+      if (fullOrder?.shipping?.trackingId && fullOrder.shipping.trackingId !== '-' && fullOrder.shipping.trackingId !== 'N/A') {
+        const { data } = await apiClient.get(`/delivery/track/${fullOrder.orderId}`);
+        setLiveTracking(data.tracking);
+      }
+    } catch (error) {
+      console.error('Failed to fetch live tracking', error);
+    } finally {
+      setIsTrackingLoading(false);
+    }
+  };
+
   const handleSaveDelivery = async () => {
     setIsSaving(true);
     try {
-      // 1. Send update to backend
       const trackingPayload = {
         partner: editForm.partner || 'Self-Shipped',
         trackingId: editForm.trackingId || 'N/A',
@@ -142,8 +170,6 @@ export const DashboardDelivery = () => {
         newOrderStatus = 'Delivered';
       }
 
-      // 2. Update global cache instantly
-      // We read the existing cache entry and patch the shipping object
       const existingOrder = orderCache[selectedDelivery.id] || {};
       updateLocalOrder(selectedDelivery.id, {
         status: newOrderStatus,
@@ -187,7 +213,6 @@ export const DashboardDelivery = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
       
-      {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
           <CheckCircle size={18} className="text-emerald-400" />
@@ -195,7 +220,6 @@ export const DashboardDelivery = () => {
         </div>
       )}
 
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Delivery & Logistics</h1>
         <p className="text-sm text-slate-500 mt-1">Track dispatch, assign tracking IDs, and manage shipping status.</p>
@@ -203,7 +227,6 @@ export const DashboardDelivery = () => {
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
         
-        {/* Toolbar */}
         <div className="p-4 md:p-6 border-b border-slate-100 space-y-4">
           
           <div className="flex bg-slate-50 p-1 rounded-xl w-full sm:w-fit">
@@ -218,10 +241,7 @@ export const DashboardDelivery = () => {
             ))}
           </div>
           
-          {/* Search, Sort & Date Filters */}
           <div className="flex flex-col xl:flex-row gap-4 pt-2">
-            
-            {/* Server-Side Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
@@ -254,7 +274,7 @@ export const DashboardDelivery = () => {
               </div>
 
               {(startDate || endDate || searchQuery) && (
-                <button onClick={() => { setStartDate(''); setEndDate(''); setSearchQuery(''); setCurrentPage(1); }} className="px-4 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-100 transition-all">
+                <button onClick={() => { setStartDate(''); setEndDate(''); setSearchQuery(''); setDebouncedSearch(''); setCurrentPage(1); }} className="px-4 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-100 transition-all">
                   Clear
                 </button>
               )}
@@ -262,7 +282,6 @@ export const DashboardDelivery = () => {
           </div>
         </div>
 
-        {/* Table Area */}
         <div className="overflow-x-auto min-h-[400px]">
           {isLoadingList ? (
             <div className="flex flex-col items-center justify-center h-full py-20 text-slate-500">
@@ -299,7 +318,7 @@ export const DashboardDelivery = () => {
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-800 text-sm">{del.partner}</span>
                           {del.trackingId !== '-' && del.trackingId !== 'N/A' ? (
-                            <a href={`https://google.com/search?q=${del.trackingId}`} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1 mt-0.5 font-medium">
+                            <a href={`https://google.com/search?q=${encodeURIComponent(del.trackingId)}`} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1 mt-0.5 font-medium">
                               {del.trackingId} <ExternalLink size={10} />
                             </a>
                           ) : (
@@ -309,12 +328,21 @@ export const DashboardDelivery = () => {
                       </td>
                       <td className="p-4">{getDeliveryBadge(del.status)}</td>
                       <td className="p-4 text-right">
-                        <button 
-                          onClick={() => handleOpenModal(del)}
-                          className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm hover:bg-slate-50 hover:border-emerald-200 hover:text-emerald-700 transition-all active:scale-95"
-                        >
-                          Update Info
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => handleViewDetails(del)}
+                            className="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-blue-50 hover:border-blue-200 transition-all"
+                            title="View Live Tracking"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleOpenModal(del)}
+                            className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm hover:bg-slate-50 hover:border-emerald-200 hover:text-emerald-700 transition-all active:scale-95"
+                          >
+                            Update Info
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -332,7 +360,6 @@ export const DashboardDelivery = () => {
           )}
         </div>
 
-        {/* Server-Side Pagination Footer */}
         <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-sm text-slate-500 gap-4">
           <span>
             Showing {totalItems === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
@@ -367,7 +394,6 @@ export const DashboardDelivery = () => {
           
           <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-[scaleIn_0.2s_ease-out]">
             
-            {/* Modal Header */}
             <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">Assign Logistics</h2>
@@ -378,9 +404,7 @@ export const DashboardDelivery = () => {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6 space-y-5">
-              
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Delivery Status</label>
                 <div className="relative">
@@ -418,10 +442,8 @@ export const DashboardDelivery = () => {
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm placeholder:text-slate-400 uppercase font-mono" 
                 />
               </div>
-
             </div>
 
-            {/* Modal Footer */}
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
               <button 
                 onClick={() => setIsModalOpen(false)} 
@@ -439,7 +461,108 @@ export const DashboardDelivery = () => {
                 {isSaving ? 'Saving...' : 'Save & Update'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
 
+      {/* --- VIEW LIVE TRACKING MODAL --- */}
+      {isViewModalOpen && selectedDelivery && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsViewModalOpen(false)}></div>
+          
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-[scaleIn_0.2s_ease-out]">
+            
+            <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-start">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Order Details</h2>
+                <p className="text-sm font-mono text-slate-500 mt-1">Ref: #{selectedDelivery.orderId}</p>
+              </div>
+              <button onClick={() => setIsViewModalOpen(false)} className="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 shadow-sm border border-slate-100">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              
+              {/* Customer & Payment Summary */}
+              {orderCache[selectedDelivery.id] && (
+                <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-1">Customer</p>
+                      <p className="font-bold text-slate-800">{orderCache[selectedDelivery.id].user?.name}</p>
+                      <p className="text-slate-600 mt-0.5">{orderCache[selectedDelivery.id].user?.mobile || orderCache[selectedDelivery.id].user?.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-1">Payment</p>
+                      <p className={`font-bold ${orderCache[selectedDelivery.id].payment?.status === 'Success' ? 'text-emerald-600' : 'text-orange-600'}`}>
+                        {orderCache[selectedDelivery.id].payment?.status}
+                      </p>
+                      <p className="text-slate-800 font-black mt-0.5">₹{orderCache[selectedDelivery.id].priceBreakup?.total}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <p className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-1">Full Shipping Address</p>
+                    <p className="text-slate-700 font-medium">
+                      {orderCache[selectedDelivery.id].shippingAddress === 'Digital Delivery' 
+                        ? 'Digital Delivery Only' 
+                        : orderCache[selectedDelivery.id].shippingAddress}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Live Tracking Timeline */}
+              <div>
+                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Truck size={18} className="text-blue-500"/> Live Tracking History
+                </h3>
+
+                {isTrackingLoading ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-slate-500">
+                    <Loader2 className="animate-spin text-blue-500 mb-3" size={28} />
+                    <p className="text-sm font-medium">Connecting to logistics partner...</p>
+                  </div>
+                ) : liveTracking && liveTracking.scans?.length > 0 ? (
+                  <div className="relative pl-4">
+                    <div className="absolute left-[23px] top-2 bottom-6 w-0.5 bg-slate-200"></div>
+                    <div className="space-y-6 relative">
+                      {liveTracking.scans.map((scan, idx) => {
+                        const isLast = idx === 0; 
+                        const isDelivered = scan.ScanDetail.Instructions.includes('Delivered');
+                        return (
+                          <div key={idx} className="flex gap-5 items-start">
+                            <div className={`relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                              isLast ? (isDelivered ? 'bg-emerald-500' : 'bg-blue-500') : 'bg-slate-300'
+                            }`}>
+                              <div className="w-2 h-2 rounded-full bg-white"></div>
+                            </div>
+                            <div>
+                              <p className={`font-bold text-sm ${isLast ? (isDelivered ? 'text-emerald-700' : 'text-blue-700') : 'text-slate-700'}`}>
+                                {scan.ScanDetail.Instructions}
+                              </p>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1">
+                                <Map size={12}/> {scan.ScanDetail.ScannedLocation}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1 font-medium">
+                                {new Date(scan.ScanDetail.ScanDateTime).toLocaleString('en-IN', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-slate-50 rounded-2xl border border-slate-100">
+                    <PackageSearch size={32} className="mx-auto text-slate-300 mb-2" />
+                    <p className="text-sm font-bold text-slate-600">No active tracking data found.</p>
+                    <p className="text-xs text-slate-500 mt-1">If recently shipped, check back in a few hours.</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
