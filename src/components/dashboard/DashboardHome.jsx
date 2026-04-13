@@ -8,6 +8,9 @@ export const DashboardHome = () => {
   const navigate = useNavigate();
   const [toastMessage, setToastMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // NEW: Prevent spam-clicking the reminder button
+  const [sendingReminderId, setSendingReminderId] = useState(null); 
 
   // Live Data States
   const [stats, setStats] = useState({ revenue: 0, totalOrders: 0, activeDeliveries: 0, totalUsers: 0 });
@@ -22,13 +25,11 @@ export const DashboardHome = () => {
 
   const fetchLiveDashboardData = async () => {
     try {
-      // 1. Fetch the fast, aggregated stats from the backend AND the latest 100 orders for the charts
       const [dashboardData, recentOrdersData] = await Promise.all([
         adminService.getDashboardStats(),
-        adminService.getOrdersPaginated({ limit: 100 }) // Only fetch 100 for chart trends, not the whole DB
+        adminService.getOrdersPaginated({ limit: 100 }) 
       ]);
 
-      // 2. Populate Top Cards & Lists from the `getDashboardStats` API
       if (dashboardData) {
         setStats({
           revenue: dashboardData.stats?.totalEarnings || 0,
@@ -52,18 +53,15 @@ export const DashboardHome = () => {
         })));
       }
 
-      // 3. Process the latest 100 orders locally to build the trend charts
       let statusCounts = { 'Success': 0, 'Pending Order': 0, 'Pending Payment': 0 };
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weekCounts = { 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0 };
 
       if (recentOrdersData && recentOrdersData.orders) {
         recentOrdersData.orders.forEach(order => {
-          // Chart Data (Group by Day)
           const orderDay = days[new Date(order.createdAt).getDay()];
           weekCounts[orderDay] += 1;
 
-          // Status Donut Chart Data
           if (order.status === 'Delivered' || order.status === 'Success') statusCounts['Success'] += 1;
           if (order.status === 'In Progress') statusCounts['Pending Order'] += 1;
           if (order.status === 'Pending Payment') statusCounts['Pending Payment'] += 1;
@@ -77,11 +75,14 @@ export const DashboardHome = () => {
         { name: 'Sun', orders: weekCounts['Sun'] }
       ]);
 
-      setLast24hData([
-        { name: 'Success', value: statusCounts['Success'] || 1, color: '#1B5E20' }, 
+      // OPTIMIZATION: Removed the falsified `|| 1` so the chart only shows real data
+      const chartData = [
+        { name: 'Success', value: statusCounts['Success'], color: '#1B5E20' }, 
         { name: 'In Progress', value: statusCounts['Pending Order'], color: '#6EE7B7' }, 
         { name: 'Pending Payment', value: statusCounts['Pending Payment'], color: '#FCD34D' }
-      ].filter(item => item.value > 0)); // Only show slices that have numbers
+      ].filter(item => item.value > 0);
+      
+      setLast24hData(chartData);
 
     } catch (error) {
       console.error("Trouble fetching dashboard stats:", error);
@@ -90,10 +91,21 @@ export const DashboardHome = () => {
     }
   };
 
-  const handleNotify = (email) => {
-    // Future expansion: Trigger an email API here
-    setToastMessage(`Payment reminder sent to ${email}`);
-    setTimeout(() => setToastMessage(''), 3000);
+  // OPTIMIZATION: Added async state to prevent multiple emails firing
+  const handleNotify = async (orderId, email) => {
+    setSendingReminderId(orderId);
+    try {
+      // NOTE: Replace this timeout with your actual API call when ready
+      // await apiClient.post(`/admin/orders/${orderId}/remind`);
+      await new Promise(res => setTimeout(res, 800)); // Simulated delay
+      
+      setToastMessage(`Payment reminder sent to ${email}`);
+    } catch (error) {
+      setToastMessage(`Failed to send reminder to ${email}`);
+    } finally {
+      setSendingReminderId(null);
+      setTimeout(() => setToastMessage(''), 3000);
+    }
   };
 
   if (loading) {
@@ -108,7 +120,6 @@ export const DashboardHome = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
       
-      {/* --- TOAST NOTIFICATION --- */}
       {toastMessage && (
         <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
           <CheckCircle size={18} className="text-emerald-400" />
@@ -116,16 +127,13 @@ export const DashboardHome = () => {
         </div>
       )}
 
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Dashboard Overview</h1>
         <p className="text-sm text-slate-500 mt-1">Plan, track, and manage your book orders with ease.</p>
       </div>
 
-      {/* --- STATS ROW --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Total Earnings */}
         <div className="bg-emerald-800 p-5 rounded-3xl text-white relative overflow-hidden flex flex-col justify-between shadow-sm hover:-translate-y-1 transition-transform duration-300">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
           <div className="flex justify-between items-start mb-4 relative z-10">
@@ -137,11 +145,7 @@ export const DashboardHome = () => {
           </div>
         </div>
 
-        {/* Total Orders */}
-        <div 
-          onClick={() => navigate('/admin/orders')}
-          className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
-        >
+        <div onClick={() => navigate('/admin/orders')} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
           <div className="flex justify-between items-start mb-4">
             <span className="text-sm font-medium text-slate-500 group-hover:text-emerald-700 transition-colors">Total Orders</span>
             <div className="p-2 bg-slate-50 rounded-full text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors"><Package size={16} /></div>
@@ -151,11 +155,7 @@ export const DashboardHome = () => {
           </div>
         </div>
 
-        {/* Total Users */}
-        <div 
-          onClick={() => navigate('/admin/users')}
-          className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
-        >
+        <div onClick={() => navigate('/admin/users')} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
           <div className="flex justify-between items-start mb-4">
             <span className="text-sm font-medium text-slate-500 group-hover:text-emerald-700 transition-colors">Total Customers</span>
             <div className="p-2 bg-slate-50 rounded-full text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors"><Users size={16} /></div>
@@ -165,11 +165,7 @@ export const DashboardHome = () => {
           </div>
         </div>
 
-        {/* In Progress Deliveries */}
-        <div 
-          onClick={() => navigate('/admin/delivery')}
-          className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
-        >
+        <div onClick={() => navigate('/admin/delivery')} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
           <div className="flex justify-between items-start mb-4">
             <span className="text-sm font-medium text-slate-500 group-hover:text-emerald-700 transition-colors">Active Deliveries</span>
             <div className="p-2 bg-slate-50 rounded-full text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors"><Clock size={16} /></div>
@@ -185,10 +181,8 @@ export const DashboardHome = () => {
         </div>
       </div>
 
-      {/* --- VISUALIZATION ROW --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Bar Chart: Daily Orders */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm lg:col-span-2">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-base font-bold text-slate-800">Weekly Orders Overview</h3>
@@ -208,45 +202,52 @@ export const DashboardHome = () => {
           </div>
         </div>
 
-        {/* Pie Chart: Overall Breakdown */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
           <h3 className="text-base font-bold text-slate-800 mb-2">Order Status Trends</h3>
           <p className="text-xs text-slate-500 mb-4">Based on latest 100 orders</p>
           
           <div className="flex-1 min-h-[180px] relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={last24hData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {last24hData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" className="hover:opacity-80 transition-opacity outline-none" />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontWeight: 'bold'}} itemStyle={{color: '#1e293b'}} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-bold text-slate-800">
-                {last24hData.reduce((acc, curr) => acc + curr.value, 0)}
-              </span>
-            </div>
+            {last24hData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={last24hData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {last24hData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" className="hover:opacity-80 transition-opacity outline-none" />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontWeight: 'bold'}} itemStyle={{color: '#1e293b'}} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-sm font-medium text-slate-400">
+                No data available
+              </div>
+            )}
+            
+            {last24hData.length > 0 && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-2xl font-bold text-slate-800">
+                  {last24hData.reduce((acc, curr) => acc + curr.value, 0)}
+                </span>
+              </div>
+            )}
           </div>
           
-          {/* Custom Legend */}
-          <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs font-medium text-slate-600">
-            {last24hData.map(item => (
-              <div key={item.name} className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
-                {item.name}
-              </div>
-            ))}
-          </div>
+          {last24hData.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs font-medium text-slate-600">
+              {last24hData.map(item => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
+                  {item.name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* --- RECENT LISTS ROW --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Recent Purchases List */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-base font-bold text-slate-800">Recent Purchasers</h3>
@@ -274,7 +275,6 @@ export const DashboardHome = () => {
           </div>
         </div>
 
-        {/* Pending Payments Alert List */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-base font-bold text-slate-800">Action Required</h3>
@@ -295,10 +295,12 @@ export const DashboardHome = () => {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                    <p className="text-xs text-slate-500 font-medium">{payment.user}</p>
                    <button 
-                    onClick={() => handleNotify(payment.user)}
-                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-100/50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 hover:text-emerald-800 transition-colors active:scale-95"
+                    onClick={() => handleNotify(payment.id, payment.user)}
+                    disabled={sendingReminderId === payment.id}
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-100/50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 hover:text-emerald-800 transition-colors active:scale-95 disabled:opacity-50"
                    >
-                     <BellRing size={14} /> Send Reminder
+                     {sendingReminderId === payment.id ? <Loader2 size={14} className="animate-spin" /> : <BellRing size={14} />} 
+                     {sendingReminderId === payment.id ? 'Sending...' : 'Send Reminder'}
                    </button>
                 </div>
               </div>
