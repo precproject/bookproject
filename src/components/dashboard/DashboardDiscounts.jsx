@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Tag, Edit, Trash2, CheckCircle, XCircle, Search, X, Save, IndianRupee, Loader2 
+  Plus, Tag, Edit, Trash2, CheckCircle, XCircle, Search, X, Save, IndianRupee, Loader2, AlertCircle, Clock
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 
@@ -26,6 +26,7 @@ export const DashboardDiscounts = () => {
     }, 400);
 
     return () => clearTimeout(delayDebounceFn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const loadDiscounts = async () => {
@@ -41,9 +42,14 @@ export const DashboardDiscounts = () => {
     }
   };
 
-  // --- STATS CALCULATION ---
-  const activeCount = discounts.filter(d => d.status === 'Active').length;
-  // Fallback to 0 if totalDiscountProvided isn't tracked in your DB yet
+  // --- CRITICAL FIX: DYNAMIC STATS CALCULATION ---
+  // A code is only active if the admin turned it on AND it hasn't expired/exhausted
+  const activeCount = discounts.filter(d => {
+    const isExpired = d.validTill && new Date(d.validTill) < new Date();
+    const isExhausted = d.maxUsage && d.currentUsage >= d.maxUsage;
+    return d.status === 'Active' && !isExpired && !isExhausted;
+  }).length;
+  
   const totalSaved = discounts.reduce((acc, curr) => acc + (curr.totalDiscountProvided || 0), 0); 
 
   // --- ACTION HANDLERS ---
@@ -59,7 +65,7 @@ export const DashboardDiscounts = () => {
       type: discount.type,
       value: discount.value,
       maxDiscount: discount.maxDiscount,
-      validTill: discount.validTill ? new Date(discount.validTill).toISOString().split('T')[0] : '', // Format for date input
+      validTill: discount.validTill ? new Date(discount.validTill).toISOString().split('T')[0] : '', 
       maxUsage: discount.maxUsage || ''
     });
     setIsModalOpen(true);
@@ -82,27 +88,28 @@ export const DashboardDiscounts = () => {
     setIsSaving(true);
     
     try {
+      const maxUsageValue = formData.maxUsage && formData.maxUsage !== "" ? Number(formData.maxUsage) : null;
+      const validTillValue = formData.validTill && formData.validTill !== "" ? formData.validTill : null;
+
       const payload = {
         code: formData.code.toUpperCase(),
         type: formData.type,
         value: Number(formData.value),
         maxDiscount: Number(formData.maxDiscount),
-        validTill: formData.validTill || null,
-        maxUsage: formData.maxUsage ? Number(formData.maxUsage) : null
+        validTill: validTillValue,
+        maxUsage: maxUsageValue
       };
 
       if (formData._id) {
-        // Edit Existing
         await adminService.updateDiscount(formData._id, payload);
         showToast('Discount updated successfully.');
       } else {
-        // Add New
         await adminService.createDiscount(payload);
         showToast('New discount code created.');
       }
       
       setIsModalOpen(false);
-      loadDiscounts(); // Refresh the list from the server
+      loadDiscounts(); 
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to save discount.');
     } finally {
@@ -118,7 +125,6 @@ export const DashboardDiscounts = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
       
-      {/* --- TOAST NOTIFICATION --- */}
       {toastMessage && (
         <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
           <CheckCircle size={18} className="text-emerald-400" />
@@ -196,50 +202,75 @@ export const DashboardDiscounts = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {discounts.length > 0 ? (
-                  discounts.map((discount) => (
-                    <tr key={discount._id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="p-4">
-                        <span className="font-mono font-bold text-sm bg-slate-100 text-slate-800 px-3 py-1.5 rounded-lg tracking-wider border border-slate-200">
-                          {discount.code}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-800 text-sm">
-                            {discount.type === 'Percentage' ? `${discount.value}%` : `₹${discount.value}`}
+                  discounts.map((discount) => {
+                    // --- CRITICAL FIX: DYNAMIC STATUS RENDERING ---
+                    const isExpired = discount.validTill && new Date(discount.validTill) < new Date();
+                    const isExhausted = discount.maxUsage && discount.currentUsage >= discount.maxUsage;
+                    
+                    let displayStatus = discount.status;
+                    let StatusIcon = CheckCircle;
+                    let statusClasses = "bg-slate-100 text-slate-500"; // default disabled
+                    
+                    if (displayStatus === 'Active') {
+                      if (isExpired) {
+                        displayStatus = 'Expired';
+                        StatusIcon = Clock;
+                        statusClasses = "bg-rose-50 text-rose-700 border border-rose-100";
+                      } else if (isExhausted) {
+                        displayStatus = 'Exhausted';
+                        StatusIcon = AlertCircle;
+                        statusClasses = "bg-amber-50 text-amber-700 border border-amber-100";
+                      } else {
+                        StatusIcon = CheckCircle;
+                        statusClasses = "bg-emerald-50 text-emerald-700 border border-emerald-100";
+                      }
+                    } else {
+                       StatusIcon = XCircle;
+                    }
+
+                    return (
+                      <tr key={discount._id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-4">
+                          <span className="font-mono font-bold text-sm bg-slate-100 text-slate-800 px-3 py-1.5 rounded-lg tracking-wider border border-slate-200">
+                            {discount.code}
                           </span>
-                          <span className="text-xs text-slate-500">{discount.type}</span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm text-slate-600 font-medium">₹{discount.maxDiscount}</td>
-                      <td className="p-4 text-sm text-slate-600">
-                        {discount.validTill ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(discount.validTill)) : 'Never Expires'}
-                      </td>
-                      <td className="p-4">
-                        <div className="group relative inline-flex items-center gap-2 text-sm font-bold text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg cursor-help transition-colors hover:bg-slate-200">
-                          {discount.currentUsage || 0} / {discount.maxUsage || '∞'}
-                          
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-800 text-white text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap shadow-lg animate-[scaleIn_0.1s_ease-out] z-10">
-                            Total Value Provided: <span className="text-emerald-400 font-bold">₹{(discount.totalDiscountProvided || 0).toLocaleString()}</span>
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-slate-800 text-sm">
+                              {discount.type === 'Percentage' ? `${discount.value}%` : `₹${discount.value}`}
+                            </span>
+                            <span className="text-xs text-slate-500">{discount.type}</span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        {discount.status === 'Active' ? (
-                          <span className="flex items-center w-fit gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700"><CheckCircle size={12}/> Active</span>
-                        ) : (
-                          <span className="flex items-center w-fit gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-500"><XCircle size={12}/> {discount.status}</span>
-                        )}
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleOpenEdit(discount)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={16} /></button>
-                          <button onClick={() => handleDelete(discount._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="p-4 text-sm text-slate-600 font-medium">₹{discount.maxDiscount}</td>
+                        <td className="p-4 text-sm text-slate-600">
+                          {discount.validTill ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(discount.validTill)) : 'Never Expires'}
+                        </td>
+                        <td className="p-4">
+                          <div className={`group relative inline-flex items-center gap-2 text-sm font-bold ${isExhausted ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-slate-700 bg-slate-100 border-slate-200'} px-3 py-1.5 rounded-lg cursor-help transition-colors hover:bg-slate-200`}>
+                            {discount.currentUsage || 0} / {discount.maxUsage || '∞'}
+                            
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-800 text-white text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap shadow-lg animate-[scaleIn_0.1s_ease-out] z-10">
+                              Total Value Provided: <span className="text-emerald-400 font-bold">₹{(discount.totalDiscountProvided || 0).toLocaleString()}</span>
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className={`flex items-center w-fit gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold ${statusClasses}`}>
+                            <StatusIcon size={14} /> {displayStatus}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => handleOpenEdit(discount)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={16} /></button>
+                            <button onClick={() => handleDelete(discount._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
                 ) : (
                   <tr>
                     <td colSpan="7" className="p-12 text-center text-slate-500">
