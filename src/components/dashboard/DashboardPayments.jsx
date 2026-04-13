@@ -17,48 +17,54 @@ export const DashboardPayments = () => {
   
   // --- FILTER & SORT STATE ---
   const [activeFilter, setActiveFilter] = useState('All');
+  
+  // CRITICAL FIX 1: Decouple search input from API trigger to prevent double-firing
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
   const [sortOrder, setSortOrder] = useState('newest'); 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // --- TRIGGER API ON FILTER/PAGE CHANGE ---
+  // --- DEBOUNCE EFFECT ---
   useEffect(() => {
-    // Debounce search typing
-    const delayDebounceFn = setTimeout(() => {
-      loadData();
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
     }, 400);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [activeFilter, searchQuery, sortOrder, currentPage]);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const loadData = async () => {
-    setIsLoadingList(true);
-    try {
-      // Map frontend payment tabs to backend order statuses if needed, 
-      // or instruct the backend to filter by payment status specifically.
-      // Here, we'll assume backend understands `paymentStatus`.
-      const params = {
-        page: currentPage,
-        limit: itemsPerPage,
-        search: searchQuery,
-        sort: sortOrder,
-        paymentStatus: activeFilter !== 'All' ? activeFilter : ''
-      };
+  // --- TRIGGER API ON FINALIZED DEPENDENCIES ---
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoadingList(true);
+      try {
+        const params = {
+          page: currentPage,
+          limit: itemsPerPage,
+          search: debouncedSearch,
+          sort: sortOrder,
+          paymentStatus: activeFilter !== 'All' ? activeFilter : ''
+        };
 
-      const response = await fetchAdminOrders(params);
+        const response = await fetchAdminOrders(params);
 
-      if (response && response.orders) {
-        setCurrentPaymentIds(response.orders.map(o => o._id));
-        setTotalItems(response.totalItems);
-        setTotalPages(response.totalPages);
+        if (response && response.orders) {
+          setCurrentPaymentIds(response.orders.map(o => o._id));
+          setTotalItems(response.totalItems);
+          setTotalPages(response.totalPages);
+        }
+      } catch (error) {
+        console.error("Error loading paginated payments:", error);
+      } finally {
+        setIsLoadingList(false);
       }
-    } catch (error) {
-      console.error("Error loading paginated payments:", error);
-    } finally {
-      setIsLoadingList(false);
-    }
-  };
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilter, debouncedSearch, sortOrder, currentPage]);
 
   // --- MAP IDs TO ACTUAL DATA FROM CACHE ---
   const visiblePayments = useMemo(() => {
@@ -69,14 +75,14 @@ export const DashboardPayments = () => {
       // Extract the relevant payment info from the complex order object
       return {
         id: order._id,
-        transactionId: order.payment?.transactionId || `Pending-${order.orderId}`,
+        transactionId: order.payment?.transactionId || order.payment?.txnId || `Pending-${order.orderId}`,
         orderId: order.orderId,
         method: order.payment?.method || 'PhonePe Gateway',
         amount: order.priceBreakup?.total || 0,
         date: order.payment?.updatedAt || order.createdAt,
         status: order.payment?.status || (order.status === 'Failed' ? 'Failed' : 'Pending')
       };
-    }).filter(Boolean); // Filter out nulls
+    }).filter(Boolean); 
   }, [currentPaymentIds, orderCache]);
 
   // --- UI HELPERS ---
@@ -104,6 +110,7 @@ export const DashboardPayments = () => {
     }
   };
 
+  // CRITICAL FIX 2: Ensured everything is inside the single parent div wrapper
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       
