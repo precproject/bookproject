@@ -29,7 +29,7 @@ export const DashboardReferrals = () => {
   const [fetchedTransactions, setFetchedTransactions] = useState([]);
   const [toastMessage, setToastMessage] = useState('');
 
-  // --- NEW: USER SEARCH & CREATE STATES ---
+  // --- USER SEARCH & CREATE STATES ---
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [isSearchingUser, setIsSearchingUser] = useState(false);
@@ -38,7 +38,7 @@ export const DashboardReferrals = () => {
   const [isCreatingUserLoading, setIsCreatingUserLoading] = useState(false);
   const [newUserForm, setNewUserForm] = useState({ name: '', email: '', mobile: '' });
 
-  // Form State extended with Discount parameters
+  // Form State
   const defaultForm = { 
     _id: null, code: '', userId: '', userName: '', rate: 50, status: 'Active', 
     isDiscountLinked: false,
@@ -52,6 +52,7 @@ export const DashboardReferrals = () => {
       loadReferrals();
     }, 400);
     return () => clearTimeout(delayDebounceFn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, sortOrder, currentPage]);
 
   const loadReferrals = async () => {
@@ -111,12 +112,11 @@ export const DashboardReferrals = () => {
 
     setIsCreatingUserLoading(true);
     try {
-      // Assuming your adminService has a createUser method mapping to a POST /api/admin/users
       const newUser = await adminService.createUser({
         name: newUserForm.name,
         email: newUserForm.email,
         mobile: newUserForm.mobile,
-        password: Math.random().toString(36).slice(-10) + 'A1!' // Secure dummy password
+        password: Math.random().toString(36).slice(-10) + 'A1!' 
       });
       
       handleSelectUser(newUser);
@@ -146,7 +146,6 @@ export const DashboardReferrals = () => {
   };
 
   const handleOpenEdit = (ref) => {
-    // When editing, populate existing discount config if available from your backend
     setFormData({
       _id: ref._id,
       code: ref.code,
@@ -169,16 +168,18 @@ export const DashboardReferrals = () => {
 
     setIsSaving(true);
     try {
-      // Build the unified payload
+      // CRITICAL FIX: Safe parsing of optional number/date fields to prevent bugs
+      const safeMaxUsage = formData.maxUsage && formData.maxUsage !== "" ? Number(formData.maxUsage) : null;
+      const safeValidTill = formData.validTill && formData.validTill !== "" ? formData.validTill : null;
+
       const payload = { 
         ...formData, 
         code: formData.code.toUpperCase(),
-        // If discount is enabled, pass the settings so the backend can create/sync the Discount model
         discountDetails: formData.isDiscountLinked ? {
           type: formData.discountType,
-          value: formData.discountValue,
-          validTill: formData.validTill || null,
-          maxUsage: formData.maxUsage || null
+          value: Number(formData.discountValue),
+          validTill: safeValidTill,
+          maxUsage: safeMaxUsage
         } : null
       };
 
@@ -238,7 +239,6 @@ export const DashboardReferrals = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
       
-      {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
           <CheckCircle size={18} className="text-emerald-400" />
@@ -439,173 +439,176 @@ export const DashboardReferrals = () => {
               </button>
             </div>
 
-            <div className="overflow-y-auto flex-1 p-6 space-y-5">
-              
-              {/* --- LIVE USER SEARCH LOGIC --- */}
-              {!formData._id ? (
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Link to Customer <span className="text-red-500">*</span></label>
-                  {!formData.userId ? (
-                    <div className="relative">
-                      {!isCreatingUser ? (
-                        <>
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                          <input
-                            type="text"
-                            placeholder="Type email or mobile to search..."
-                            value={userSearchQuery}
-                            onChange={(e) => setUserSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm"
-                          />
-                          
-                          {/* User Search Dropdown */}
-                          {userSearchQuery.length >= 3 && (
-                            <div className="absolute z-10 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto">
-                              {isSearchingUser ? (
-                                <div className="p-4 text-center text-sm text-slate-500">
-                                  <Loader2 className="animate-spin inline mr-2" size={14}/> Searching...
-                                </div>
-                              ) : userSearchResults.length > 0 ? (
-                                userSearchResults.map(u => (
-                                  <div key={u._id} onClick={() => handleSelectUser(u)} className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex items-center justify-between group">
-                                    <div>
-                                      <p className="font-bold text-slate-800 text-sm group-hover:text-emerald-700">{u.name}</p>
-                                      <p className="text-xs text-slate-500">{u.email} • {u.mobile}</p>
-                                    </div>
-                                    <User size={16} className="text-slate-300 group-hover:text-emerald-500" />
+            {/* Form */}
+            <form onSubmit={handleSaveReferral} className="overflow-y-auto flex-1 flex flex-col">
+              <div className="p-6 space-y-5 flex-1">
+                
+                {/* --- LIVE USER SEARCH LOGIC --- */}
+                {!formData._id ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Link to Customer <span className="text-red-500">*</span></label>
+                    {!formData.userId ? (
+                      <div className="relative">
+                        {!isCreatingUser ? (
+                          <>
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <input
+                              type="text"
+                              placeholder="Type email or mobile to search..."
+                              value={userSearchQuery}
+                              onChange={(e) => setUserSearchQuery(e.target.value)}
+                              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm"
+                            />
+                            
+                            {/* CRITICAL FIX: Z-Index added so it overlays other form elements */}
+                            {userSearchQuery.length >= 3 && (
+                              <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-56 overflow-y-auto">
+                                {isSearchingUser ? (
+                                  <div className="p-4 text-center text-sm text-slate-500">
+                                    <Loader2 className="animate-spin inline mr-2" size={14}/> Searching...
                                   </div>
-                                ))
-                              ) : null}
+                                ) : userSearchResults.length > 0 ? (
+                                  userSearchResults.map(u => (
+                                    <div key={u._id} onClick={() => handleSelectUser(u)} className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex items-center justify-between group">
+                                      <div>
+                                        <p className="font-bold text-slate-800 text-sm group-hover:text-emerald-700">{u.name}</p>
+                                        <p className="text-xs text-slate-500">{u.email} • {u.mobile}</p>
+                                      </div>
+                                      <User size={16} className="text-slate-300 group-hover:text-emerald-500" />
+                                    </div>
+                                  ))
+                                ) : null}
 
-                              {/* Quick Create Action inside Dropdown */}
-                              {!isSearchingUser && (
-                                <div 
-                                  onClick={() => setIsCreatingUser(true)}
-                                  className="p-3 hover:bg-emerald-50 cursor-pointer text-emerald-700 flex items-center justify-center gap-2 border-t border-slate-100"
-                                >
-                                  <UserPlus size={16} /> <span className="text-sm font-bold">Create New User</span>
-                                </div>
-                              )}
+                                {!isSearchingUser && (
+                                  <div 
+                                    onClick={() => setIsCreatingUser(true)}
+                                    className="p-3 hover:bg-emerald-50 cursor-pointer text-emerald-700 flex items-center justify-center gap-2 border-t border-slate-100"
+                                  >
+                                    <UserPlus size={16} /> <span className="text-sm font-bold">Create New User</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          // QUICK CREATE USER FORM
+                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 animate-[fadeIn_0.2s_ease-out]">
+                            <div className="flex justify-between items-center mb-1">
+                              <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2"><UserPlus size={16}/> Quick Create User</h4>
+                              <button type="button" onClick={() => setIsCreatingUser(false)} className="text-slate-400 hover:text-slate-600"><X size={16}/></button>
                             </div>
-                          )}
-                        </>
-                      ) : (
-                        // QUICK CREATE USER FORM
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 animate-[fadeIn_0.2s_ease-out]">
-                          <div className="flex justify-between items-center mb-1">
-                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2"><UserPlus size={16}/> Quick Create User</h4>
-                            <button onClick={() => setIsCreatingUser(false)} className="text-slate-400 hover:text-slate-600"><X size={16}/></button>
+                            <input type="text" placeholder="Full Name" value={newUserForm.name} onChange={e => setNewUserForm({...newUserForm, name: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500" />
+                            <input type="email" placeholder="Email Address" value={newUserForm.email} onChange={e => setNewUserForm({...newUserForm, email: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500" />
+                            <input type="tel" placeholder="Mobile Number" value={newUserForm.mobile} onChange={e => setNewUserForm({...newUserForm, mobile: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500" />
+                            <button 
+                              type="button"
+                              onClick={handleQuickCreateUser}
+                              disabled={isCreatingUserLoading}
+                              className="w-full bg-emerald-600 text-white font-bold text-sm py-2.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex justify-center items-center gap-2"
+                            >
+                              {isCreatingUserLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                              Create & Select
+                            </button>
                           </div>
-                          <input type="text" placeholder="Full Name" value={newUserForm.name} onChange={e => setNewUserForm({...newUserForm, name: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500" />
-                          <input type="email" placeholder="Email Address" value={newUserForm.email} onChange={e => setNewUserForm({...newUserForm, email: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500" />
-                          <input type="tel" placeholder="Mobile Number" value={newUserForm.mobile} onChange={e => setNewUserForm({...newUserForm, mobile: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500" />
-                          <button 
-                            onClick={handleQuickCreateUser}
-                            disabled={isCreatingUserLoading}
-                            className="w-full bg-emerald-600 text-white font-bold text-sm py-2.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex justify-center items-center gap-2"
-                          >
-                            {isCreatingUserLoading ? <Loader2 size={16} className="animate-spin" /> : null}
-                            Create & Select
-                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                        <div>
+                          <p className="text-sm font-bold text-emerald-800">{formData.userName}</p>
+                          <p className="text-xs text-emerald-600 font-mono">{formData.userId}</p>
                         </div>
-                      )}
+                        <button type="button" onClick={() => setFormData({...formData, userId: '', userName: ''})} className="text-xs font-bold text-red-500 hover:text-red-700 underline">Change User</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Edit Mode (User is fixed)
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2 col-span-2 sm:col-span-1">
+                      <label className="text-sm font-bold text-slate-700">Linked User ID</label>
+                      <input type="text" disabled value={formData.userId} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm shadow-sm cursor-not-allowed text-slate-500" />
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
-                      <div>
-                        <p className="text-sm font-bold text-emerald-800">{formData.userName}</p>
-                        <p className="text-xs text-emerald-600 font-mono">{formData.userId}</p>
-                      </div>
-                      <button type="button" onClick={() => setFormData({...formData, userId: '', userName: ''})} className="text-xs font-bold text-red-500 hover:text-red-700 underline">Change User</button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // Edit Mode (User is fixed)
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2 col-span-2 sm:col-span-1">
-                    <label className="text-sm font-bold text-slate-700">Linked User ID</label>
-                    <input type="text" disabled value={formData.userId} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm shadow-sm cursor-not-allowed text-slate-500" />
-                  </div>
-                  <div className="space-y-2 col-span-2 sm:col-span-1">
-                    <label className="text-sm font-bold text-slate-700">User Name</label>
-                    <input type="text" disabled value={formData.userName} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm shadow-sm cursor-not-allowed text-slate-500" />
-                  </div>
-                </div>
-              )}
-
-              {/* Code & Rate */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Referral Code Text <span className="text-red-500">*</span></label>
-                  <input type="text" required disabled={!!formData._id} value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})} placeholder="e.g. CUSTOM50" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm disabled:bg-slate-50 disabled:text-slate-500" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Referrer Reward (₹) <span className="text-red-500">*</span></label>
-                  <input type="number" required min="0" value={formData.rate} onChange={(e) => setFormData({...formData, rate: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" />
-                </div>
-              </div>
-
-              {/* --- DISCOUNT CODE SYNC SETTINGS --- */}
-              <div className="pt-4 border-t border-slate-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800">Use as Discount Code for Buyers</h4>
-                    <p className="text-xs text-slate-500 mt-0.5">Generates a parallel discount code using the same text.</p>
-                  </div>
-                  <button type="button" onClick={() => setFormData({...formData, isDiscountLinked: !formData.isDiscountLinked})} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${formData.isDiscountLinked ? 'bg-purple-500' : 'bg-slate-300'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${formData.isDiscountLinked ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-
-                {formData.isDiscountLinked && (
-                  <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl space-y-4 animate-[fadeIn_0.3s_ease-out]">
-                    <h4 className="text-xs font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1"><Tag size={12}/> Buyer Discount Settings</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-purple-900">Discount Type</label>
-                        <select value={formData.discountType} onChange={(e) => setFormData({...formData, discountType: e.target.value})} className="w-full p-2.5 bg-white border border-purple-200 rounded-lg text-sm outline-none focus:border-purple-400">
-                          <option value="Percentage">Percentage (%)</option>
-                          <option value="Flat">Flat Amount (₹)</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-purple-900">Discount Value</label>
-                        <input type="number" min="0" value={formData.discountValue} onChange={(e) => setFormData({...formData, discountValue: e.target.value})} className="w-full p-2.5 bg-white border border-purple-200 rounded-lg text-sm outline-none focus:border-purple-400" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-purple-900">Max Usages (Optional)</label>
-                        <input type="number" min="0" placeholder="Unlimited" value={formData.maxUsage} onChange={(e) => setFormData({...formData, maxUsage: e.target.value})} className="w-full p-2.5 bg-white border border-purple-200 rounded-lg text-sm outline-none focus:border-purple-400" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-purple-900">Expiry Date (Optional)</label>
-                        <input type="date" value={formData.validTill} onChange={(e) => setFormData({...formData, validTill: e.target.value})} className="w-full p-2.5 bg-white border border-purple-200 rounded-lg text-sm outline-none focus:border-purple-400" />
-                      </div>
+                    <div className="space-y-2 col-span-2 sm:col-span-1">
+                      <label className="text-sm font-bold text-slate-700">User Name</label>
+                      <input type="text" disabled value={formData.userName} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm shadow-sm cursor-not-allowed text-slate-500" />
                     </div>
                   </div>
                 )}
+
+                {/* Code & Rate */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Referral Code Text <span className="text-red-500">*</span></label>
+                    <input type="text" required disabled={!!formData._id} value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})} placeholder="e.g. CUSTOM50" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm disabled:bg-slate-50 disabled:text-slate-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Referrer Reward (₹) <span className="text-red-500">*</span></label>
+                    <input type="number" required min="0" value={formData.rate} onChange={(e) => setFormData({...formData, rate: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" />
+                  </div>
+                </div>
+
+                {/* --- DISCOUNT CODE SYNC SETTINGS --- */}
+                <div className="pt-4 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800">Use as Discount Code for Buyers</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Generates a parallel discount code using the same text.</p>
+                    </div>
+                    <button type="button" onClick={() => setFormData({...formData, isDiscountLinked: !formData.isDiscountLinked})} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${formData.isDiscountLinked ? 'bg-purple-500' : 'bg-slate-300'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${formData.isDiscountLinked ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+
+                  {formData.isDiscountLinked && (
+                    <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl space-y-4 animate-[fadeIn_0.3s_ease-out]">
+                      <h4 className="text-xs font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1"><Tag size={12}/> Buyer Discount Settings</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label htmlFor="discountType" className="text-xs font-bold text-purple-900">Discount Type</label>
+                          <select id="discountType" value={formData.discountType} onChange={(e) => setFormData({...formData, discountType: e.target.value})} className="w-full p-2.5 bg-white border border-purple-200 rounded-lg text-sm outline-none focus:border-purple-400">
+                            <option value="Percentage">Percentage (%)</option>
+                            <option value="Amount">Flat Amount (₹)</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor="discountValue" className="text-xs font-bold text-purple-900">Discount Value</label>
+                          <input id="discountValue" type="number" min="0" value={formData.discountValue} onChange={(e) => setFormData({...formData, discountValue: e.target.value})} className="w-full p-2.5 bg-white border border-purple-200 rounded-lg text-sm outline-none focus:border-purple-400" />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor="maxUsage" className="text-xs font-bold text-purple-900">Max Usages (Optional)</label>
+                          <input id="maxUsage" type="number" min="0" placeholder="Unlimited" value={formData.maxUsage} onChange={(e) => setFormData({...formData, maxUsage: e.target.value})} className="w-full p-2.5 bg-white border border-purple-200 rounded-lg text-sm outline-none focus:border-purple-400" />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor="validTill" className="text-xs font-bold text-purple-900">Expiry Date (Optional)</label>
+                          <input id="validTill" type="date" value={formData.validTill} onChange={(e) => setFormData({...formData, validTill: e.target.value})} className="w-full p-2.5 bg-white border border-purple-200 rounded-lg text-sm outline-none focus:border-purple-400" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Status Toggle */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800">Referral Status</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">Suspend this code from generating new rewards.</p>
+                  </div>
+                  <button type="button" onClick={() => setFormData({...formData, status: formData.status === 'Active' ? 'Disabled' : 'Active'})} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${formData.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${formData.status === 'Active' ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
               </div>
 
-              {/* Status Toggle */}
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-800">Referral Status</h4>
-                  <p className="text-xs text-slate-500 mt-0.5">Suspend this code from generating new rewards.</p>
-                </div>
-                <button type="button" onClick={() => setFormData({...formData, status: formData.status === 'Active' ? 'Disabled' : 'Active'})} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${formData.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${formData.status === 'Active' ? 'translate-x-6' : 'translate-x-1'}`} />
+              <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 shrink-0 mt-auto">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} disabled={isSaving} className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={isSaving || !formData.userId} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-900 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} 
+                  {isSaving ? 'Saving...' : 'Save Configuration'}
                 </button>
               </div>
-
-            </div>
-
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 shrink-0">
-              <button type="button" onClick={() => setIsEditModalOpen(false)} disabled={isSaving} className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50">Cancel</button>
-              <button onClick={handleSaveReferral} disabled={isSaving || !formData.userId} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-900 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
-                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} 
-                {isSaving ? 'Saving...' : 'Save Configuration'}
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
