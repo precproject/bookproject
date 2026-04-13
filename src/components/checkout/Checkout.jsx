@@ -11,7 +11,7 @@ import { Button } from '../ui/Button';
 // Contexts & API
 import { CartContext } from '../../context/CartContext';
 import { AuthContext } from '../../context/AuthContext';
-import { useConfig } from '../../context/ConfigContext'; // <-- CRITICAL FIX: Import Config
+import { useConfig } from '../../context/ConfigContext';
 import apiClient from '../../api/client';
 import { getValidReferralCode } from '../../utils/referralManager';
 import { orderService } from '../../api/service/orderService';
@@ -20,7 +20,7 @@ export const Checkout = ({ isOpen, onClose }) => {
   const { cartItems, cartSubtotal, requiresShipping, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
   const { user, login } = useContext(AuthContext);
 
-    // --- CRITICAL FIX: DYNAMIC PRICING ---
+  // --- DYNAMIC PRICING FROM CONFIG ---
   const { config } = useConfig();
   const gstPercentage = config?.taxConfig?.isGstEnabled ? (config?.taxConfig?.gstPercentage || 5) : 0;
   const configShippingCharge = config?.delivery?.shippingCharge || 50;
@@ -36,10 +36,11 @@ export const Checkout = ({ isOpen, onClose }) => {
 
   // --- STEP 3: ADDRESS STATE ---
   const [savedAddresses, setSavedAddresses] = useState([]);
-  const [selectedAddressIndex, setSelectedAddressIndex] = useState(0); // Default to 0
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState(0); 
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [newAddress, setNewAddress] = useState({ fullName: '', phone: '', street: '', city: '', state: '', pincode: '' });
   const [isFetchingAddresses, setIsFetchingAddresses] = useState(false);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
   // --- PROMO STATE ---
   const [promoCode, setPromoCode] = useState('');
@@ -47,7 +48,7 @@ export const Checkout = ({ isOpen, onClose }) => {
   const [promoMessage, setPromoMessage] = useState({ text: '', type: '' });
   const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 
-  // --- PAYMENT OVERLAY POLLING ---
+  // --- PAYMENT OVERLAY STATE ---
   const [paymentOverlay, setPaymentOverlay] = useState({ active: false, status: 'waiting', orderId: null });
 
   // --- PRICING CALCULATIONS ---
@@ -116,6 +117,33 @@ export const Checkout = ({ isOpen, onClose }) => {
 
   const handleAddressChange = (e) => setNewAddress({ ...newAddress, [e.target.name]: e.target.value });
 
+  // Auto Pincode Fetcher
+  const handlePincodeChange = async (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6); 
+    setNewAddress(prev => ({ ...prev, pincode: val }));
+
+    if (val.length === 6) {
+      setIsFetchingLocation(true);
+      try {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${val}`);
+        const data = await response.json();
+        
+        if (data && data[0] && data[0].Status === 'Success') {
+          const postOffice = data[0].PostOffice[0];
+          setNewAddress(prev => ({
+            ...prev,
+            city: postOffice.District,
+            state: postOffice.State
+          }));
+        }
+      } catch (err) {
+        console.error("Pincode fetch error:", err);
+      } finally {
+        setIsFetchingLocation(false);
+      }
+    }
+  };
+
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
     setIsVerifyingPromo(true);
@@ -155,15 +183,12 @@ export const Checkout = ({ isOpen, onClose }) => {
     setIsProcessing(true);
     setError('');
 
-    // --- CRITICAL FIX: POPUP BLOCKER BYPASS ---
-    // Open the window IMMEDIATELY on click, before any async/await happens.
-    // Give it a generic loading name or message.
+    // Open the window IMMEDIATELY on click to bypass popup blockers
     const paymentWindow = window.open('', '_blank');
     if (paymentWindow) {
-      paymentWindow.document.write('<h2>Securely connecting to payment gateway... Please wait.</h2>');
+      paymentWindow.document.write('<div style="font-family:sans-serif; text-align:center; padding-top:50px;"><h2>Securely connecting to payment gateway... Please wait.</h2></div>');
     }
 
-    // --- FIX: Pass exact structured object instead of concatenated string ---
     let finalShippingAddress = undefined;
 
     if (requiresShipping) {
@@ -184,9 +209,17 @@ export const Checkout = ({ isOpen, onClose }) => {
 
     try {
       const hiddenReferral = getValidReferralCode();
+      
       const payload = {
         orderItems: cartItems.map(item => ({ bookId: item.bookId, qty: item.qty })),
-        shippingAddress: finalShippingAddress, // Passes the object directly
+        shippingAddress: finalShippingAddress, 
+        priceBreakup: {
+          subtotal: cartSubtotal,
+          shipping: shipping,
+          discountAmount: appliedDiscount,
+          taxAmount: taxAmount,
+          total: finalTotal
+        },
         ...(appliedDiscount > 0 ? { discountCode: promoCode } : {}),
         ...(hiddenReferral ? { referralCode: hiddenReferral } : {})
       };
@@ -209,7 +242,35 @@ export const Checkout = ({ isOpen, onClose }) => {
     }
   };
 
-  // Poll for payment success
+  // --- 1. INSTANT POPUP CALLBACK LISTENER (postMessage) ---
+  useEffect(() => {
+    const handlePaymentMessage = (event) => {
+      // Security check: Only trust messages from your own website origin
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data && event.data.type === 'PAYMENT_CALLBACK') {
+        if (event.data.status === 'SUCCESS') {
+          setPaymentOverlay(prev => ({ ...prev, status: 'success' }));
+          setIsProcessing(false);
+          clearCart();
+          setStep(5); // Move to Success Screen
+        } else {
+          setPaymentOverlay(prev => ({ ...prev, status: 'failed' }));
+          setIsProcessing(false);
+          setError("Payment failed or was cancelled. Your cart has been saved.");
+          
+          setTimeout(() => {
+             setPaymentOverlay({ active: false, status: 'waiting', orderId: null });
+          }, 3000);
+        }
+      }
+    };
+
+    window.addEventListener('message', handlePaymentMessage);
+    return () => window.removeEventListener('message', handlePaymentMessage);
+  }, [clearCart]);
+
+  // --- 2. BACKGROUND POLLING FAILSAFE ---
   useEffect(() => {
     if (!paymentOverlay.active || paymentOverlay.status !== 'waiting') return;
 
@@ -220,10 +281,8 @@ export const Checkout = ({ isOpen, onClose }) => {
           setPaymentOverlay(prev => ({ ...prev, status: 'success' }));
           clearInterval(pollInterval);
           setIsProcessing(false);
-
           clearCart();
-
-          setStep(5); // Proceed to Success Screen in Modal
+          setStep(5); 
         } else if (data.paymentStatus === 'Failed') {
           setPaymentOverlay(prev => ({ ...prev, status: 'failed' }));
           clearInterval(pollInterval);
@@ -233,7 +292,6 @@ export const Checkout = ({ isOpen, onClose }) => {
           setTimeout(() => {
              setPaymentOverlay({ active: false, status: 'waiting', orderId: null });
           }, 3000);
-
         }
       } catch (error) {
         console.error('Polling error', error);
@@ -241,7 +299,7 @@ export const Checkout = ({ isOpen, onClose }) => {
     }, 4000);
 
     return () => clearInterval(pollInterval);
-  }, [paymentOverlay]);
+  }, [paymentOverlay, clearCart]);
 
   const handleBack = () => {
     setError('');
@@ -257,8 +315,8 @@ export const Checkout = ({ isOpen, onClose }) => {
     : [ { num: 1, icon: ShoppingBag, label: "Cart" }, { num: 2, icon: UserCircle, label: "Account" }, { num: 3, icon: MapPin, label: "Address" }, { num: 4, icon: CreditCard, label: "Payment" } ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-100/80 dark:bg-slate-950/80 backdrop-blur-sm">
-      <div className="w-full h-full max-w-3xl mx-auto bg-white dark:bg-slate-900 shadow-2xl md:h-[90vh] md:rounded-2xl flex flex-col overflow-hidden relative">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm p-4">
+      <div className="w-full h-full max-w-3xl mx-auto bg-white dark:bg-slate-900 shadow-2xl md:h-[90vh] md:max-h-[800px] md:rounded-2xl flex flex-col overflow-hidden relative">
         
         {/* --- HEADER --- */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-10 shrink-0">
@@ -342,7 +400,7 @@ export const Checkout = ({ isOpen, onClose }) => {
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                          <input type="text" placeholder="Promo Code" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 outline-none focus:ring-2 focus:ring-orange-500 uppercase text-sm font-mono" />
+                          <input type="text" placeholder="Promo Code" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-orange-500 uppercase text-sm font-mono" />
                         </div>
                         <Button variant="secondary" onClick={handleApplyPromo} disabled={isVerifyingPromo || !promoCode} className="px-4 text-sm">
                           {isVerifyingPromo ? <Loader2 size={16} className="animate-spin" /> : 'Apply'}
@@ -433,11 +491,14 @@ export const Checkout = ({ isOpen, onClose }) => {
                         <input type="text" name="fullName" placeholder="Full Name" onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
                         <input type="tel" name="phone" placeholder="Mobile Number" onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
                         <input type="text" name="street" placeholder="Street Address / Flat No" onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm md:col-span-2" />
-                        <input type="text" name="city" placeholder="City" onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
-                        <div className="flex gap-4">
-                          <input type="text" name="state" placeholder="State" onChange={handleAddressChange} className="w-1/2 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
-                          <input type="text" name="pincode" placeholder="PIN Code" onChange={handleAddressChange} className="w-1/2 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
+                        
+                        <div className="relative">
+                          <input type="text" name="pincode" placeholder="PIN Code" value={newAddress.pincode} onChange={handlePincodeChange} maxLength={6} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
+                          {isFetchingLocation && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-orange-500" />}
                         </div>
+
+                        <input type="text" name="city" placeholder="City" value={newAddress.city} onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
+                        <input type="text" name="state" placeholder="State" value={newAddress.state} onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
                       </div>
                     )}
                     
@@ -514,9 +575,13 @@ export const Checkout = ({ isOpen, onClose }) => {
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Order ID</div>
                   <div className="font-mono font-bold text-lg text-slate-900 dark:text-white mb-4">#{paymentOverlay.orderId}</div>
                   
-                  <div className="h-px bg-slate-200 dark:bg-slate-700 my-4" />
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Estimated Delivery</div>
-                  <div className="font-bold text-slate-900 dark:text-white">3-5 Business Days</div>
+                  {requiresShipping && (
+                    <>
+                      <div className="h-px bg-slate-200 dark:bg-slate-700 my-4" />
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Estimated Delivery</div>
+                      <div className="font-bold text-slate-900 dark:text-white">3-5 Business Days</div>
+                    </>
+                  )}
                 </div>
 
                 <Button variant="primary" className="w-full mt-4 py-3.5" onClick={() => { onClose(); window.location.href='/dashboard'; }}>
