@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Edit, Trash2, Package, Image as ImageIcon, Search, 
   X, Save, CheckCircle, AlertTriangle, XCircle, BookOpen, 
-  Eye, History, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Hash, Loader2, Upload, Scale 
+  Eye, History, ChevronDown, ChevronUp, TrendingUp, TrendingDown, 
+  Hash, Loader2, Upload, Scale, EyeOff, User, Building
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 
@@ -24,10 +25,11 @@ export const DashboardInventory = () => {
   
   const fileInputRef = useRef(null);
 
-  // Added weightInGrams to perfectly sync with Delhivery needs
+  // CRITICAL FIX: Form state now perfectly matches the Book Schema
   const defaultForm = { 
     _id: null, sku: '', title: '', description: '', 
-    type: 'Physical', price: '', stock: '', weightInGrams: 500, coverImage: '' 
+    type: 'Physical', price: '', stock: '', weightInGrams: 500, 
+    coverImage: '', status: 'Active', author: 'SahakarStree', publisher: 'Independent'
   };
   const [formData, setFormData] = useState(defaultForm);
 
@@ -38,6 +40,7 @@ export const DashboardInventory = () => {
     }, 400);
 
     return () => clearTimeout(delayDebounceFn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const loadInventory = async () => {
@@ -69,7 +72,10 @@ export const DashboardInventory = () => {
       price: item.price,
       stock: item.stock === null ? '' : item.stock,
       weightInGrams: item.weightInGrams || 500,
-      coverImage: item.coverImage || '' 
+      coverImage: item.coverImage || '',
+      status: item.status || 'Active',
+      author: item.author || 'SahakarStree',
+      publisher: item.publisher || 'Independent'
     });
     setIsEditModalOpen(true);
   };
@@ -77,7 +83,7 @@ export const DashboardInventory = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to remove this item from inventory? It may affect past order displays.')) {
       try {
-        await adminService.deleteInventory(id); // Calling the new backend route
+        await adminService.deleteInventory(id);
         setInventory(prev => prev.filter(item => item._id !== id));
         showToast('Item deleted successfully.');
       } catch (error) {
@@ -102,7 +108,7 @@ export const DashboardInventory = () => {
 
       const response = await adminService.uploadImage(uploadData);
       
-      setFormData(prev => ({ ...prev, coverImage: response.imageUrl }));
+      setFormData({ ...formData, coverImage: response.imageUrl });
       showToast("Image uploaded and optimized securely.");
     } catch (error) {
       console.error(error);
@@ -119,6 +125,7 @@ export const DashboardInventory = () => {
 
     try {
       const isDigital = formData.type === 'Digital';
+      // CRITICAL FIX: Payload now sends Author & Publisher to backend
       const payload = {
         sku: formData.sku.toUpperCase(),
         title: formData.title,
@@ -127,7 +134,10 @@ export const DashboardInventory = () => {
         price: Number(formData.price),
         stock: isDigital ? null : Number(formData.stock),
         weightInGrams: isDigital ? 0 : Number(formData.weightInGrams),
-        coverImage: formData.coverImage
+        coverImage: formData.coverImage,
+        status: formData.status,
+        author: formData.author,
+        publisher: formData.publisher
       };
 
       if (formData._id) {
@@ -141,7 +151,6 @@ export const DashboardInventory = () => {
       setIsEditModalOpen(false);
       loadInventory(); 
     } catch (error) {
-      // Backend properly throws 400 if SKU is duplicate now
       showToast(error.response?.data?.message || 'Failed to save product.');
     } finally {
       setIsSaving(false);
@@ -165,6 +174,10 @@ export const DashboardInventory = () => {
   };
 
   const getStatusInfo = (item) => {
+    if (item.status === 'Inactive') {
+      return { label: 'Hidden (Inactive)', style: 'bg-slate-100 text-slate-600 border-slate-200', icon: EyeOff };
+    }
+    
     if (item.type === 'Digital') {
       return { label: 'Available', style: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle };
     }
@@ -247,7 +260,7 @@ export const DashboardInventory = () => {
                       <tr key={item._id} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="p-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-16 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 shadow-sm shrink-0 overflow-hidden">
+                            <div className={`w-12 h-16 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center shadow-sm shrink-0 overflow-hidden ${item.status === 'Inactive' ? 'opacity-50 grayscale' : 'text-slate-400'}`}>
                               {item.coverImage ? (
                                 <img src={item.coverImage} alt={item.title} className="w-full h-full object-cover" />
                               ) : item.type === 'Physical' ? (
@@ -256,9 +269,9 @@ export const DashboardInventory = () => {
                                 <ImageIcon size={20} />
                               )}
                             </div>
-                            <div className="flex flex-col">
+                            <div className={`flex flex-col ${item.status === 'Inactive' ? 'opacity-50' : ''}`}>
                               <span className="font-bold text-slate-800 text-sm">{item.title}</span>
-                              <span className="text-xs text-slate-500 mt-0.5">{item.description}</span>
+                              <span className="text-xs text-slate-500 mt-0.5 truncate max-w-[200px]">{item.description}</span>
                             </div>
                           </div>
                         </td>
@@ -304,23 +317,41 @@ export const DashboardInventory = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsEditModalOpen(false)}></div>
           
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-[scaleIn_0.2s_ease-out] flex flex-col max-h-[90vh]">
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-[scaleIn_0.2s_ease-out] flex flex-col max-h-[90vh]">
             
+            {/* Modal Header */}
             <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">
                   {formData._id ? 'Edit Product' : 'Add New Product'}
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">Configure product info and stock.</p>
+                <p className="text-xs text-slate-500 mt-1">Configure product info, stock, and publishing details.</p>
               </div>
-              <button onClick={() => setIsEditModalOpen(false)} className="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 shadow-sm border border-slate-100">
+              <button type="button" onClick={() => setIsEditModalOpen(false)} className="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 shadow-sm border border-slate-100">
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="overflow-y-auto">
-              <div className="p-6 space-y-5">
+            {/* Modal Form */}
+            <form onSubmit={handleSave} className="overflow-y-auto flex flex-col flex-1">
+              <div className="p-6 space-y-6 flex-1">
+
+                {/* Status Toggle */}
+                <div className="flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">Storefront Visibility</p>
+                    <p className="text-xs text-slate-500">Should this book be visible to customers?</p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setFormData({...formData, status: formData.status === 'Active' ? 'Inactive' : 'Active'})} 
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-300 ${formData.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${formData.status === 'Active' ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
                 
+                {/* Basic Identifiers */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2 sm:col-span-1">
                     <label className="text-sm font-bold text-slate-700">SKU / Product ID <span className="text-red-500">*</span></label>
@@ -362,7 +393,51 @@ export const DashboardInventory = () => {
                   />
                 </div>
 
-                {/* --- IMAGE UPLOAD SECTION --- */}
+                {/* NEW: Author & Publisher Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Author Name <span className="text-red-500">*</span></label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input 
+                        type="text" 
+                        required
+                        value={formData.author}
+                        onChange={(e) => setFormData({...formData, author: e.target.value})}
+                        placeholder="e.g. SahakarStree" 
+                        className="w-full pl-9 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Publisher</label>
+                    <div className="relative">
+                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input 
+                        type="text" 
+                        value={formData.publisher}
+                        onChange={(e) => setFormData({...formData, publisher: e.target.value})}
+                        placeholder="e.g. Independent" 
+                        className="w-full pl-9 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Short Description <span className="text-red-500">*</span></label>
+                  <textarea 
+                    required
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="e.g. Physical paperback edition." 
+                    rows={2}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm resize-none" 
+                  />
+                </div>
+
+                {/* Image Upload Section */}
                 <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <label className="text-sm font-bold text-slate-700">Cover Image / File URL</label>
                   <div className="flex flex-col sm:flex-row gap-3">
@@ -399,18 +474,7 @@ export const DashboardInventory = () => {
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Short Description <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text" 
-                    required
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="e.g. Physical paperback edition." 
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-sm" 
-                  />
-                </div>
-
+                {/* Pricing & Stock */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700">Price (₹) <span className="text-red-500">*</span></label>
@@ -445,7 +509,7 @@ export const DashboardInventory = () => {
                   </div>
                 </div>
 
-                {/* --- WEIGHT IN GRAMS (FOR DELHIVERY) --- */}
+                {/* Weight (Delhivery) */}
                 {formData.type === 'Physical' && (
                   <div className="space-y-2 bg-orange-50/50 p-4 rounded-xl border border-orange-100">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
@@ -466,9 +530,9 @@ export const DashboardInventory = () => {
                     </div>
                   </div>
                 )}
-
               </div>
 
+              {/* Modal Footer */}
               <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3 mt-auto shrink-0">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} disabled={isSaving} className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={isSaving || isUploading} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-900 transition-colors shadow-md disabled:opacity-50">
@@ -500,7 +564,10 @@ export const DashboardInventory = () => {
                   )}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">{selectedItem.title}</h2>
+                  <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    {selectedItem.title} 
+                    {selectedItem.status === 'Inactive' && <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md uppercase tracking-wider">Hidden</span>}
+                  </h2>
                   <p className="text-xs text-slate-500 mt-1 font-mono">SKU: {selectedItem.sku || selectedItem.id} • {selectedItem.type}</p>
                 </div>
               </div>
