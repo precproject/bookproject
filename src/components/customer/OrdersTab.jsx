@@ -10,11 +10,10 @@ import {
   AlertCircle, X, MapPin, CheckCircle, FileText, ChevronRight, Loader2, ShieldCheck,
   Gift, Map
 } from 'lucide-react';
-const { t, i18n } = useTranslation();
-const dateLocale = i18n.language === 'mr' ? 'mr-IN' : 'en-IN';
 
 const OrdersTab = () => {
-  const { t } = useTranslation();
+  const { t,i18n } = useTranslation();
+  const dateLocale = i18n.language === 'mr' ? 'mr-IN' : 'en-IN';
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
