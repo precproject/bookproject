@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, ArrowDownRight, Users, Package, Clock, TrendingUp, CheckCircle, BellRing, ChevronRight, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { adminService } from '../../api/service/adminService';
-import { useToast } from '../../context/ToastContext';
+import { useToast } from '../../context/ToastContext'; // Using Global Toast
 
 export const DashboardHome = () => {
-  const { showToast } = useToast(); // 2. Destructure showToast
-
+  const { showToast } = useToast(); 
+  
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
 
@@ -97,6 +97,7 @@ export const DashboardHome = () => {
 
     } catch (error) {
       console.error("Trouble fetching dashboard stats:", error);
+      showToast("Trouble fetching live dashboard stats.", "error"); // <-- Added error toast
     } finally {
       setLoading(false);
     }
@@ -111,12 +112,11 @@ export const DashboardHome = () => {
       // await apiClient.post(`/admin/orders/${orderId}/remind`);
       await new Promise(resolve => setTimeout(resolve, 800)); // Simulated network delay
       
-      showToast(`Payment reminder sent to ${email}`);
+      showToast(`Payment reminder sent to ${email}`, "success"); // <-- Used global toast
     } catch (error) {
-      showToast(`Failed to send reminder to ${email}`);
+      showToast(`Failed to send reminder to ${email}`, "error"); // <-- Used global toast
     } finally {
       setSendingReminderId(null);
-      setTimeout(() => showToast(''), 3000);
     }
   };
 
@@ -131,14 +131,6 @@ export const DashboardHome = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
-      
-      {/* --- TOAST NOTIFICATION --- */}
-      {toastMessage && (
-        <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
-          <CheckCircle size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
-        </div>
-      )}
 
       {/* Header */}
       <div>

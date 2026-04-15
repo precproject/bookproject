@@ -10,7 +10,7 @@ import { useToast } from '../../context/ToastContext';
 
 export const DashboardInventory = () => {
 
-  const { showToast } = useToast(); // 2. Destructure showToast
+  const { showToast } = useToast(); 
 
   // --- STATE MANAGEMENT ---
   const [inventory, setInventory] = useState([]);
@@ -28,7 +28,7 @@ export const DashboardInventory = () => {
   
   const fileInputRef = useRef(null);
 
-  // CRITICAL FIX: Form state now perfectly matches the Book Schema
+  // CRITICAL FIX: Form state matches the Book Schema perfectly
   const defaultForm = { 
     _id: null, sku: '', title: '', description: '', 
     type: 'Physical', price: '', stock: '', weightInGrams: 500, 
@@ -53,7 +53,7 @@ export const DashboardInventory = () => {
       setInventory(data || []);
     } catch (error) {
       console.error("Failed to load inventory:", error);
-      showToast("Error fetching inventory data.");
+      showToast("Error fetching inventory data.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -88,9 +88,9 @@ export const DashboardInventory = () => {
       try {
         await adminService.deleteInventory(id);
         setInventory(prev => prev.filter(item => item._id !== id));
-        showToast('Item deleted successfully.');
+        showToast('Item deleted successfully.', 'success');
       } catch (error) {
-        showToast(error.response?.data?.message || 'Failed to delete item.');
+        showToast(error.response?.data?.message || 'Failed to delete item.', 'error');
       }
     }
   };
@@ -100,7 +100,7 @@ export const DashboardInventory = () => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      showToast("Image size must be smaller than 5MB.");
+      showToast("Image size must be smaller than 5MB.", "warning");
       return;
     }
 
@@ -112,10 +112,10 @@ export const DashboardInventory = () => {
       const response = await adminService.uploadImage(uploadData);
       
       setFormData({ ...formData, coverImage: response.imageUrl });
-      showToast("Image uploaded and optimized securely.");
+      showToast("Image uploaded and optimized securely.", "success");
     } catch (error) {
       console.error(error);
-      showToast("Image upload failed. Please check network or file type.");
+      showToast("Image upload failed. Please check network or file type.", "error");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -128,7 +128,6 @@ export const DashboardInventory = () => {
 
     try {
       const isDigital = formData.type === 'Digital';
-      // CRITICAL FIX: Payload now sends Author & Publisher to backend
       const payload = {
         sku: formData.sku.toUpperCase(),
         title: formData.title,
@@ -145,16 +144,16 @@ export const DashboardInventory = () => {
 
       if (formData._id) {
         await adminService.updateInventory(formData._id, payload);
-        showToast('Inventory updated successfully.');
+        showToast('Inventory updated successfully.', 'success');
       } else {
         await adminService.addInventory(payload);
-        showToast('New product added to inventory.');
+        showToast('New product added to inventory.', 'success');
       }
       
       setIsEditModalOpen(false);
       loadInventory(); 
     } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to save product.');
+      showToast(error.response?.data?.message || 'Failed to save product.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -191,14 +190,6 @@ export const DashboardInventory = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
       
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
-          <CheckCircle size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

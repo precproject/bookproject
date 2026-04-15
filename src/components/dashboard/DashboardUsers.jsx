@@ -8,6 +8,7 @@ import { useToast } from '../../context/ToastContext';
 export const DashboardUsers = () => {
   
   const { updateLocalOrder } = useContext(AdminContext);  
+  const { showToast } = useToast(); 
 
   // --- SERVER-SIDE STATE ---
   const [users, setUsers] = useState([]);
@@ -37,8 +38,6 @@ export const DashboardUsers = () => {
   const defaultUserForm = { name: '', email: '', mobile: '', password: '', role: 'Customer', masterSecret: '' };
   const [newUser, setNewUser] = useState(defaultUserForm);
 
-  const { showToast } = useToast(); // 2. Destructure showToast
-
   // --- TRIGGER API ON FILTER/PAGE CHANGE ---
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -46,6 +45,7 @@ export const DashboardUsers = () => {
     }, 400);
 
     return () => clearTimeout(delayDebounceFn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, currentPage]);
 
   const loadUsers = async () => {
@@ -64,7 +64,7 @@ export const DashboardUsers = () => {
       }
     } catch (error) {
       console.error("Error loading users:", error);
-      showToast("Failed to load user list.");
+      showToast("Failed to load user list.", "error");
     } finally {
       setIsLoadingList(false);
     }
@@ -79,18 +79,18 @@ export const DashboardUsers = () => {
       if (newUser.role === 'Admin') {
         // Calls the secure POST /api/auth/create-admin route
         await adminService.createAdmin(newUser); 
-        showToast("Admin account created successfully!");
+        showToast("Admin account created successfully!", "success");
       } else {
         // Calls the standard POST /api/auth/register route
         await adminService.createCustomer(newUser); 
-        showToast("Customer account created successfully!");
+        showToast("Customer account created successfully!", "success");
       }
       
       setIsAddUserModalOpen(false);
       setNewUser(defaultUserForm);
       loadUsers(); // Refresh the list to show the new user
     } catch (error) {
-      showToast(error.response?.data?.message || "Failed to add user. Check details and try again.");
+      showToast(error.response?.data?.message || "Failed to add user. Check details and try again.", "error");
     } finally {
       setIsAddingUser(false);
     }
@@ -110,9 +110,9 @@ export const DashboardUsers = () => {
       updateLocalOrder(selectedOrder._id, { status: newStatus });
       setSelectedOrder(prev => ({ ...prev, status: newStatus }));
       
-      showToast(`Order #${selectedOrder.orderId} updated to ${newStatus}`);
+      showToast(`Order #${selectedOrder.orderId} updated to ${newStatus}`, "success");
     } catch (error) {
-      showToast("Failed to update status. " + (error.response?.data?.message || ''));
+      showToast("Failed to update status. " + (error.response?.data?.message || ''), "error");
     } finally {
       setIsUpdatingStatus(false);
       setIsModalOpen(false);
@@ -121,6 +121,7 @@ export const DashboardUsers = () => {
 
   const handleNotifyUser = (email, type) => {
     console.log(`Sending ${type} notification to ${email}`);
+    showToast(`Notification sent to ${email}`, "success");
   };
 
   const handleToggleStatus = async (user) => {
@@ -135,9 +136,9 @@ export const DashboardUsers = () => {
         u._id === user._id ? { ...u, status: newStatus } : u
       ));
       
-      showToast(`${user.name}'s account is now ${newStatus}.`);
+      showToast(`${user.name}'s account is now ${newStatus}.`, "success");
     } catch (error) {
-      showToast("Failed to update user status.");
+      showToast("Failed to update user status.", "error");
     } finally {
       setIsTogglingId(null);
     }
@@ -152,7 +153,7 @@ export const DashboardUsers = () => {
       setFetchedOrders(orders.orders);
     } catch (error) {
       console.error("Failed to load user orders:", error);
-      showToast("Failed to load order history.");
+      showToast("Failed to load order history.", "error");
       setFetchedOrders([]);
     } finally {
       setIsOrdersLoading(false);
@@ -166,14 +167,6 @@ export const DashboardUsers = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
-      
-      {/* --- TOAST NOTIFICATION --- */}
-      {toastMessage && (
-        <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
-          <CheckCircle size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -493,7 +486,7 @@ export const DashboardUsers = () => {
               ) : fetchedOrders.length > 0 ? (
                 <div className="space-y-4">
                   {fetchedOrders.map((order) => (
-                    <div key={order._id} onClick={() => handleOpenOrder(order)} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-emerald-200 transition-colors">
+                    <div key={order._id} onClick={() => handleOpenOrder(order)} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-emerald-200 transition-colors cursor-pointer">
                       
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
@@ -512,6 +505,8 @@ export const DashboardUsers = () => {
                         {order.status === 'In Progress' && <span className="text-[10px] font-bold px-2 py-1 bg-blue-50 text-blue-700 rounded-md border border-blue-100 uppercase tracking-wider">In Progress</span>}
                         {order.status === 'Cancelled' && <span className="text-[10px] font-bold px-2 py-1 bg-red-50 text-red-700 rounded-md border border-red-100 uppercase tracking-wider">Cancelled</span>}
                         {order.status === 'Pending Payment' && <span className="text-[10px] font-bold px-2 py-1 bg-yellow-50 text-yellow-700 rounded-md border border-yellow-100 uppercase tracking-wider">Pending</span>}
+                        {order.status === 'Success' && <span className="text-[10px] font-bold px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-100 uppercase tracking-wider">Success</span>}
+                        {order.status === 'Failed' && <span className="text-[10px] font-bold px-2 py-1 bg-red-50 text-red-700 rounded-md border border-red-100 uppercase tracking-wider">Failed</span>}
                       </div>
 
                     </div>

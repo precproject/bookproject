@@ -18,6 +18,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { Navbar } from '../components/sections/Navbar';
+import { useToast } from '../context/ToastContext';
 
 export const ProductPage = () => {
   const { id } = useParams();
@@ -41,6 +42,8 @@ export const ProductPage = () => {
   const [submittingReview, setSubmittingReview] = useState(false);
 
   const cartItem = book ? cartItems.find(item => item.bookId === book._id) : null;
+
+  const { showToast } = useToast(); // 2. Destructure showToast
 
   // Check for referral on page load
   useEffect(() => {
@@ -82,29 +85,34 @@ export const ProductPage = () => {
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
-    if (!user) return alert("Please login to submit a review.");
+    if (!user) {
+      showToast(t('alerts.loginToReview', 'Please log in to submit a review.'), 'error');
+      return;
+    }
     
     setSubmittingReview(true);
     try {
       const { data } = await apiClient.post(`/public/books/${id}/reviews`, newReview);
       setReviews([data, ...reviews]); 
       setNewReview({ rating: 5, comment: '' }); 
+      showToast(t('alerts.reviewSubmitted', 'Thank you! Your review has been submitted.'));
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to submit review.");
+      showToast(error.response?.data?.message || t('alerts.reviewSubmitFailed', 'Failed to submit your review.'), 'error');
     } finally {
       setSubmittingReview(false);
     }
   };
 
   const handleDeleteReview = async (reviewId) => {
-    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    if (!window.confirm(t('alerts.confirmDeleteReview', "Are you sure you want to remove your review?"))) return;
 
     try {
       await apiClient.delete(`/public/books/${id}/reviews/${reviewId}`);
       // Instantly remove the deleted review from the screen
       setReviews(reviews.filter(review => review._id !== reviewId));
+      showToast(t('alerts.reviewDeleted', 'Your review has been removed.'));
     } catch (error) {
-      alert("Failed to delete review.");
+      showToast(t('alerts.reviewDeleteFailed', 'Failed to remove your review.'), 'error');
     }
   };
 

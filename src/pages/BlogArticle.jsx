@@ -11,8 +11,11 @@ import { useTheme } from '../context/ThemeContext';
 import { AuthContext } from '../context/AuthContext'; // To get logged-in user for comments
 import apiClient from '../api/client';
 import { Footer } from '../components/sections/Footer';
+import { useToast } from '../context/ToastContext';
 
 export const BlogArticle = () => {
+  const { showToast } = useToast(); // 2. Destructure showToast
+  
   const { slug } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -95,7 +98,7 @@ export const BlogArticle = () => {
   const handleLike = async () => {
 
     if (!user) {
-      alert(t('blog.loginToLike', 'Please log in to like this article.'));
+      showToast(t('alerts.loginToLike', 'Please log in to like this.'), 'warning');
       return;
     }
 
@@ -116,8 +119,8 @@ export const BlogArticle = () => {
   };
 
   const handleCommentSubmit = async () => {
-    if (!newComment.trim() || !user) {
-      if (!user) alert(t('blog.loginToComment', 'Please log in to leave a review.'));
+    if (!user) {
+      showToast(t('alerts.loginToComment', 'Please log in to leave a comment.'), 'warning');
       return;
     }
 
@@ -141,7 +144,7 @@ export const BlogArticle = () => {
 
     } catch (error) {
       console.error("Failed to post comment", error);
-      alert(t('blog.commentError', 'Failed to post comment. Please try again.'));
+      showToast(t('alerts.error', 'Failed to post comment. Please try again.'), 'error');
     } finally {
       setIsSubmittingComment(false);
     }

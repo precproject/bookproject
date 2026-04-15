@@ -6,7 +6,7 @@ import {
   Facebook, Twitter, Instagram, Linkedin, Youtube
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
-import { useToast } from '../../context/ToastContext';
+import { useToast } from '../../context/ToastContext'; // Using Global Toast
 
 // ============================================================================
 // REUSABLE UI SUB-COMPONENTS
@@ -79,7 +79,7 @@ export const DashboardConfig = () => {
   const [isFetching, setIsFetching] = useState(true);
   const [savingSection, setSavingSection] = useState(null);
 
-  const { showToast } = useToast(); // 2. Destructure showToast
+  const { showToast } = useToast(); // Using Global Toast
 
   const [config, setConfig] = useState({
     general: { storeName: '', supportEmail: '', supportPhone: '', businessAddress: '' },
@@ -119,20 +119,19 @@ export const DashboardConfig = () => {
           uiConfig: { ...prev.uiConfig, ...data.uiConfig }
         }));
       } catch (error) {
-        showToast('Failed to connect to configuration server.');
+        showToast('Failed to connect to configuration server.', 'error');
       } finally {
         setIsFetching(false);
       }
     };
     loadConfig();
-  }, []);
+  }, [showToast]);
 
   const handleUpdate = (section, field, value) => {
     setConfig(prev => ({
       ...prev,
       [section]: { 
         ...prev[section], 
-        // Allow functional updates for deeply nested objects (like returnAddress)
         [field]: typeof value === 'function' ? value(prev[section][field]) : value 
       }
     }));
@@ -143,9 +142,9 @@ export const DashboardConfig = () => {
     setSavingSection(sectionKey);
     try {
       await adminService.updateConfig(sectionKey, { [sectionKey]: config[sectionKey] });
-      showToast(successMsg);
+      showToast(successMsg, 'success');
     } catch (error) {
-      showToast(`Failed to save ${sectionKey} settings.`);
+      showToast(`Failed to save ${sectionKey} settings.`, 'error');
     } finally {
       setSavingSection(null);
     }
@@ -162,13 +161,6 @@ export const DashboardConfig = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10 relative">
-      
-      {toastMessage && (
-        <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
-          <CheckCircle size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
-        </div>
-      )}
 
       <div>
         <h1 className="text-2xl font-bold text-slate-800">System Configuration</h1>
@@ -188,7 +180,6 @@ export const DashboardConfig = () => {
             isSaving={savingSection === 'general'} onSave={(e) => handleSave(e, 'general', 'General settings saved.')}
           >
             <div className="space-y-4">
-              {/* CRITICAL FIX: Added || '' to prevent React Uncontrolled Component Warnings */}
               <InputField label="Store Name" icon={Store} value={config.general.storeName || ''} onChange={e => handleUpdate('general', 'storeName', e.target.value)} required />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InputField label="Support Email" icon={Mail} type="email" value={config.general.supportEmail || ''} onChange={e => handleUpdate('general', 'supportEmail', e.target.value)} required />
@@ -361,7 +352,6 @@ export const DashboardConfig = () => {
 
               <div className="space-y-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Return Address (RTO)</h4>
-                {/* CRITICAL FIX: Safe nested functional state update */}
                 <InputField label="Return Contact Name" value={config.delivery.returnAddress?.name || ''} onChange={e => handleUpdate('delivery', 'returnAddress', (prev) => ({ ...prev, name: e.target.value }))} />
                 <InputField label="Full Street Address" value={config.delivery.returnAddress?.address || ''} onChange={e => handleUpdate('delivery', 'returnAddress', (prev) => ({ ...prev, address: e.target.value }))} />
                 <div className="grid grid-cols-3 gap-4">
@@ -373,7 +363,6 @@ export const DashboardConfig = () => {
             </div>
           </ConfigSection>
 
-          {/* CRITICAL FIX: THE MISSING SOCIAL LINKS SECTION */}
           <ConfigSection 
             title="Social Media Links" subtitle="Connect your footer to your socials"
             icon={LinkIcon} iconColor="bg-fuchsia-100 text-fuchsia-700" btnColor="bg-fuchsia-600 hover:bg-fuchsia-700"

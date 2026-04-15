@@ -4,10 +4,10 @@ import {
   Edit, Search, Copy, Eye, Tag, ChevronDown, X, Save, ArrowUpRight, Loader2, User, UserPlus 
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
-import { useToast } from '../../context/ToastContext';
+import { useToast } from '../../context/ToastContext'; // <-- Import Global Toast
 
 export const DashboardReferrals = () => {
-  const { showToast } = useToast(); // 2. Destructure showToast
+  const { showToast } = useToast(); // <-- Destructure showToast
 
   // --- SERVER-SIDE STATE ---
   const [referrals, setReferrals] = useState([]);
@@ -71,7 +71,7 @@ export const DashboardReferrals = () => {
       }
     } catch (error) {
       console.error("Failed to load referrals:", error);
-      showToast("Error fetching referral data.");
+      showToast("Error fetching referral data.", "error");
     } finally {
       setIsLoadingList(false);
     }
@@ -109,7 +109,7 @@ export const DashboardReferrals = () => {
   // --- QUICK CREATE USER LOGIC ---
   const handleQuickCreateUser = async () => {
     if (!newUserForm.name || (!newUserForm.email && !newUserForm.mobile)) {
-      return showToast("Name and either Email or Mobile are required to create a user.");
+      return showToast("Name and either Email or Mobile are required to create a user.", "warning");
     }
 
     setIsCreatingUserLoading(true);
@@ -122,12 +122,12 @@ export const DashboardReferrals = () => {
       });
       
       handleSelectUser(newUser);
-      showToast("User created and linked successfully!");
+      showToast("User created and linked successfully!", "success");
       setNewUserForm({ name: '', email: '', mobile: '' });
       setIsCreatingUser(false);
     } catch (error) {
       console.log(error)
-      showToast(error.response?.data?.message || "Failed to create new user.");
+      showToast(error.response?.data?.message || "Failed to create new user.", "error");
     } finally {
       setIsCreatingUserLoading(false);
     }
@@ -166,11 +166,10 @@ export const DashboardReferrals = () => {
 
   const handleSaveReferral = async (e) => {
     e.preventDefault();
-    if (!formData.userId) return showToast('Please select a user to link this referral code to.');
+    if (!formData.userId) return showToast('Please select a user to link this referral code to.', "warning");
 
     setIsSaving(true);
     try {
-      // CRITICAL FIX: Safe parsing of optional number/date fields to prevent bugs
       const safeMaxUsage = formData.maxUsage && formData.maxUsage !== "" ? Number(formData.maxUsage) : null;
       const safeValidTill = formData.validTill && formData.validTill !== "" ? formData.validTill : null;
 
@@ -187,16 +186,16 @@ export const DashboardReferrals = () => {
 
       if (formData._id) {
         await adminService.updateReferral(formData._id, payload);
-        showToast('Referral configuration updated.');
+        showToast('Referral configuration updated.', "success");
       } else {
         await adminService.createReferral(payload);
-        showToast('New referral code generated.');
+        showToast('New referral code generated.', "success");
       }
       
       setIsEditModalOpen(false);
       loadReferrals(); 
     } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to save referral.');
+      showToast(error.response?.data?.message || 'Failed to save referral.', "error");
     } finally {
       setIsSaving(false);
     }
@@ -210,7 +209,7 @@ export const DashboardReferrals = () => {
       const txns = await adminService.getReferralTransactions(ref._id);
       setFetchedTransactions(txns || []);
     } catch (error) {
-      showToast('Failed to load transaction history.');
+      showToast('Failed to load transaction history.', "error");
     } finally {
       setIsTxnLoading(false);
     }
@@ -222,26 +221,19 @@ export const DashboardReferrals = () => {
       setFetchedTransactions(prev => prev.map(txn => txn._id === txnId ? { ...txn, payoutStatus: 'Paid' } : txn));
       setReferrals(prev => prev.map(r => r._id === selectedReferral._id ? { ...r, pending: Math.max(0, r.pending - amount) } : r));
       setStats(prev => ({ ...prev, totalPending: Math.max(0, prev.totalPending - amount) }));
-      showToast(`₹${amount} marked as paid to referrer.`);
+      showToast(`₹${amount} marked as paid to referrer.`, "success");
     } catch (error) {
-      showToast('Failed to mark transaction as paid.');
+      showToast('Failed to mark transaction as paid.', "error");
     }
   };
 
   const copyToClipboard = (code) => {
     navigator.clipboard.writeText(`${window.location.origin}/?ref=${code}`);
-    showToast('Referral link copied to clipboard!');
+    showToast('Referral link copied to clipboard!', "success");
   };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
-      
-      {toastMessage && (
-        <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
-          <CheckCircle size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

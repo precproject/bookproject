@@ -4,10 +4,10 @@ import {
   ChevronDown, Loader2, Calendar, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
-import { useToast } from '../../context/ToastContext';
+import { useToast } from '../../context/ToastContext'; // <-- Global Toast Import
 
 export const DashboardReviews = () => {
-  const { showToast } = useToast(); // 2. Destructure showToast
+  const { showToast } = useToast(); // <-- Destructure showToast
 
   // --- DATA STATE ---
   const [reviews, setReviews] = useState([]);
@@ -32,7 +32,7 @@ export const DashboardReviews = () => {
         const data = await adminService.getInventory({});
         setBooks(data || []);
       } catch (error) {
-        console.error("Failed to load books for filter");
+        console.error("Failed to load books for filter", error);
       }
     };
     fetchBooksList();
@@ -50,18 +50,18 @@ export const DashboardReviews = () => {
           sort: sortOrder
         });
         
-        // Matches your JSON: { reviews: [], totalItems: X, totalPages: Y, currentPage: Z }
         setReviews(response.reviews || []);
         setTotalPages(response.totalPages || 1);
         setTotalItems(response.totalItems || 0);
       } catch (error) {
-        showToast("Failed to fetch reviews.");
+        showToast("Failed to fetch reviews.", "error"); // <-- Added error type
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBookId, currentPage, sortOrder]);
 
   const handleToggleStatus = async (review) => {
@@ -71,9 +71,9 @@ export const DashboardReviews = () => {
       setReviews(prev => prev.map(r => 
         r._id === review._id ? { ...r, status: response.status } : r
       ));
-      showToast(`Review is now ${response.status}.`);
+      showToast(`Review visibility updated to ${response.status}.`, "success"); // <-- Added success type
     } catch (error) {
-      showToast("Failed to update status.");
+      showToast("Failed to update status.", "error"); // <-- Added error type
     } finally {
       setIsTogglingId(null);
     }
@@ -86,13 +86,6 @@ export const DashboardReviews = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
       
-      {toastMessage && (
-        <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
-          <CheckCircle size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
-        </div>
-      )}
-
       {/* Header & Advanced Filters */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>

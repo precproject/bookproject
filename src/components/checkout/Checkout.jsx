@@ -15,8 +15,11 @@ import { useConfig } from '../../context/ConfigContext';
 import apiClient from '../../api/client';
 import { getValidReferralCode } from '../../utils/referralManager';
 import { orderService } from '../../api/service/orderService';
+import { useTranslation } from 'react-i18next'; // <-- Translation Hook
 
 export const Checkout = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+
   const { cartItems, cartSubtotal, requiresShipping, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
   const { user, login } = useContext(AuthContext);
 
@@ -109,7 +112,7 @@ export const Checkout = ({ isOpen, onClose }) => {
     try {
       await login(email, password);
     } catch (err) {
-      setError('Invalid email or password.');
+      setError(t('alerts.error', 'Invalid email or password.'));
     } finally {
       setIsProcessing(false);
     }
@@ -152,10 +155,10 @@ export const Checkout = ({ isOpen, onClose }) => {
     try {
       const { data } = await apiClient.post('/discounts/validate', { code: promoCode, subtotal: cartSubtotal });
       setAppliedDiscount(data.discountAmount);
-      setPromoMessage({ text: `Saved ₹${data.discountAmount}!`, type: 'success' });
+      setPromoMessage({ text: `${t('checkout.savedAmount', 'Saved ₹')}${data.discountAmount}!`, type: 'success' });
     } catch (err) {
       setAppliedDiscount(0);
-      setPromoMessage({ text: err.response?.data?.message || 'Invalid code', type: 'error' });
+      setPromoMessage({ text: err.response?.data?.message || t('checkout.invalidPromo', 'Invalid code'), type: 'error' });
     } finally {
       setIsVerifyingPromo(false);
     }
@@ -165,14 +168,14 @@ export const Checkout = ({ isOpen, onClose }) => {
     setError('');
     if (requiresShipping && isAddingNewAddress) {
       if (!newAddress.fullName || !newAddress.phone || !newAddress.street || !newAddress.city || !newAddress.state || !newAddress.pincode) {
-        setError('Please fill in all shipping details.');
+        setError(t('checkout.errorFillDetails', 'Please fill in all shipping details.'));
         return;
       }
       try {
         await apiClient.post('/user/addresses', newAddress);
         await fetchAddresses(); // Refresh addresses so selection works properly
       } catch (e) {
-        setError("Could not save address. Please try again.");
+        setError(t('checkout.errorSaveAddress', "Could not save address. Please try again."));
         return;
       }
     }
@@ -186,7 +189,7 @@ export const Checkout = ({ isOpen, onClose }) => {
     // Open the window IMMEDIATELY on click to bypass popup blockers
     const paymentWindow = window.open('', '_blank');
     if (paymentWindow) {
-      paymentWindow.document.write('<div style="font-family:sans-serif; text-align:center; padding-top:50px;"><h2>Securely connecting to payment gateway... Please wait.</h2></div>');
+      paymentWindow.document.write(`<div style="font-family:sans-serif; text-align:center; padding-top:50px;"><h2>${t('checkout.processing', 'Securely connecting to payment gateway... Please wait.')}</h2></div>`);
     }
 
     let finalShippingAddress = undefined;
@@ -230,14 +233,14 @@ export const Checkout = ({ isOpen, onClose }) => {
       if (paymentWindow) {
         paymentWindow.location.href = data.paymentPayload.redirectUrl;
       } else {
-        alert("Payment popup blocked! Please disable your popup blocker and try again.");
+        setError(t('alerts.popupBlocked', "Payment window blocked! Please allow popups for this site and try again."));
       }
       
       setPaymentOverlay({ active: true, status: 'waiting', orderId: data.orderId });
 
     } catch (err) {
       if (paymentWindow) paymentWindow.close(); // Close the blank window if API fails
-      setError(err.response?.data?.message || 'Failed to initialize checkout.');
+      setError(err.response?.data?.message || t('checkout.errorInitCheckout', 'Failed to initialize checkout.'));
       setIsProcessing(false);
     }
   };
@@ -257,7 +260,7 @@ export const Checkout = ({ isOpen, onClose }) => {
         } else {
           setPaymentOverlay(prev => ({ ...prev, status: 'failed' }));
           setIsProcessing(false);
-          setError("Payment failed or was cancelled. Your cart has been saved.");
+          setError(t('checkout.paymentDeclined', "Payment failed or was cancelled. Your cart has been saved."));
           
           setTimeout(() => {
              setPaymentOverlay({ active: false, status: 'waiting', orderId: null });
@@ -268,7 +271,7 @@ export const Checkout = ({ isOpen, onClose }) => {
 
     window.addEventListener('message', handlePaymentMessage);
     return () => window.removeEventListener('message', handlePaymentMessage);
-  }, [clearCart]);
+  }, [clearCart, t]);
 
   // --- 2. BACKGROUND POLLING FAILSAFE ---
   useEffect(() => {
@@ -287,7 +290,7 @@ export const Checkout = ({ isOpen, onClose }) => {
           setPaymentOverlay(prev => ({ ...prev, status: 'failed' }));
           clearInterval(pollInterval);
           setIsProcessing(false);
-          setError("Payment failed or was cancelled. Your cart has been saved.");
+          setError(t('checkout.paymentDeclined', "Payment failed or was cancelled. Your cart has been saved."));
 
           setTimeout(() => {
              setPaymentOverlay({ active: false, status: 'waiting', orderId: null });
@@ -299,7 +302,7 @@ export const Checkout = ({ isOpen, onClose }) => {
     }, 4000);
 
     return () => clearInterval(pollInterval);
-  }, [paymentOverlay, clearCart]);
+  }, [paymentOverlay, clearCart, t]);
 
   const handleBack = () => {
     setError('');
@@ -311,8 +314,8 @@ export const Checkout = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const visualSteps = user 
-    ? [ { num: 1, icon: ShoppingBag, label: "Cart" }, { num: 3, icon: MapPin, label: "Address" }, { num: 4, icon: CreditCard, label: "Payment" } ]
-    : [ { num: 1, icon: ShoppingBag, label: "Cart" }, { num: 2, icon: UserCircle, label: "Account" }, { num: 3, icon: MapPin, label: "Address" }, { num: 4, icon: CreditCard, label: "Payment" } ];
+    ? [ { num: 1, icon: ShoppingBag, label: t('navbar.cart', "Cart") }, { num: 3, icon: MapPin, label: t('checkout.shippingAddress', "Address") }, { num: 4, icon: CreditCard, label: t('checkout.securePayment', "Payment") } ]
+    : [ { num: 1, icon: ShoppingBag, label: t('navbar.cart', "Cart") }, { num: 2, icon: UserCircle, label: t('navbar.login', "Account") }, { num: 3, icon: MapPin, label: t('checkout.shippingAddress', "Address") }, { num: 4, icon: CreditCard, label: t('checkout.securePayment', "Payment") } ];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm p-4">
@@ -327,11 +330,11 @@ export const Checkout = ({ isOpen, onClose }) => {
               </button>
             )}
             <h2 className="text-xl font-bold font-serif text-slate-900 dark:text-white">
-              {step === 1 && "Order Summary"}
-              {step === 2 && "Account Sign In"}
-              {step === 3 && "Delivery Address"}
-              {step === 4 && "Secure Payment"}
-              {step === 5 && "Order Confirmed"}
+              {step === 1 && t('checkout.orderSummary', "Order Summary")}
+              {step === 2 && t('checkout.loginToCheckout', "Account Sign In")}
+              {step === 3 && t('checkout.shippingAddress', "Delivery Address")}
+              {step === 4 && t('checkout.securePayment', "Secure Payment")}
+              {step === 5 && t('checkout.paymentSuccess', "Order Confirmed!")}
             </h2>
           </div>
           {step < 5 && !paymentOverlay.active && (
@@ -369,7 +372,7 @@ export const Checkout = ({ isOpen, onClose }) => {
                 {cartItems.length === 0 ? (
                   <div className="text-center py-20 text-slate-500">
                     <ShoppingBag size={64} className="mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-bold">Your cart is empty</p>
+                    <p className="text-lg font-bold">{t('checkout.emptyCartTitle', 'Your cart is empty')}</p>
                   </div>
                 ) : (
                   <>
@@ -377,7 +380,9 @@ export const Checkout = ({ isOpen, onClose }) => {
                       {cartItems.map((item) => (
                         <div key={item.bookId} className="flex gap-4 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                           <div className="flex-1">
-                            <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-1 block">{item.type}</span>
+                            <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-1 block">
+                              {item.type} {t('checkout.edition', 'Edition')}
+                            </span>
                             <h3 className="font-bold text-slate-900 dark:text-white leading-tight mb-2">{item.name}</h3>
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 rounded-lg p-1">
@@ -400,10 +405,16 @@ export const Checkout = ({ isOpen, onClose }) => {
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                          <input type="text" placeholder="Promo Code" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-orange-500 uppercase text-sm font-mono" />
+                          <input 
+                            type="text" 
+                            placeholder={t('checkout.enterPromo', "Promo Code")} 
+                            value={promoCode} 
+                            onChange={(e) => setPromoCode(e.target.value.toUpperCase())} 
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-orange-500 uppercase text-sm font-mono" 
+                          />
                         </div>
                         <Button variant="secondary" onClick={handleApplyPromo} disabled={isVerifyingPromo || !promoCode} className="px-4 text-sm">
-                          {isVerifyingPromo ? <Loader2 size={16} className="animate-spin" /> : 'Apply'}
+                          {isVerifyingPromo ? <Loader2 size={16} className="animate-spin" /> : t('checkout.apply', 'Apply')}
                         </Button>
                       </div>
                       {promoMessage.text && (
@@ -413,20 +424,32 @@ export const Checkout = ({ isOpen, onClose }) => {
 
                     {/* Totals */}
                     <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm"><span>Subtotal</span><span>₹{cartSubtotal}</span></div>
-                      {appliedDiscount > 0 && <div className="flex justify-between text-green-600 font-medium text-sm"><span>Discount</span><span>-₹{appliedDiscount}</span></div>}
+                      <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm">
+                        <span>{t('checkout.subtotal', 'Subtotal')}</span><span>₹{cartSubtotal}</span>
+                      </div>
+                      {appliedDiscount > 0 && (
+                        <div className="flex justify-between text-green-600 font-medium text-sm">
+                          <span>{t('checkout.discount', 'Discount')}</span><span>-₹{appliedDiscount}</span>
+                        </div>
+                      )}
                       
                       {gstPercentage > 0 && (
-                        <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm"><span>Tax ({gstPercentage}% GST)</span><span>₹{taxAmount}</span></div>
+                        <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm">
+                          <span>{t('checkout.taxes', 'Tax')} ({gstPercentage}% {t('checkout.gst', 'GST')})</span><span>₹{taxAmount}</span>
+                        </div>
                       )}
 
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm"><span>Delivery</span><span>{shipping === 0 ? 'Free' : `₹${shipping}`}</span></div>
+                      <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm">
+                        <span>{t('checkout.shipping', 'Delivery')}</span><span>{shipping === 0 ? t('checkout.free', 'Free') : `₹${shipping}`}</span>
+                      </div>
                       <div className="h-px w-full bg-slate-100 dark:bg-slate-700 my-2" />
-                      <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white"><span>Total</span><span className="text-orange-600">₹{finalTotal}</span></div>
+                      <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white">
+                        <span>{t('checkout.totalToPay', 'Total')}</span><span className="text-orange-600">₹{finalTotal}</span>
+                      </div>
                     </div>
                     
                     <Button variant="primary" className="w-full text-lg py-4" onClick={handleProceedFromCart}>
-                      {user ? "Proceed to Address" : "Secure Checkout"}
+                      {user ? t('checkout.proceedToPay', "Proceed to Address") : t('checkout.secureCheckout', "Secure Checkout")}
                     </Button>
                   </>
                 )}
@@ -437,8 +460,8 @@ export const Checkout = ({ isOpen, onClose }) => {
             {step === 2 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col items-center justify-center h-full max-w-sm mx-auto py-8">
                 <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-full flex items-center justify-center mb-6"><UserCircle size={32} /></div>
-                <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white mb-2 text-center">Login to Checkout</h3>
-                <p className="text-slate-600 dark:text-slate-400 text-center mb-8 text-sm">Sign in to save your order details securely.</p>
+                <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white mb-2 text-center">{t('checkout.loginToCheckout', "Login to Checkout")}</h3>
+                <p className="text-slate-600 dark:text-slate-400 text-center mb-8 text-sm">{t('alerts.loginRequired', "Sign in to save your order details securely.")}</p>
 
                 {error && <div className="w-full p-3 mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl">{error}</div>}
 
@@ -452,7 +475,7 @@ export const Checkout = ({ isOpen, onClose }) => {
                     <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
                   </div>
                   <Button variant="primary" type="submit" className="w-full py-3.5" disabled={isProcessing}>
-                    {isProcessing ? <Loader2 className="animate-spin mx-auto" size={20} /> : "Sign In & Continue"}
+                    {isProcessing ? <Loader2 className="animate-spin mx-auto" size={20} /> : t('navbar.login', "Sign In & Continue")}
                   </Button>
                 </form>
               </motion.div>
@@ -464,7 +487,9 @@ export const Checkout = ({ isOpen, onClose }) => {
                 {error && <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl">{error}</div>}
 
                 {isFetchingAddresses ? (
-                  <div className="py-10 text-center text-slate-500 flex flex-col items-center"><Loader2 size={30} className="animate-spin mb-3 text-orange-500"/> Loading addresses...</div>
+                  <div className="py-10 text-center text-slate-500 flex flex-col items-center">
+                    <Loader2 size={30} className="animate-spin mb-3 text-orange-500"/> {t('checkout.loadingAddresses', "Loading addresses...")}
+                  </div>
                 ) : (
                   <>
                     {!isAddingNewAddress && savedAddresses.length > 0 && (
@@ -485,30 +510,34 @@ export const Checkout = ({ isOpen, onClose }) => {
                     )}
 
                     {(!isAddingNewAddress && savedAddresses.length > 0) ? (
-                      <button onClick={() => setIsAddingNewAddress(true)} className="text-sm font-bold text-orange-600 flex items-center gap-1 mb-4"><Plus size={16}/> Add New Address</button>
+                      <button onClick={() => setIsAddingNewAddress(true)} className="text-sm font-bold text-orange-600 flex items-center gap-1 mb-4">
+                        <Plus size={16}/> {t('checkout.addNewAddress', 'Add New Address')}
+                      </button>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" name="fullName" placeholder="Full Name" onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
-                        <input type="tel" name="phone" placeholder="Mobile Number" onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
-                        <input type="text" name="street" placeholder="Street Address / Flat No" onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm md:col-span-2" />
+                        <input type="text" name="fullName" placeholder={t('checkout.fullName', "Full Name")} onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
+                        <input type="tel" name="phone" placeholder={t('checkout.phone', "Mobile Number")} onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
+                        <input type="text" name="street" placeholder={t('checkout.street', "Street Address / Flat No")} onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm md:col-span-2" />
                         
                         <div className="relative">
-                          <input type="text" name="pincode" placeholder="PIN Code" value={newAddress.pincode} onChange={handlePincodeChange} maxLength={6} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
+                          <input type="text" name="pincode" placeholder={t('checkout.pincode', "PIN Code")} value={newAddress.pincode} onChange={handlePincodeChange} maxLength={6} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
                           {isFetchingLocation && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-orange-500" />}
                         </div>
 
-                        <input type="text" name="city" placeholder="City" value={newAddress.city} onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
-                        <input type="text" name="state" placeholder="State" value={newAddress.state} onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
+                        <input type="text" name="city" placeholder={t('checkout.city', "City")} value={newAddress.city} onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
+                        <input type="text" name="state" placeholder={t('checkout.state', "State")} value={newAddress.state} onChange={handleAddressChange} className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm" />
                       </div>
                     )}
                     
                     {isAddingNewAddress && savedAddresses.length > 0 && (
-                      <button onClick={() => setIsAddingNewAddress(false)} className="text-sm font-bold text-slate-500 mt-4 block">Cancel new address</button>
+                      <button onClick={() => setIsAddingNewAddress(false)} className="text-sm font-bold text-slate-500 mt-4 block">
+                        {t('checkout.cancel', 'Cancel new address')}
+                      </button>
                     )}
 
                     <div className="pt-4">
                       <Button variant="primary" className="w-full text-lg py-4" onClick={handleProceedToPayment}>
-                        Confirm Delivery Details
+                        {t('checkout.saveSelectAddress', 'Confirm Delivery Details')}
                       </Button>
                     </div>
                   </>
@@ -525,14 +554,14 @@ export const Checkout = ({ isOpen, onClose }) => {
                 {paymentOverlay.active ? (
                    <div className="text-center py-10 space-y-4">
                      <Loader2 size={50} className="animate-spin text-orange-500 mx-auto" />
-                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">Awaiting Payment</h3>
-                     <p className="text-sm text-slate-500 dark:text-slate-400">Please complete the payment in the new tab that just opened.</p>
+                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">{t('checkout.paymentWaiting', 'Awaiting Payment')}</h3>
+                     <p className="text-sm text-slate-500 dark:text-slate-400">{t('checkout.paymentWaitingDesc1', 'Please complete the payment in the new tab that just opened.')}</p>
                    </div>
                 ) : (
                   <>
                     <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-500 bg-green-50 dark:bg-green-900/20 py-3 rounded-lg">
                       <ShieldCheck size={20} />
-                      <span className="font-medium text-sm">100% Secure Encrypted Payment</span>
+                      <span className="font-medium text-sm">{t('checkout.securePayment', '100% Secure Encrypted Payment')}</span>
                     </div>
 
                     <div className="bg-white dark:bg-slate-800 border-2 border-[#5f259f] rounded-2xl overflow-hidden shadow-md relative">
@@ -542,7 +571,7 @@ export const Checkout = ({ isOpen, onClose }) => {
                       </div>
                       
                       <div className="p-6 md:p-8 flex flex-col items-center text-center space-y-4">
-                        <p className="text-slate-600 dark:text-slate-300 text-sm">You will be redirected to the secure portal.</p>
+                        <p className="text-slate-600 dark:text-slate-300 text-sm">{t('checkout.paymentWaitingDesc2', 'You will be redirected to the secure portal.')}</p>
                         <h2 className="text-4xl font-black text-slate-900 dark:text-white">₹{finalTotal}</h2>
                       </div>
                     </div>
@@ -552,7 +581,7 @@ export const Checkout = ({ isOpen, onClose }) => {
                       disabled={isProcessing}
                       className="w-full bg-[#5f259f] hover:bg-[#4a1c7d] text-white font-bold text-lg py-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg shadow-[#5f259f]/30"
                     >
-                      {isProcessing ? <Loader2 size={20} className="animate-spin"/> : `Pay ₹${finalTotal} Now`}
+                      {isProcessing ? <Loader2 size={20} className="animate-spin"/> : `${t('checkout.proceedToPay', 'Pay')} ₹${finalTotal}`}
                     </button>
                   </>
                 )}
@@ -566,13 +595,13 @@ export const Checkout = ({ isOpen, onClose }) => {
                   <CheckCircle2 size={40} />
                 </motion.div>
                 
-                <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white">Order Confirmed!</h2>
+                <h2 className="text-3xl font-serif font-bold text-slate-900 dark:text-white">{t('checkout.paymentSuccess', 'Order Confirmed!')}</h2>
                 <p className="text-slate-600 dark:text-slate-300 text-sm">
-                  Thank you for your purchase! A confirmation has been sent to your email.
+                  {t('alerts.orderPlaced', 'Thank you for your purchase! A confirmation has been sent to your email.')}
                 </p>
 
                 <div className="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 w-full mt-4 text-left">
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Order ID</div>
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{t('dashboard.orders.orderIdLabel', 'Order ID')}</div>
                   <div className="font-mono font-bold text-lg text-slate-900 dark:text-white mb-4">#{paymentOverlay.orderId}</div>
                   
                   {requiresShipping && (
@@ -585,7 +614,7 @@ export const Checkout = ({ isOpen, onClose }) => {
                 </div>
 
                 <Button variant="primary" className="w-full mt-4 py-3.5" onClick={() => { onClose(); window.location.href='/dashboard'; }}>
-                  View My Orders
+                  {t('dashboard.myOrders', 'View My Orders')}
                 </Button>
               </motion.div>
             )}

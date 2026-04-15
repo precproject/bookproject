@@ -11,8 +11,11 @@ import { captureAndVerifyReferral } from '../../utils/referralManager';
 import { useTranslation } from 'react-i18next';
 import { ConfigContext } from '../../context/ConfigContext';
 import { PrebookModal } from '../shared/PrebookModal';
+import { useToast } from '../../context/ToastContext';
 
 export const Hero = ({ onOrderPopup, productRoute }) => {
+  const { showToast } = useToast(); // 2. Destructure showToast
+
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { addToCart } = useContext(CartContext);
@@ -59,11 +62,11 @@ export const Hero = ({ onOrderPopup, productRoute }) => {
         addToCart(physicalBook);
         navigate('/checkout');
       } else {
-        alert(t('mainHero.outOfStock', "Sorry! The physical book is currently out of stock."));
+        showToast(t('alerts.outOfStock', "Sorry! The physical book is currently out of stock."), 'error');
       }
     } catch (error) {
       console.error("Failed to load book:", error);
-      alert(t('mainHero.errorStore', "Something went wrong connecting to the store."));
+      showToast(t('alerts.storeConnectionError', "Something went wrong connecting to the store."), 'error');
     } finally {
       setIsAdding(false);
     }

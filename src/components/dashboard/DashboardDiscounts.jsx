@@ -6,7 +6,7 @@ import { adminService } from '../../api/service/adminService';
 import { useToast } from '../../context/ToastContext';
 
 export const DashboardDiscounts = () => {
-  const { showToast } = useToast(); // 2. Destructure showToast
+  const { showToast } = useToast(); 
 
   // --- STATE MANAGEMENT ---
   const [discounts, setDiscounts] = useState([]);
@@ -38,14 +38,13 @@ export const DashboardDiscounts = () => {
       setDiscounts(data || []);
     } catch (error) {
       console.error("Failed to load discounts:", error);
-      showToast("Error fetching discount codes.");
+      showToast("Error fetching discount codes.", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // --- CRITICAL FIX: DYNAMIC STATS CALCULATION ---
-  // A code is only active if the admin turned it on AND it hasn't expired/exhausted
+  // --- DYNAMIC STATS CALCULATION ---
   const activeCount = discounts.filter(d => {
     const isExpired = d.validTill && new Date(d.validTill) < new Date();
     const isExhausted = d.maxUsage && d.currentUsage >= d.maxUsage;
@@ -78,9 +77,9 @@ export const DashboardDiscounts = () => {
       try {
         await adminService.deleteDiscount(id);
         setDiscounts(prev => prev.filter(d => d._id !== id));
-        showToast('Discount code deleted successfully.');
+        showToast('Discount code deleted successfully.', 'success');
       } catch (error) {
-        showToast('Failed to delete discount.');
+        showToast('Failed to delete discount.', 'error');
       }
     }
   };
@@ -104,16 +103,16 @@ export const DashboardDiscounts = () => {
 
       if (formData._id) {
         await adminService.updateDiscount(formData._id, payload);
-        showToast('Discount updated successfully.');
+        showToast('Discount updated successfully.', 'success');
       } else {
         await adminService.createDiscount(payload);
-        showToast('New discount code created.');
+        showToast('New discount code created.', 'success');
       }
       
       setIsModalOpen(false);
       loadDiscounts(); 
     } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to save discount.');
+      showToast(error.response?.data?.message || 'Failed to save discount.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -121,13 +120,6 @@ export const DashboardDiscounts = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
-      
-      {toastMessage && (
-        <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
-          <CheckCircle size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -200,13 +192,12 @@ export const DashboardDiscounts = () => {
               <tbody className="divide-y divide-slate-100">
                 {discounts.length > 0 ? (
                   discounts.map((discount) => {
-                    // --- CRITICAL FIX: DYNAMIC STATUS RENDERING ---
                     const isExpired = discount.validTill && new Date(discount.validTill) < new Date();
                     const isExhausted = discount.maxUsage && discount.currentUsage >= discount.maxUsage;
                     
                     let displayStatus = discount.status;
                     let StatusIcon = CheckCircle;
-                    let statusClasses = "bg-slate-100 text-slate-500"; // default disabled
+                    let statusClasses = "bg-slate-100 text-slate-500"; 
                     
                     if (displayStatus === 'Active') {
                       if (isExpired) {

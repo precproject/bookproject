@@ -7,10 +7,10 @@ import {
 import { AdminContext } from '../../context/AdminContext';
 import { adminService } from '../../api/service/adminService';
 import { OrderDetailsModal } from '../shared/OrderDetailsModal';
-import { useToast } from '../../context/ToastContext';
+import { useToast } from '../../context/ToastContext'; // <-- Global Toast Import
 
 export const DashboardOrders = () => {
-  const { showToast } = useToast(); // 2. Destructure showToast
+  const { showToast } = useToast(); // <-- Destructure showToast
 
   const { orderCache, fetchAdminOrders, updateLocalOrder } = useContext(AdminContext);
   
@@ -68,7 +68,7 @@ export const DashboardOrders = () => {
         
       } catch (error) {
         console.error("Error loading paginated data:", error);
-        showToast("Failed to load orders from server.");
+        showToast("Failed to load orders from server.", "error"); // <-- Added error type
       } finally {
         setIsLoadingList(false);
       }
@@ -76,7 +76,7 @@ export const DashboardOrders = () => {
 
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, debouncedSearch, sortOrder, startDate, endDate, currentPage]);
+  }, [activeTab, debouncedSearch, sortOrder, startDate, endDate, currentPage, showToast]);
 
   const visibleOrders = useMemo(() => {
     return currentOrderIds.map(id => orderCache[id]).filter(Boolean);
@@ -97,9 +97,9 @@ export const DashboardOrders = () => {
       updateLocalOrder(selectedOrder._id, { status: newStatus });
       setSelectedOrder(prev => ({ ...prev, status: newStatus }));
       
-      showToast(`Order #${selectedOrder.orderId} updated to ${newStatus}`);
+      showToast(`Order #${selectedOrder.orderId} updated to ${newStatus}`, "success"); // <-- Added success type
     } catch (error) {
-      showToast("Failed to update status. " + (error.response?.data?.message || ''));
+      showToast("Failed to update status. " + (error.response?.data?.message || ''), "error"); // <-- Added error type
     } finally {
       setIsUpdatingStatus(false);
       // Let the modal stay open so admin can see the change, or close it if you prefer:
@@ -108,7 +108,7 @@ export const DashboardOrders = () => {
   };
 
   const handleNotifyUser = (email, type) => {
-    showToast(`Payment ${type} reminder triggered for ${email}`);
+    showToast(`Payment ${type} reminder triggered for ${email}`, "success"); // <-- Added success type
   };
 
   const formatDateTime = (isoString) => {
@@ -128,13 +128,6 @@ export const DashboardOrders = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
-      
-      {toastMessage && (
-        <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
-          <CheckCircle size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
-        </div>
-      )}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { 
   Search, MapPin, Truck, ExternalLink, PackageCheck, PackageSearch, 
-  Calendar, ChevronDown, X, Save, CheckCircle, Loader2, Eye, Map 
+  Calendar, ChevronDown, X, Save, Loader2, Eye, Map 
 } from 'lucide-react';
 import { AdminContext } from '../../context/AdminContext'; 
 import { adminService } from '../../api/service/adminService';
 import apiClient from '../../api/client';
+import { useToast } from '../../context/ToastContext'; // <-- Import Global Toast
 
 export const DashboardDelivery = () => {
   // --- CONSUME GLOBAL CACHE ---
   const { orderCache, fetchAdminOrders, updateLocalOrder } = useContext(AdminContext);
+  const { showToast } = useToast(); // <-- Destructure showToast
 
   // --- SERVER-SIDE PAGINATION STATE ---
   const [currentDeliveryIds, setCurrentDeliveryIds] = useState([]);
@@ -38,7 +40,6 @@ export const DashboardDelivery = () => {
   const [liveTracking, setLiveTracking] = useState(null);
   const [isTrackingLoading, setIsTrackingLoading] = useState(false);
 
-  const { showToast } = useToast(); // 2. Destructure showToast
 
   // --- TRIGGER API ON FILTER/PAGE CHANGE ---
   
@@ -75,7 +76,7 @@ export const DashboardDelivery = () => {
         }
       } catch (error) {
         console.error("Error loading paginated deliveries:", error);
-        showToast("Failed to load delivery data from server.");
+        showToast("Failed to load delivery data from server.", "error"); // <-- Fixed
       } finally {
         setIsLoadingList(false);
       }
@@ -83,7 +84,7 @@ export const DashboardDelivery = () => {
 
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStatus, debouncedSearch, sortOrder, startDate, endDate, currentPage]);
+  }, [activeStatus, debouncedSearch, sortOrder, startDate, endDate, currentPage, showToast]);
 
   // --- MAP IDs TO ACTUAL DATA FROM CACHE ---
   const visibleDeliveries = useMemo(() => {
@@ -149,6 +150,7 @@ export const DashboardDelivery = () => {
       }
     } catch (error) {
       console.error('Failed to fetch live tracking', error);
+      // showToast is optional here since we handle empty states gracefully below
     } finally {
       setIsTrackingLoading(false);
     }
@@ -181,11 +183,11 @@ export const DashboardDelivery = () => {
         }
       });
       
-      showToast(`Tracking updated for Order #${selectedDelivery.orderId}`);
+      showToast(`Tracking updated for Order #${selectedDelivery.orderId}`, 'success'); // <-- Fixed
       setIsModalOpen(false);
     } catch (error) {
       console.error("Failed to update delivery:", error);
-      showToast("Error updating delivery details.");
+      showToast("Error updating delivery details.", "error"); // <-- Fixed
     } finally {
       setIsSaving(false);
     }
@@ -208,13 +210,6 @@ export const DashboardDelivery = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative pb-10">
-      
-      {toastMessage && (
-        <div className="fixed top-24 right-6 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-[slideLeft_0.3s_ease-out]">
-          <CheckCircle size={18} className="text-emerald-400" />
-          <span className="text-sm font-bold">{toastMessage}</span>
-        </div>
-      )}
 
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Delivery & Logistics</h1>
