@@ -32,12 +32,13 @@ export const DashboardDelivery = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState({ partner: '', trackingId: '', status: '' });
-  const [toastMessage, setToastMessage] = useState('');
 
   // --- VIEW DETAILS MODAL STATE ---
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [liveTracking, setLiveTracking] = useState(null);
   const [isTrackingLoading, setIsTrackingLoading] = useState(false);
+
+  const { showToast } = useToast(); // 2. Destructure showToast
 
   // --- TRIGGER API ON FILTER/PAGE CHANGE ---
   
@@ -188,11 +189,6 @@ export const DashboardDelivery = () => {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
   };
 
   // --- UI HELPERS ---

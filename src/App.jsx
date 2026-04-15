@@ -15,6 +15,7 @@ import { ScrollToTop } from './components/ui/ScrollToTop';
 import { ConfigProvider } from './context/ConfigContext';
 import { DashboardReviews } from './components/dashboard/DashboardReviews';
 import { DeliveryPolicy } from './components/ui/DeliveryPolicy';
+import { ToastProvider } from './context/ToastContext';
 
 // ============================================================================
 // LAZY LOADED COMPONENTS (Code Splitting)
@@ -61,6 +62,7 @@ const PageLoader = () => (
 export default function App() {
   return (
     <BrowserRouter>
+      <ToastProvider>
       <ScrollToTop />
       <ThemeProvider>
         <ConfigProvider> {/* <--- 2. WRAP IT AROUND AUTH & CART */}
@@ -120,6 +122,7 @@ export default function App() {
         </AuthProvider>
         </ConfigProvider>
       </ThemeProvider>
+      </ToastProvider>
     </BrowserRouter>
   );
 }

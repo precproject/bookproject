@@ -4,8 +4,11 @@ import {
   ChevronDown, Loader2, Calendar, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
+import { useToast } from '../../context/ToastContext';
 
 export const DashboardReviews = () => {
+  const { showToast } = useToast(); // 2. Destructure showToast
+
   // --- DATA STATE ---
   const [reviews, setReviews] = useState([]);
   const [books, setBooks] = useState([]); 
@@ -21,7 +24,6 @@ export const DashboardReviews = () => {
   // --- UI STATE ---
   const [isLoading, setIsLoading] = useState(true);
   const [isTogglingId, setIsTogglingId] = useState(null);
-  const [toastMessage, setToastMessage] = useState('');
 
   // 1. Fetch Books ONLY ONCE on mount
   useEffect(() => {
@@ -75,11 +77,6 @@ export const DashboardReviews = () => {
     } finally {
       setIsTogglingId(null);
     }
-  };
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
   };
 
   const formatDate = (dateString) => {

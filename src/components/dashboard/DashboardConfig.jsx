@@ -6,6 +6,7 @@ import {
   Facebook, Twitter, Instagram, Linkedin, Youtube
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
+import { useToast } from '../../context/ToastContext';
 
 // ============================================================================
 // REUSABLE UI SUB-COMPONENTS
@@ -75,9 +76,10 @@ const ToggleSwitch = ({ label, checked, onChange, activeColor = "bg-emerald-500"
 // ============================================================================
 
 export const DashboardConfig = () => {
-  const [toastMessage, setToastMessage] = useState('');
   const [isFetching, setIsFetching] = useState(true);
   const [savingSection, setSavingSection] = useState(null);
+
+  const { showToast } = useToast(); // 2. Destructure showToast
 
   const [config, setConfig] = useState({
     general: { storeName: '', supportEmail: '', supportPhone: '', businessAddress: '' },
@@ -147,11 +149,6 @@ export const DashboardConfig = () => {
     } finally {
       setSavingSection(null);
     }
-  };
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
   };
 
   if (isFetching) {

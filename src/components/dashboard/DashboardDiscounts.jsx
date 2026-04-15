@@ -3,8 +3,11 @@ import {
   Plus, Tag, Edit, Trash2, CheckCircle, XCircle, Search, X, Save, IndianRupee, Loader2, AlertCircle, Clock
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
+import { useToast } from '../../context/ToastContext';
 
 export const DashboardDiscounts = () => {
+  const { showToast } = useToast(); // 2. Destructure showToast
+
   // --- STATE MANAGEMENT ---
   const [discounts, setDiscounts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,7 +16,6 @@ export const DashboardDiscounts = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
   
   // Form State
   const defaultForm = { _id: null, code: '', type: 'Percentage', value: '', maxDiscount: '', validTill: '', maxUsage: '' };
@@ -115,11 +117,6 @@ export const DashboardDiscounts = () => {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
   };
 
   return (

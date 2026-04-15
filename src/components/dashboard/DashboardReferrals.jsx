@@ -4,8 +4,11 @@ import {
   Edit, Search, Copy, Eye, Tag, ChevronDown, X, Save, ArrowUpRight, Loader2, User, UserPlus 
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
+import { useToast } from '../../context/ToastContext';
 
 export const DashboardReferrals = () => {
+  const { showToast } = useToast(); // 2. Destructure showToast
+
   // --- SERVER-SIDE STATE ---
   const [referrals, setReferrals] = useState([]);
   const [stats, setStats] = useState({ totalEarned: 0, totalPending: 0 });
@@ -27,7 +30,6 @@ export const DashboardReferrals = () => {
   
   const [selectedReferral, setSelectedReferral] = useState(null);
   const [fetchedTransactions, setFetchedTransactions] = useState([]);
-  const [toastMessage, setToastMessage] = useState('');
 
   // --- USER SEARCH & CREATE STATES ---
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -229,11 +231,6 @@ export const DashboardReferrals = () => {
   const copyToClipboard = (code) => {
     navigator.clipboard.writeText(`${window.location.origin}/?ref=${code}`);
     showToast('Referral link copied to clipboard!');
-  };
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
   };
 
   return (

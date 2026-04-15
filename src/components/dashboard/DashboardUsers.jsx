@@ -3,6 +3,7 @@ import { Search, Mail, Phone, ShoppingBag, ChevronRight, Shield, User, X, CheckC
 import { adminService } from '../../api/service/adminService';
 import { OrderDetailsModal } from '../shared/OrderDetailsModal';
 import { AdminContext } from '../../context/AdminContext';
+import { useToast } from '../../context/ToastContext';
 
 export const DashboardUsers = () => {
   
@@ -24,7 +25,6 @@ export const DashboardUsers = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [fetchedOrders, setFetchedOrders] = useState([]);
-  const [toastMessage, setToastMessage] = useState('');
   const [isTogglingId, setIsTogglingId] = useState(null);
 
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -36,6 +36,8 @@ export const DashboardUsers = () => {
   const [isAddingUser, setIsAddingUser] = useState(false);
   const defaultUserForm = { name: '', email: '', mobile: '', password: '', role: 'Customer', masterSecret: '' };
   const [newUser, setNewUser] = useState(defaultUserForm);
+
+  const { showToast } = useToast(); // 2. Destructure showToast
 
   // --- TRIGGER API ON FILTER/PAGE CHANGE ---
   useEffect(() => {
@@ -155,11 +157,6 @@ export const DashboardUsers = () => {
     } finally {
       setIsOrdersLoading(false);
     }
-  };
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
   };
 
   const formatDate = (isoString) => {

@@ -6,8 +6,12 @@ import {
   Hash, Loader2, Upload, Scale, EyeOff, User, Building
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
+import { useToast } from '../../context/ToastContext';
 
 export const DashboardInventory = () => {
+
+  const { showToast } = useToast(); // 2. Destructure showToast
+
   // --- STATE MANAGEMENT ---
   const [inventory, setInventory] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,7 +25,6 @@ export const DashboardInventory = () => {
   
   const [selectedItem, setSelectedItem] = useState(null);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
-  const [toastMessage, setToastMessage] = useState('');
   
   const fileInputRef = useRef(null);
 
@@ -161,11 +164,6 @@ export const DashboardInventory = () => {
     setSelectedItem(item);
     setIsHistoryExpanded(true); 
     setIsViewModalOpen(true);
-  };
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
   };
 
   const formatDateTime = (isoString) => {

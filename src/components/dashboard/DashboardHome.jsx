@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, ArrowDownRight, Users, Package, Clock, TrendingUp, CheckCircle, BellRing, ChevronRight, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { adminService } from '../../api/service/adminService';
+import { useToast } from '../../context/ToastContext';
 
 export const DashboardHome = () => {
+  const { showToast } = useToast(); // 2. Destructure showToast
+
   const navigate = useNavigate();
-  const [toastMessage, setToastMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Prevention for spam-clicking the reminder button
@@ -109,12 +111,12 @@ export const DashboardHome = () => {
       // await apiClient.post(`/admin/orders/${orderId}/remind`);
       await new Promise(resolve => setTimeout(resolve, 800)); // Simulated network delay
       
-      setToastMessage(`Payment reminder sent to ${email}`);
+      showToast(`Payment reminder sent to ${email}`);
     } catch (error) {
-      setToastMessage(`Failed to send reminder to ${email}`);
+      showToast(`Failed to send reminder to ${email}`);
     } finally {
       setSendingReminderId(null);
-      setTimeout(() => setToastMessage(''), 3000);
+      setTimeout(() => showToast(''), 3000);
     }
   };
 

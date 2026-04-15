@@ -7,8 +7,11 @@ import {
 import { AdminContext } from '../../context/AdminContext';
 import { adminService } from '../../api/service/adminService';
 import { OrderDetailsModal } from '../shared/OrderDetailsModal';
+import { useToast } from '../../context/ToastContext';
 
 export const DashboardOrders = () => {
+  const { showToast } = useToast(); // 2. Destructure showToast
+
   const { orderCache, fetchAdminOrders, updateLocalOrder } = useContext(AdminContext);
   
   const [currentOrderIds, setCurrentOrderIds] = useState([]); 
@@ -31,7 +34,6 @@ export const DashboardOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
 
   // 1. Handle Debounce locally
   useEffect(() => {
@@ -107,11 +109,6 @@ export const DashboardOrders = () => {
 
   const handleNotifyUser = (email, type) => {
     showToast(`Payment ${type} reminder triggered for ${email}`);
-  };
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
   };
 
   const formatDateTime = (isoString) => {
