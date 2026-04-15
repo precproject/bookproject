@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { useTranslation } from 'react-i18next'; 
 import { orderService } from '../api/service/orderService'; 
@@ -12,7 +12,7 @@ export const PaymentStatus = () => {
   
   const [isPopup] = useState(!!window.opener);
   
-  // UI States: 'verifying', 'success', 'failed', 'timeout'
+  // UI States: 'verifying', 'success', 'failed', 'timeout', 'not_found'
   const [status, setStatus] = useState('verifying');
   
   // 3 Minute Countdown (180 seconds)
@@ -63,7 +63,15 @@ export const PaymentStatus = () => {
 
       } catch (error) {
         console.error("Secure payment verification failed:", error);
-        // We don't automatically fail on a single network error, we keep trying until timeout
+        
+        // --- NEW: Handle 404 Order Not Found immediately ---
+        if (error?.response?.status === 404) {
+          if (isMounted) setStatus('not_found');
+          notifyParent('FAILED');
+        }
+        // For other errors (like 500s or network drops), we don't automatically fail. 
+        // We keep trying until the 3-minute timeout is reached.
+        
       } finally {
         isPolling.current = false;
       }
@@ -170,6 +178,21 @@ export const PaymentStatus = () => {
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mt-4 mb-8 leading-relaxed">
               {t('paymentStatus.timeoutMsg', 'We haven\'t received confirmation from the bank yet. If money was deducted, it is safe and your order will be updated automatically in a few minutes.')}
+            </p>
+          </div>
+        )}
+
+        {/* --- NEW: Not Found State --- */}
+        {status === 'not_found' && (
+          <div className="animate-[scaleIn_0.3s_ease-out]">
+            <AlertCircle size={80} className="text-slate-400 mx-auto mb-6" />
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+              {t('paymentStatus.notFoundTitle', 'Order Not Found')}
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-4 mb-8 leading-relaxed">
+              {t('paymentStatus.notFoundMsg1', 'We could not locate order ')}
+              <strong className="text-slate-700 dark:text-slate-300">#{orderId}</strong>
+              {t('paymentStatus.notFoundMsg2', '. The link might be invalid or expired.')}
             </p>
           </div>
         )}
