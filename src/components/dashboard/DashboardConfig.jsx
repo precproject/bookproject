@@ -3,7 +3,7 @@ import {
   CreditCard, Truck, Key, Save, CheckCircle, Eye, EyeOff, 
   Globe, Mail, Phone, Store, Loader2, LayoutTemplate, 
   ShoppingCart, Receipt, MapPin, Hash, Package, Link as LinkIcon,
-  Facebook, Twitter, Instagram, Linkedin, Youtube
+  Facebook, Twitter, Instagram, Linkedin, Youtube, UserCheck
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 import { useToast } from '../../context/ToastContext'; // Using Global Toast
@@ -86,7 +86,10 @@ export const DashboardConfig = () => {
     sections: { hero: true, features: true, chapters: true, author: true, reviews: true, blog: true, footer: true },
     shoppingRules: { isPrebookActive: true, referralBasedShoppingOnly: true, currency: 'INR', currencySymbol: '₹' },
     taxConfig: { isGstEnabled: true, gstPercentage: 0, hsnCode: '4901' },
-    payment: { provider: 'PhonePe', merchantId: '', saltKey: '', saltIndex: 1, isLiveMode: false },
+    
+    // --- CRITICAL FIX: Updated State for PhonePe V2 API ---
+    payment: { provider: 'PhonePe', clientId: '', clientSecret: '', clientVersion: '1', webhookUsername: '', webhookPassword: '', isLiveMode: false },
+    
     delivery: { 
       provider: 'Delhivery', apiToken: '', pickupPincode: '', isLiveMode: false, shippingCharge: 50,
       pickupLocationName: '', originPincode: '', originCity: '', originState: '', defaultWeightGrams: 500,
@@ -218,8 +221,9 @@ export const DashboardConfig = () => {
             </div>
           </ConfigSection>
 
+          {/* --- CRITICAL FIX: Updated Payment Section for V2 API --- */}
           <ConfigSection 
-            title="Payment Gateway" subtitle="Manage transaction credentials"
+            title="Payment Gateway (V2)" subtitle="Manage OAuth 2.0 credentials & webhooks"
             icon={CreditCard} iconColor="bg-emerald-100 text-emerald-700" btnColor="bg-emerald-700 hover:bg-emerald-800"
             isSaving={savingSection === 'payment'} onSave={(e) => handleSave(e, 'payment', 'Payment settings saved.')}
             headerRight={
@@ -236,13 +240,26 @@ export const DashboardConfig = () => {
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Provider</label>
                 <select value={config.payment.provider || 'PhonePe'} onChange={e => handleUpdate('payment', 'provider', e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-                  <option value="PhonePe">PhonePe (UPI & Cards)</option>
+                  <option value="PhonePe">PhonePe (V2 Checkout)</option>
                   <option value="Razorpay">Razorpay</option>
                 </select>
               </div>
-              <InputField label="Merchant ID" icon={Key} value={config.payment.merchantId || ''} onChange={e => handleUpdate('payment', 'merchantId', e.target.value)} />
-              <InputField label="Salt Key / Secret" icon={Key} isSecret={true} value={config.payment.saltKey || ''} onChange={e => handleUpdate('payment', 'saltKey', e.target.value)} />
-              <InputField label="Salt Index" icon={Hash} type="number" value={config.payment.saltIndex || 1} onChange={e => handleUpdate('payment', 'saltIndex', e.target.value)} />
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">OAuth API Credentials</h4>
+                <InputField label="Client ID" icon={Key} value={config.payment.clientId || ''} onChange={e => handleUpdate('payment', 'clientId', e.target.value)} />
+                <InputField label="Client Secret" icon={Key} isSecret={true} value={config.payment.clientSecret || ''} onChange={e => handleUpdate('payment', 'clientSecret', e.target.value)} />
+                <InputField label="Client Version" icon={Hash} type="number" value={config.payment.clientVersion || 1} onChange={e => handleUpdate('payment', 'clientVersion', e.target.value)} />
+              </div>
+
+              <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-4">
+                <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Globe size={14}/> Webhook Authentication</h4>
+                <p className="text-xs text-indigo-700 font-medium pb-2">Matches the Username/Password created in your PhonePe Business Dashboard for S2S callbacks.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputField label="Webhook Username" icon={UserCheck} value={config.payment.webhookUsername || ''} onChange={e => handleUpdate('payment', 'webhookUsername', e.target.value)} />
+                  <InputField label="Webhook Password" icon={Key} isSecret={true} value={config.payment.webhookPassword || ''} onChange={e => handleUpdate('payment', 'webhookPassword', e.target.value)} />
+                </div>
+              </div>
             </div>
           </ConfigSection>
 
