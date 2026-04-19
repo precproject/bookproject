@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  CreditCard, Truck, Key, Save, CheckCircle, Eye, EyeOff, 
+  CreditCard, Truck, Key, Save, Eye, EyeOff, 
   Globe, Mail, Phone, Store, Loader2, LayoutTemplate, 
   ShoppingCart, Receipt, MapPin, Hash, Package, Link as LinkIcon,
-  Facebook, Twitter, Instagram, Linkedin, Youtube, UserCheck
+  Facebook, Twitter, Instagram, Linkedin, Youtube, UserCheck, MonitorSmartphone
 } from 'lucide-react';
 import { adminService } from '../../api/service/adminService';
 import { useToast } from '../../context/ToastContext'; // Using Global Toast
@@ -79,17 +79,25 @@ export const DashboardConfig = () => {
   const [isFetching, setIsFetching] = useState(true);
   const [savingSection, setSavingSection] = useState(null);
 
-  const { showToast } = useToast(); // Using Global Toast
+  const { showToast } = useToast(); 
 
   const [config, setConfig] = useState({
     general: { storeName: '', supportEmail: '', supportPhone: '', businessAddress: '' },
     sections: { hero: true, features: true, chapters: true, author: true, reviews: true, blog: true, footer: true },
-    shoppingRules: { isPrebookActive: true, referralBasedShoppingOnly: true, currency: 'INR', currencySymbol: '₹' },
+    
+    // --- Added Prebook Discount Fields ---
+    shoppingRules: { 
+      isPrebookActive: true, 
+      referralBasedShoppingOnly: true, 
+      prebookDiscountEnabled: true,
+      prebookDiscountType: 'Flat',
+      prebookDiscountValue: 50,
+      currency: 'INR', 
+      currencySymbol: '₹' 
+    },
+    
     taxConfig: { isGstEnabled: true, gstPercentage: 0, hsnCode: '4901' },
-    
-    // --- CRITICAL FIX: Updated State for PhonePe V2 API ---
     payment: { provider: 'PhonePe', clientId: '', clientSecret: '', clientVersion: '1', webhookUsername: '', webhookPassword: '', isLiveMode: false },
-    
     delivery: { 
       provider: 'Delhivery', apiToken: '', pickupPincode: '', isLiveMode: false, shippingCharge: 50,
       pickupLocationName: '', originPincode: '', originCity: '', originState: '', defaultWeightGrams: 500,
@@ -97,7 +105,7 @@ export const DashboardConfig = () => {
     },
     socialLinks: { facebook: '', twitter: '', instagram: '', linkedin: '', youtube: '' },
     emailAlerts: { welcome: true, orderPlaced: true, paymentSuccess: true, orderDispatched: true, orderDelivered: true, paymentReminder: true },
-    uiConfig: { showRecentOrdersPopup: true }
+    uiConfig: { showRecentOrdersPopup: true } // Added missing UI Config State
   });
 
   useEffect(() => {
@@ -119,7 +127,7 @@ export const DashboardConfig = () => {
           },
           socialLinks: { ...prev.socialLinks, ...data.socialLinks },
           emailAlerts: { ...prev.emailAlerts, ...data.emailAlerts },
-          uiConfig: { ...prev.uiConfig, ...data.uiConfig }
+          uiConfig: { ...prev.uiConfig, ...data.uiConfig } // Load from backend
         }));
       } catch (error) {
         showToast('Failed to connect to configuration server.', 'error');
@@ -198,14 +206,47 @@ export const DashboardConfig = () => {
             isSaving={savingSection === 'shoppingRules'} onSave={(e) => handleSave(e, 'shoppingRules', 'Shopping rules updated.')}
           >
             <div className="space-y-4">
-              <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl mb-4">
+              
+              {/* --- UPDATED PREBOOK CONFIGURATION WIDGET --- */}
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-4">
                 <ToggleSwitch 
-                  label="Enable 'Pre-book' Lead Capture Phase" 
+                  label="Enable 'Pre-book' Phase" 
                   checked={config.shoppingRules.isPrebookActive} 
                   onChange={() => handleUpdate('shoppingRules', 'isPrebookActive', !config.shoppingRules.isPrebookActive)} 
                   activeColor="bg-orange-500" 
                 />
-                <p className="text-xs text-orange-700 mt-2 font-medium">Turn this OFF on launch day to replace the Pre-book button with 'Add to Cart'.</p>
+                <p className="text-xs text-orange-700 font-medium">Turn this OFF on launch day to replace Pre-book with standard checkout.</p>
+                
+                <div className="pt-4 border-t border-orange-200/60 space-y-4">
+                  <ToggleSwitch 
+                    label="Give Pre-bookers a Discount" 
+                    checked={config.shoppingRules.prebookDiscountEnabled} 
+                    onChange={() => handleUpdate('shoppingRules', 'prebookDiscountEnabled', !config.shoppingRules.prebookDiscountEnabled)} 
+                    activeColor="bg-orange-500" 
+                  />
+                  
+                  {config.shoppingRules.prebookDiscountEnabled && (
+                    <div className="grid grid-cols-2 gap-4 animate-[fadeIn_0.3s_ease-out]">
+                      <div className="space-y-2 w-full">
+                        <label className="text-sm font-bold text-slate-700">Discount Type</label>
+                        <select 
+                          value={config.shoppingRules.prebookDiscountType || 'Flat'} 
+                          onChange={e => handleUpdate('shoppingRules', 'prebookDiscountType', e.target.value)} 
+                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                        >
+                          <option value="Flat">Flat Amount (₹)</option>
+                          <option value="Percentage">Percentage (%)</option>
+                        </select>
+                      </div>
+                      <InputField 
+                        label="Discount Value" 
+                        type="number" 
+                        value={config.shoppingRules.prebookDiscountValue || 0} 
+                        onChange={e => handleUpdate('shoppingRules', 'prebookDiscountValue', Number(e.target.value))} 
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <ToggleSwitch 
@@ -221,7 +262,6 @@ export const DashboardConfig = () => {
             </div>
           </ConfigSection>
 
-          {/* --- CRITICAL FIX: Updated Payment Section for V2 API --- */}
           <ConfigSection 
             title="Payment Gateway (V2)" subtitle="Manage OAuth 2.0 credentials & webhooks"
             icon={CreditCard} iconColor="bg-emerald-100 text-emerald-700" btnColor="bg-emerald-700 hover:bg-emerald-800"
@@ -263,32 +303,6 @@ export const DashboardConfig = () => {
             </div>
           </ConfigSection>
 
-          <ConfigSection 
-            title="Automated Emails" subtitle="Turn specific customer email alerts on or off"
-            icon={Mail} iconColor="bg-sky-100 text-sky-700" btnColor="bg-sky-600 hover:bg-sky-700"
-            isSaving={savingSection === 'emailAlerts'} onSave={(e) => handleSave(e, 'emailAlerts', 'Email settings saved.')}
-          >
-            <div className="flex flex-col gap-3">
-              {[
-                { key: 'welcome', label: 'Welcome Email', desc: 'Sent when a user registers or pre-books.' },
-                { key: 'orderPlaced', label: 'Order Placed', desc: 'Sent before payment is completed.' },
-                { key: 'paymentSuccess', label: 'Payment Success', desc: 'Sent with receipt after payment.' },
-                { key: 'orderDispatched', label: 'Order Dispatched', desc: 'Sent with Delhivery tracking ID.' },
-                { key: 'orderDelivered', label: 'Order Delivered', desc: 'Sent to ask for a review.' }
-              ].map((alert) => (
-                <div key={alert.key} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100/50 transition-colors">
-                  <div>
-                    <p className="font-bold text-slate-800 text-sm">{alert.label}</p>
-                    <p className="text-xs text-slate-500">{alert.desc}</p>
-                  </div>
-                  <button type="button" onClick={() => handleUpdate('emailAlerts', alert.key, !config.emailAlerts[alert.key])} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${config.emailAlerts[alert.key] ? 'bg-sky-500' : 'bg-slate-300'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.emailAlerts[alert.key] ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </ConfigSection>
-
         </div>
 
         {/* ================================================================= */}
@@ -311,6 +325,25 @@ export const DashboardConfig = () => {
                   activeColor="bg-indigo-500" 
                 />
               ))}
+            </div>
+          </ConfigSection>
+
+          {/* --- NEW UI SETTINGS SECTION --- */}
+          <ConfigSection 
+            title="User Interface (UI)" subtitle="Control popups and frontend widgets"
+            icon={MonitorSmartphone} iconColor="bg-teal-100 text-teal-700" btnColor="bg-teal-600 hover:bg-teal-700"
+            isSaving={savingSection === 'uiConfig'} onSave={(e) => handleSave(e, 'uiConfig', 'UI settings updated.')}
+          >
+            <div className="space-y-4">
+              <ToggleSwitch 
+                label="Show 'Recent Sales' Popup Notification" 
+                checked={config.uiConfig.showRecentOrdersPopup} 
+                onChange={() => handleUpdate('uiConfig', 'showRecentOrdersPopup', !config.uiConfig.showRecentOrdersPopup)} 
+                activeColor="bg-teal-500" 
+              />
+              <p className="text-xs text-slate-500 pl-2 border-l-2 border-slate-200">
+                Displays a small notification banner in the bottom corner of the screen indicating when other users have recently purchased a book (Social Proof).
+              </p>
             </div>
           </ConfigSection>
 
@@ -377,6 +410,32 @@ export const DashboardConfig = () => {
                   <InputField label="State" value={config.delivery.returnAddress?.state || ''} onChange={e => handleUpdate('delivery', 'returnAddress', (prev) => ({ ...prev, state: e.target.value }))} />
                 </div>
               </div>
+            </div>
+          </ConfigSection>
+
+          <ConfigSection 
+            title="Automated Emails" subtitle="Turn specific customer email alerts on or off"
+            icon={Mail} iconColor="bg-sky-100 text-sky-700" btnColor="bg-sky-600 hover:bg-sky-700"
+            isSaving={savingSection === 'emailAlerts'} onSave={(e) => handleSave(e, 'emailAlerts', 'Email settings saved.')}
+          >
+            <div className="flex flex-col gap-3">
+              {[
+                { key: 'welcome', label: 'Welcome Email', desc: 'Sent when a user registers or pre-books.' },
+                { key: 'orderPlaced', label: 'Order Placed', desc: 'Sent before payment is completed.' },
+                { key: 'paymentSuccess', label: 'Payment Success', desc: 'Sent with receipt after payment.' },
+                { key: 'orderDispatched', label: 'Order Dispatched', desc: 'Sent with Delhivery tracking ID.' },
+                { key: 'orderDelivered', label: 'Order Delivered', desc: 'Sent to ask for a review.' }
+              ].map((alert) => (
+                <div key={alert.key} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100/50 transition-colors">
+                  <div>
+                    <p className="font-bold text-slate-800 text-sm">{alert.label}</p>
+                    <p className="text-xs text-slate-500">{alert.desc}</p>
+                  </div>
+                  <button type="button" onClick={() => handleUpdate('emailAlerts', alert.key, !config.emailAlerts[alert.key])} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${config.emailAlerts[alert.key] ? 'bg-sky-500' : 'bg-slate-300'}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.emailAlerts[alert.key] ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              ))}
             </div>
           </ConfigSection>
 
