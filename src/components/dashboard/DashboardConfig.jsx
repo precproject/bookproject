@@ -97,7 +97,10 @@ export const DashboardConfig = () => {
     },
     
     taxConfig: { isGstEnabled: true, gstPercentage: 0, hsnCode: '4901' },
-    payment: { provider: 'PhonePe', clientId: '', clientSecret: '', clientVersion: '1', webhookUsername: '', webhookPassword: '', isLiveMode: false },
+    payment: { provider: 'PhonePe', clientId: '', clientSecret: '', clientVersion: '1', webhookUsername: '', webhookPassword: '', isLiveMode: false,
+      isCodEnabled: true, // <-- ADD THIS
+      codCharge: 0        // <-- ADD THIS
+     },
     delivery: { 
       provider: 'Delhivery', apiToken: '', pickupPincode: '', isLiveMode: false, shippingCharge: 50,
       pickupLocationName: '', originPincode: '', originCity: '', originState: '', defaultWeightGrams: 500,
@@ -302,6 +305,28 @@ export const DashboardConfig = () => {
               </div>
             </div>
           </ConfigSection>
+
+          {/* --- NEW: Cash on Delivery Config --- */}
+          <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-4">
+            <ToggleSwitch 
+              label="Enable Cash on Delivery (COD)" 
+              checked={config.payment.isCodEnabled} 
+              onChange={() => handleUpdate('payment', 'isCodEnabled', !config.payment.isCodEnabled)} 
+              activeColor="bg-orange-500" 
+            />
+            
+            {config.payment.isCodEnabled && (
+              <div className="animate-[fadeIn_0.3s_ease-out]">
+                <InputField 
+                  label="COD Convenience Fee (₹) (Optional)" 
+                  type="number" 
+                  value={config.payment.codCharge || 0} 
+                  onChange={e => handleUpdate('payment', 'codCharge', Number(e.target.value))} 
+                />
+                <p className="text-xs text-orange-700 font-medium mt-2">Extra charge added to the bill when a user selects COD.</p>
+              </div>
+            )}
+          </div>
 
         </div>
 

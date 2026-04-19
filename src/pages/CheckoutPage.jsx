@@ -3,21 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { ConfigContext } from '../context/ConfigContext';
-import { useToast } from '../context/ToastContext'; // <-- Import Toast
+import { useToast } from '../context/ToastContext'; 
 import apiClient from '../api/client';
 import { getValidReferralCode } from '../utils/referralManager';
-import { MapPin, Tag, CreditCard, ShoppingBag, Trash2, User, Loader2, CheckCircle, Clock, Plus, Home, Lock } from 'lucide-react';
+import { MapPin, Tag, CreditCard, ShoppingBag, Trash2, User, Loader2, CheckCircle, Clock, Plus, Home, Lock, Truck, Banknote } from 'lucide-react';
 import { orderService } from '../api/service/orderService';
 import { Navbar } from '../components/sections/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
-import { useTranslation } from 'react-i18next'; // <-- Import Translation
+import { useTranslation } from 'react-i18next'; 
 
 export const CheckoutPage = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const { t } = useTranslation(); 
-  const { showToast } = useToast(); // <-- Initialize Toast
+  const { showToast } = useToast(); 
 
   const { user, openAuthModal } = useContext(AuthContext);
   const { cartItems, cartSubtotal, requiresShipping, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
@@ -39,19 +39,28 @@ export const CheckoutPage = () => {
   const [promoMessage, setPromoMessage] = useState({ text: '', type: '' });
   const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 
+  // --- NEW: PAYMENT METHOD STATE ---
+  const [paymentMethod, setPaymentMethod] = useState('ONLINE'); // 'ONLINE' or 'COD'
+
   // --- PAYMENT OVERLAY STATE ---
   const [paymentOverlay, setPaymentOverlay] = useState({ active: false, status: 'waiting', orderId: null, paymentUrl: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // --- PRICING CALCULATIONS ---
+  // --- CONFIG EXTRACTION ---
   const taxRate = config?.taxConfig?.isGstEnabled ? (config?.taxConfig?.gstPercentage || 18) : 18;
   const baseShippingCharge = config?.delivery?.shippingCharge ?? 50;
+  const isCodEnabled = config?.payment?.isCodEnabled ?? true;
+  const codCharge = config?.payment?.codCharge || 0;
 
+  // --- PRICING CALCULATIONS ---
   const shipping = requiresShipping ? baseShippingCharge : 0;
   const taxableAmount = Math.max(0, cartSubtotal - appliedDiscount);
   const taxAmount = Math.round(taxableAmount * (taxRate / 100));
-  const finalTotal = taxableAmount + shipping + taxAmount;
+  
+  // Add COD Fee ONLY if COD is selected and shipping is required
+  const appliedCodFee = (paymentMethod === 'COD' && requiresShipping) ? codCharge : 0;
+  const finalTotal = taxableAmount + shipping + taxAmount + appliedCodFee;
 
   // --- FETCH INITIAL DATA ---
   useEffect(() => {
@@ -131,7 +140,6 @@ export const CheckoutPage = () => {
 
   const handleDeleteAddress = async (e, addressId, index) => {
     e.stopPropagation(); 
-    // Translated Confirmation Box
     if (!window.confirm(t('checkout.confirmDeleteAddress', "Are you sure you want to remove this address?"))) return;
 
     try {
@@ -141,7 +149,6 @@ export const CheckoutPage = () => {
       if (data.addresses.length === 0) setIsAddingNewAddress(true);
       showToast(t('alerts.success', 'Success!'), 'success');
     } catch (err) {
-      // Replaced alert() with showToast()
       showToast(t('alerts.addressDeleteFailed', "Failed to remove address."), 'error');
     }
   };
@@ -203,19 +210,22 @@ export const CheckoutPage = () => {
       const payload = {
         orderItems: cartItems.map(item => ({ bookId: item.bookId, qty: item.qty })),
         shippingAddress: finalShippingAddress,
-        priceBreakup: {
-          subtotal: cartSubtotal,
-          shipping: shipping,
-          discountAmount: appliedDiscount,
-          taxAmount: taxAmount,
-          total: finalTotal
-        },
+        paymentMethod: paymentMethod, // <-- Send COD or ONLINE to backend
         ...(appliedDiscount > 0 ? { discountCode: promoCode } : {}),
         ...(hiddenReferral ? { referralCode: hiddenReferral } : {})
       };
 
       const data = await orderService.checkout(payload);
 
+      // --- HANDLE COD SUCCESS IMMEDIATELY ---
+      if (data.isCOD) {
+        setPaymentOverlay({ active: true, status: 'success', orderId: data.orderId });
+        clearCart();
+        setTimeout(() => navigate('/dashboard'), 3000);
+        return;
+      }
+
+      // --- HANDLE ONLINE PAYMENT ---
       setPaymentOverlay({ active: true, status: 'waiting', orderId: data.orderId, paymentUrl: data.paymentPayload.redirectUrl });
       window.location.href = data.paymentPayload.redirectUrl;
 
@@ -225,48 +235,33 @@ export const CheckoutPage = () => {
     }
   };
 
-  // --- PAYMENT POLLING LOGIC ---
+  // --- MISSING FIX: POSTMESSAGE LISTENER ---
+  // Replaces the old inefficient polling loop. Listens instantly to the popup window.
   useEffect(() => {
-    if (!paymentOverlay.active || !paymentOverlay.orderId || paymentOverlay.status !== 'waiting') return;
-    let attempts = 0;
-    const maxAttempts = 6; 
-    let pollInterval;
+    const handlePaymentMessage = (event) => {
+      // Security Check: Only accept messages from your own domain
+      if (event.origin !== window.location.origin) return;
 
-    const checkStatus = async () => {
-      attempts++;
-      try {
-        const data = await orderService.verifyPayment(paymentOverlay.orderId);
-        if (data.paymentStatus === 'Success') {
+      if (event.data && event.data.type === 'PAYMENT_CALLBACK') {
+        if (event.data.status === 'SUCCESS') {
           setPaymentOverlay(prev => ({ ...prev, status: 'success' }));
-          clearInterval(pollInterval);
           clearCart();
           setTimeout(() => navigate('/dashboard'), 3000);
-        } else if (data.paymentStatus === 'Failed') {
+        } else if (event.data.status === 'FAILED') {
           setPaymentOverlay(prev => ({ ...prev, status: 'failed' }));
-          clearInterval(pollInterval);
           setLoading(false);
+        } else if (event.data.status === 'TIMEOUT') {
+          setPaymentOverlay(prev => ({ ...prev, status: 'timeout' }));
+          clearCart(); // Safe to clear, order exists as pending
+          setTimeout(() => navigate('/dashboard'), 5000);
         }
-      } catch (error) {
-        console.error('Polling error', error);
-      }
-
-      if (attempts >= maxAttempts) {
-        clearInterval(pollInterval);
-        setPaymentOverlay(prev => ({ ...prev, status: 'timeout' }));
-        setTimeout(() => navigate('/dashboard'), 5000);
       }
     };
 
-    const handleFocus = () => {
-      if (!pollInterval) pollInterval = setInterval(checkStatus, 5000);
-    };
+    window.addEventListener('message', handlePaymentMessage);
+    return () => window.removeEventListener('message', handlePaymentMessage);
+  }, [navigate, clearCart]);
 
-    window.addEventListener('focus', handleFocus);
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      if (pollInterval) clearInterval(pollInterval);
-    };
-  }, [paymentOverlay, navigate, clearCart]);
 
   // --- EMPTY CART STATE ---
   if (cartItems.length === 0 && !paymentOverlay.active) {
@@ -471,50 +466,96 @@ export const CheckoutPage = () => {
           </div>
 
           {/* Right Column: Order Summary (Sticky) */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none h-fit lg:sticky top-28 transition-colors duration-300">
-            <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-white">{t('checkout.orderSummary', 'Order Summary')}</h2>
-
-            <div className="space-y-3 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                <span>{t('checkout.subtotal', 'Subtotal')}</span> <span className="font-semibold">₹{cartSubtotal}</span>
-              </div>
-              
-              {appliedDiscount > 0 && (
-                <div className="flex justify-between text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg -mx-2 px-2">
-                  <span className="flex items-center gap-1"><Tag size={14}/> {t('checkout.discount', 'Discount')}</span> 
-                  <span className="font-bold">-₹{appliedDiscount}</span>
-                </div>
-              )}
-
-              <div className="flex justify-between text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100/50 dark:border-slate-800/50">
-                <span>{t('checkout.taxes', 'Taxes')} ({taxRate}% {t('checkout.gst', 'GST')})</span> <span className="font-semibold">₹{taxAmount}</span>
-              </div>
-
-              <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                <span>{t('checkout.shipping', 'Shipping')}</span> <span className="font-semibold">{shipping === 0 ? t('checkout.free', 'Free') : `₹${shipping}`}</span>
-              </div>
-              
-              <div className="flex justify-between text-xl font-black text-slate-900 dark:text-white mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                <span>{t('checkout.totalToPay', 'Total to Pay')}</span> <span className="text-orange-600 dark:text-orange-500">₹{finalTotal}</span>
-              </div>
-            </div>
-
-            {error && <p className="text-red-600 dark:text-red-400 text-sm mb-4 font-medium p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-lg">{error}</p>}
-
-            <Button 
-              variant="primary" 
-              onClick={handleCheckout} 
-              disabled={loading || (requiresShipping && isAddingNewAddress)}
-              className="w-full py-4 text-lg font-bold flex justify-center items-center gap-2 shadow-lg shadow-orange-500/30 rounded-xl"
-            >
-              {loading ? <><Loader2 size={20} className="animate-spin"/> {t('checkout.processing', 'Processing...')}</> : (
-                <>{user ? <CreditCard size={20} /> : <User size={20} />} {user ? t('checkout.proceedToPay', 'Proceed to Pay') : t('checkout.loginToCheckout', 'Login to Checkout')}</>
-              )}
-            </Button>
+          <div className="space-y-6 lg:sticky top-28 h-fit">
             
-            <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4 flex items-center justify-center gap-1">
-              <Lock size={12} /> {t('checkout.securePayment', 'Secure encrypted payment')}
-            </p>
+            {/* --- NEW: PAYMENT METHOD SELECTION --- */}
+            {requiresShipping && isCodEnabled && (
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-300">
+                <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-white">{t('checkout.paymentMethod', 'Payment Method')}</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPaymentMethod('ONLINE')}
+                    className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-3 transition-all ${
+                      paymentMethod === 'ONLINE' 
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 shadow-inner' 
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-orange-300 dark:hover:border-orange-500'
+                    }`}
+                  >
+                    <CreditCard size={28} className={paymentMethod === 'ONLINE' ? 'text-orange-500' : ''} />
+                    <span className="text-sm font-bold">{t('checkout.payOnline', 'Pay Online')}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setPaymentMethod('COD')}
+                    className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-3 transition-all ${
+                      paymentMethod === 'COD' 
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 shadow-inner' 
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-orange-300 dark:hover:border-orange-500'
+                    }`}
+                  >
+                    <Banknote size={28} className={paymentMethod === 'COD' ? 'text-orange-500' : ''} />
+                    <span className="text-sm font-bold">{t('checkout.cod', 'Cash on Delivery')}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors duration-300">
+              <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-white">{t('checkout.orderSummary', 'Order Summary')}</h2>
+
+              <div className="space-y-3 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                  <span>{t('checkout.subtotal', 'Subtotal')}</span> <span className="font-semibold">₹{cartSubtotal}</span>
+                </div>
+                
+                {appliedDiscount > 0 && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg -mx-2 px-2">
+                    <span className="flex items-center gap-1"><Tag size={14}/> {t('checkout.discount', 'Discount')}</span> 
+                    <span className="font-bold">-₹{appliedDiscount}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100/50 dark:border-slate-800/50">
+                  <span>{t('checkout.taxes', 'Taxes')} ({taxRate}% {t('checkout.gst', 'GST')})</span> <span className="font-semibold">₹{taxAmount}</span>
+                </div>
+
+                <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                  <span>{t('checkout.shipping', 'Shipping')}</span> <span className="font-semibold">{shipping === 0 ? t('checkout.free', 'Free') : `₹${shipping}`}</span>
+                </div>
+
+                {/* --- NEW: COD FEE DISPLAY --- */}
+                {paymentMethod === 'COD' && requiresShipping && codCharge > 0 && (
+                  <div className="flex justify-between text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg -mx-2 px-2">
+                    <span className="flex items-center gap-1"><Truck size={14}/> {t('checkout.codFee', 'COD Fee')}</span> 
+                    <span className="font-bold">+₹{codCharge}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between text-xl font-black text-slate-900 dark:text-white mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <span>{t('checkout.totalToPay', 'Total to Pay')}</span> <span className="text-orange-600 dark:text-orange-500">₹{finalTotal}</span>
+                </div>
+              </div>
+
+              {error && <p className="text-red-600 dark:text-red-400 text-sm mb-4 font-medium p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-lg">{error}</p>}
+
+              <Button 
+                variant="primary" 
+                onClick={handleCheckout} 
+                disabled={loading || (requiresShipping && isAddingNewAddress)}
+                className="w-full py-4 text-lg font-bold flex justify-center items-center gap-2 shadow-lg shadow-orange-500/30 rounded-xl"
+              >
+                {loading ? <><Loader2 size={20} className="animate-spin"/> {t('checkout.processing', 'Processing...')}</> : (
+                  <>
+                    {user ? (paymentMethod === 'COD' ? <CheckCircle size={20} /> : <CreditCard size={20} />) : <User size={20} />} 
+                    {user ? (paymentMethod === 'COD' ? t('checkout.confirmOrder', 'Confirm Order') : t('checkout.proceedToPay', 'Proceed to Pay')) : t('checkout.loginToCheckout', 'Login to Checkout')}
+                  </>
+                )}
+              </Button>
+              
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4 flex items-center justify-center gap-1">
+                {paymentMethod === 'ONLINE' ? <><Lock size={12} /> {t('checkout.securePayment', 'Secure encrypted payment')}</> : <><Truck size={12} /> {t('checkout.payOnDelivery', 'Pay cash when your order arrives')}</>}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -522,7 +563,7 @@ export const CheckoutPage = () => {
       {/* PAYMENT OVERLAY (Fixed Full Screen) */}
       {paymentOverlay.active && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
-          <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-3xl max-w-lg w-full text-center shadow-2xl relative border border-slate-200 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-3xl max-w-lg w-full text-center shadow-2xl relative border border-slate-200 dark:border-slate-800 animate-[scaleIn_0.2s_ease-out]">
             
             {paymentOverlay.status === 'waiting' && (
               <>
@@ -541,7 +582,7 @@ export const CheckoutPage = () => {
             {paymentOverlay.status === 'success' && (
               <>
                 <CheckCircle size={70} className="text-green-500 mx-auto mb-6" />
-                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{t('checkout.paymentSuccess', 'Payment Successful!')}</h2>
+                <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{t('checkout.paymentSuccess', 'Order Successful!')}</h2>
                 <p className="text-slate-500 dark:text-slate-400 mt-2">{t('checkout.redirecting', 'Redirecting to your dashboard...')}</p>
               </>
             )}

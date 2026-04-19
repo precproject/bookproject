@@ -8,17 +8,18 @@ import { Button } from '../ui/Button';
 import { 
   PackageOpen, CreditCard, Download, Truck, Clock, 
   AlertCircle, X, MapPin, CheckCircle, FileText, ChevronRight, Loader2, ShieldCheck,
-  Gift, Map
+  Gift, Map, Banknote
 } from 'lucide-react';
 
 const OrdersTab = () => {
-  const { t,i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'mr' ? 'mr-IN' : 'en-IN';
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [retryingOrderId, setRetryingOrderId] = useState(null);
-  
+  const [isDownloading, setIsDownloading] = useState(false);
+
   // Live Tracking States
   const [liveTracking, setLiveTracking] = useState(null);
   const [isTrackingLoading, setIsTrackingLoading] = useState(false);
@@ -29,7 +30,7 @@ const OrdersTab = () => {
 
   // Fetch Live Tracking when a shipped order is selected
   useEffect(() => {
-    if (selectedOrder?.shipping?.trackingId && selectedOrder?.shipping?.partner === 'Delhivery') {
+    if (selectedOrder?.shipping?.trackingId && selectedOrder.shipping.trackingId !== 'Digital' && selectedOrder.shipping.trackingId !== 'N/A') {
       fetchLiveTracking(selectedOrder.orderId);
     } else {
       setLiveTracking(null);
@@ -83,16 +84,16 @@ const OrdersTab = () => {
   };
 
   const getShortAddress = (shipping) => {
-    if (!shipping) return t('dashboard.orders.digital', 'Digital Delivery');
-    if (typeof shipping === 'string') return shipping.split(',')[0]; 
+    if (!shipping || shipping.street === 'Digital Delivery' || shipping.street === 'Digital') return t('dashboard.orders.digital', 'Digital Delivery');
     if (shipping.city) return `${shipping.city}, ${shipping.state}`;
     return t('dashboard.orders.digital', 'Digital Delivery');
   };
 
   // --- REUSABLE TRACKING BLOCK ---
-  // Extracted so we can render it in different positions for mobile vs desktop
   const renderTrackingTimeline = () => {
-    if (selectedOrder.payment?.status !== 'Success') return null;
+    // Hide if still awaiting initial online payment or cancelled
+    if (selectedOrder.status === 'Pending Payment' || selectedOrder.status === 'Cancelled') return null;
+    if (selectedOrder.shipping?.trackingId === 'Digital') return null;
 
     return (
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -102,9 +103,9 @@ const OrdersTab = () => {
           </h3>
         </div>
 
-        {selectedOrder.shipping?.trackingId && (
+        {selectedOrder.shipping?.trackingId && selectedOrder.shipping.trackingId !== 'N/A' && (
           <div className="mb-6 bg-orange-50 border border-orange-100 p-3 rounded-xl flex justify-between items-center">
-            <span className="text-sm font-bold text-orange-800">{selectedOrder.shipping.partner}</span>
+            <span className="text-sm font-bold text-orange-800">{selectedOrder.shipping.partner || 'Courier'}</span>
             <span className="text-xs font-mono bg-white border border-orange-200 text-orange-700 px-3 py-1 rounded-full shadow-sm">
               {selectedOrder.shipping.trackingId}
             </span>
@@ -123,19 +124,19 @@ const OrdersTab = () => {
                 return (
                   <div key={idx} className="flex gap-5 items-start">
                     <div className={`relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                      isLast ? (isDelivered ? 'bg-green-500' : 'bg-orange-500') : 'bg-slate-300'
+                      isLast ? (isDelivered ? 'bg-green-500' : 'bg-blue-500') : 'bg-slate-300'
                     }`}>
                       <div className="w-2 h-2 rounded-full bg-white"></div>
                     </div>
                     <div>
-                      <p className={`font-bold text-base ${isLast ? (isDelivered ? 'text-green-700' : 'text-orange-600') : 'text-slate-700'}`}>
+                      <p className={`font-bold text-base ${isLast ? (isDelivered ? 'text-green-700' : 'text-blue-700') : 'text-slate-700'}`}>
                         {scan.ScanDetail.Instructions}
                       </p>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1">
                         <Map size={12}/> {scan.ScanDetail.ScannedLocation}
                       </p>
                       <p className="text-sm text-slate-500 mt-0.5">
-                        {new Date(scan.ScanDetail.ScanDateTime).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(scan.ScanDetail.ScanDateTime).toLocaleString(dateLocale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
@@ -147,8 +148,20 @@ const OrdersTab = () => {
           <div className="relative pl-4">
             <div className="absolute left-[23px] top-2 bottom-6 w-0.5 bg-slate-200"></div>
             <div className="space-y-6 relative">
+              
+              {/* --- GHOST STEP FOR PRE-DISPATCH --- */}
+              {(!selectedOrder.shipping?.trackingId || selectedOrder.shipping.trackingId === 'N/A') && selectedOrder.status === 'In Progress' && (
+                 <div className="flex gap-5 items-start opacity-70 animate-pulse">
+                    <div className="relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border-2 border-dashed border-blue-400 bg-white"></div>
+                    <div>
+                      <p className="font-bold text-base text-blue-600">Waiting for Courier Assignment</p>
+                      <p className="text-sm text-slate-500 mt-0.5">Your package is being prepared for dispatch</p>
+                    </div>
+                 </div>
+              )}
+
               {selectedOrder.transitHistory?.slice().reverse().map((history, idx) => {
-                const isLast = idx === 0;
+                const isLast = idx === 0 && (selectedOrder.shipping?.trackingId && selectedOrder.shipping.trackingId !== 'N/A');
                 const isDelivered = history.stage.includes('Delivered');
                 
                 return (
@@ -163,7 +176,7 @@ const OrdersTab = () => {
                         {history.stage}
                       </p>
                       <p className="text-sm text-slate-500 mt-0.5">
-                        {new Date(history.time || history.timestamp).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(history.time || history.timestamp).toLocaleString(dateLocale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
@@ -190,18 +203,19 @@ const OrdersTab = () => {
 
   return (
     <div className="space-y-6">
+      {/* ORDER LIST VIEW */}
       {orders.map((order) => {
-        const isPaid = order.payment?.status === 'Success';
-        const isPending = order.status === 'Pending Payment';
-        const hasTracking = order.shipping?.trackingId && isPaid;
-
+        const isPendingOnline = order.status === 'Pending Payment';
+        const isConfirmed = ['In Progress', 'Delivered'].includes(order.status);
+        const isCOD = order.payment?.method === 'COD';
+        
         return (
           <div key={order._id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div className="bg-slate-50 border-b border-slate-200 p-4 sm:px-6 flex flex-wrap justify-between items-center gap-4 text-sm">
               <div className="flex gap-6 sm:gap-12">
                 <div>
                   <p className="text-slate-500 uppercase font-semibold text-xs mb-1">{t('dashboard.orders.placedLabel', 'Order Placed')}</p>
-                  <p className="font-bold text-slate-800">{new Date(order.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  <p className="font-bold text-slate-800">{new Date(order.createdAt).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                 </div>
                 <div>
                   <p className="text-slate-500 uppercase font-semibold text-xs mb-1">{t('dashboard.orders.totalLabel', 'Total')}</p>
@@ -223,9 +237,9 @@ const OrdersTab = () => {
             <div className="p-4 sm:p-6 flex flex-col md:flex-row justify-between gap-6">
               <div className="flex-1">
                 <h3 className={`text-lg font-bold flex items-center gap-2 mb-3 ${
-                  isPaid ? 'text-green-700' : isPending ? 'text-orange-600' : 'text-red-600'
+                  order.status === 'Delivered' ? 'text-green-700' : isPendingOnline ? 'text-orange-600' : order.status === 'Cancelled' ? 'text-red-600' : 'text-blue-700'
                 }`}>
-                  {isPending && <AlertCircle size={20} />}
+                  {isPendingOnline && <AlertCircle size={20} />}
                   {order.status === 'Delivered' && <CheckCircle size={20} />}
                   {order.status === 'In Progress' && <Truck size={20} />}
                   {t(`dashboard.orders.status.${order.status.replace(/\s+/g, '')}`, order.status)}
@@ -246,10 +260,10 @@ const OrdersTab = () => {
                   variant="secondary" 
                   className="w-full bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 py-2.5 shadow-sm flex justify-center items-center gap-2"
                 >
-                  {hasTracking ? t('dashboard.orders.trackBtn', 'Track Order') : t('dashboard.orders.viewDetailsBtn', 'View Details')} <ChevronRight size={16} />
+                  {isConfirmed && order.shipping?.trackingId !== 'Digital' ? t('dashboard.orders.trackBtn', 'Track Order') : t('dashboard.orders.viewDetailsBtn', 'View Details')} <ChevronRight size={16} />
                 </Button>
 
-                {isPending ? (
+                {isPendingOnline ? (
                   <Button 
                     onClick={() => handleRetryPayment(order.orderId)} 
                     variant="primary" 
@@ -262,14 +276,20 @@ const OrdersTab = () => {
                       <><CreditCard size={18} /> {t('dashboard.orders.payNowBtn', 'Complete Payment')}</>
                     )}
                   </Button>
-                ) : isPaid ? (
-                  <Button 
-                    onClick={() => downloadInvoice(order)} 
-                    variant="secondary" 
-                    className="w-full bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 py-2.5 flex justify-center items-center gap-2"
-                  >
-                    <Download size={18} /> {t('dashboard.orders.invoiceBtn', 'Invoice')}
-                  </Button>
+                ) : isConfirmed ? (
+                    <Button 
+                        onClick={async () => {
+                          setIsDownloading(true);
+                          await downloadInvoice(order); // <--- MUST BE 'order' HERE
+                          setIsDownloading(false);
+                        }} 
+                        variant="secondary" 
+                        disabled={isDownloading}
+                        className="w-full bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 py-2.5 flex justify-center items-center gap-2"
+                      >
+                        {isDownloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />} 
+                        {isDownloading ? 'Generating...' : t('dashboard.orders.invoiceBtn', 'Invoice')}
+                      </Button>
                 ) : null}
               </div>
             </div>
@@ -278,7 +298,7 @@ const OrdersTab = () => {
       })}
 
       {/* =========================================
-          2. ORDER DETAILS MODAL
+          ORDER DETAILS MODAL (Pop-up)
       ========================================= */}
       <AnimatePresence>
         {selectedOrder && (
@@ -295,11 +315,19 @@ const OrdersTab = () => {
               exit={{ opacity: 0, y: 30, scale: 0.95 }}
               className="relative w-full max-w-4xl bg-slate-50 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
+              {/* Modal Header */}
               <div className="flex items-center justify-between p-5 sm:px-8 bg-white border-b border-slate-200 sticky top-0 z-10">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-800 flex items-center gap-2">
-                    {t('dashboard.orders.modalTitle', 'Order Summary')}
-                  </h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-800">
+                      {t('dashboard.orders.modalTitle', 'Order Summary')}
+                    </h2>
+                    {selectedOrder.payment?.method === 'COD' && selectedOrder.status !== 'Delivered' && (
+                      <span className="text-[10px] font-bold px-2 py-1 bg-amber-100 text-amber-700 rounded-md uppercase tracking-wider border border-amber-200">
+                        COD
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-slate-500 font-mono mt-1">{t('dashboard.orders.modalId', 'ID')}: #{selectedOrder.orderId}</p>
                 </div>
                 <button onClick={closeModal} className="p-2 bg-slate-100 hover:bg-red-100 hover:text-red-600 rounded-full text-slate-500 transition-colors">
@@ -307,6 +335,7 @@ const OrdersTab = () => {
                 </button>
               </div>
 
+              {/* Modal Body */}
               <div className="p-5 sm:p-8 overflow-y-auto custom-scrollbar">
                 <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8">
                   
@@ -329,7 +358,7 @@ const OrdersTab = () => {
                       </div>
                     </div>
 
-                    {selectedOrder.shipping && typeof selectedOrder.shipping === 'object' && (
+                    {selectedOrder.shipping && typeof selectedOrder.shipping === 'object' && selectedOrder.shipping.street !== 'Digital Delivery' && (
                       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                           <MapPin size={18}/> {t('dashboard.orders.deliveryAddress', 'Delivery Address')}
@@ -345,7 +374,7 @@ const OrdersTab = () => {
                       </div>
                     )}
 
-                    {selectedOrder.priceBreakup?.referralApplied && (
+                    {selectedOrder.priceBreakup?.referralApplied && !selectedOrder.priceBreakup?.discountCode && (
                       <div className="flex justify-between items-center text-sm font-medium text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200">
                         <div className="flex flex-col">
                           <p className="flex items-center gap-1 font-bold"><Gift size={16}/> {t('dashboard.orders.referralApplied', 'Referral Applied')}</p>
@@ -369,10 +398,24 @@ const OrdersTab = () => {
                       
                       <div className="space-y-3 text-[15px] text-slate-600 mb-4 pb-4 border-b border-slate-100">
                         <div className="flex justify-between"><span>{t('dashboard.orders.subtotal', 'Subtotal')}</span> <span className="font-bold">₹{selectedOrder.priceBreakup?.subtotal || 0}</span></div>
-                        <div className="flex justify-between"><span>{t('dashboard.orders.tax', 'Tax')}</span> <span className="font-bold">₹{selectedOrder.priceBreakup?.taxAmount || 0}</span></div>
+                        
                         <div className="flex justify-between"><span>{t('dashboard.orders.shippingFee', 'Shipping')}</span> <span className="font-bold">{selectedOrder.priceBreakup?.shipping === 0 ? t('dashboard.orders.free', 'Free') : `₹${selectedOrder.priceBreakup?.shipping}`}</span></div>
+                        
+                        {/* --- COD FEE --- */}
+                        {selectedOrder.priceBreakup?.codFee > 0 && (
+                          <div className="flex justify-between text-amber-700 bg-amber-50 rounded px-2 -mx-2">
+                            <span>COD Fee</span> <span className="font-bold">+₹{selectedOrder.priceBreakup.codFee}</span>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between"><span>{t('dashboard.orders.tax', 'Tax')}</span> <span className="font-bold">₹{selectedOrder.priceBreakup?.taxAmount || 0}</span></div>
+                        
+                        {/* --- PROMO / PREBOOK DISCOUNT --- */}
                         {selectedOrder.priceBreakup?.discountAmount > 0 && (
-                          <div className="flex justify-between text-green-600"><span>{t('dashboard.orders.discount', 'Discount')}</span> <span className="font-bold">-₹{selectedOrder.priceBreakup.discountAmount}</span></div>
+                          <div className="flex justify-between text-green-600 bg-green-50 rounded px-2 -mx-2">
+                            <span>{t('dashboard.orders.discount', 'Discount')} {selectedOrder.priceBreakup?.discountCode && `(${selectedOrder.priceBreakup.discountCode})`}</span> 
+                            <span className="font-bold">-₹{selectedOrder.priceBreakup.discountAmount}</span>
+                          </div>
                         )}
                       </div>
                       
@@ -384,14 +427,17 @@ const OrdersTab = () => {
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
                         <div className="grid grid-cols-2 gap-y-3">
                           <div className="text-slate-500">{t('dashboard.orders.paymentStatus', 'Status')}</div>
-                          <div className={`font-bold text-right ${selectedOrder.payment?.status === 'Success' ? 'text-green-600' : 'text-orange-600'}`}>
-                            {t(`dashboard.orders.status.${selectedOrder.payment?.status}`, selectedOrder.payment?.status)}
+                          <div className={`font-bold text-right ${selectedOrder.payment?.status === 'Success' ? 'text-green-600' : selectedOrder.payment?.status === 'Failed' ? 'text-red-600' : 'text-orange-600'}`}>
+                            {selectedOrder.payment?.method === 'COD' && selectedOrder.status !== 'Delivered' ? 'To be paid on delivery' : t(`dashboard.orders.status.${selectedOrder.payment?.status}`, selectedOrder.payment?.status)}
                           </div>
                           
-                          <div className="text-slate-500">{t('dashboard.orders.gateway', 'Payment Gateway')}</div>
-                          <div className="font-bold text-slate-800 text-right">{selectedOrder.payment?.method || 'N/A'}</div>
+                          <div className="text-slate-500">{t('dashboard.orders.gateway', 'Method')}</div>
+                          <div className="font-bold text-slate-800 text-right flex items-center justify-end gap-1">
+                            {selectedOrder.payment?.method === 'COD' ? <Banknote size={14} className="text-orange-500"/> : <CreditCard size={14} className="text-blue-500"/>}
+                            {selectedOrder.payment?.method || 'Online'}
+                          </div>
 
-                          {selectedOrder.payment?.txnId && (
+                          {selectedOrder.payment?.txnId && selectedOrder.payment?.method !== 'COD' && (
                             <>
                               <div className="text-slate-500">{t('dashboard.orders.txnId', 'Transaction ID')}</div>
                               <div className="font-mono text-xs font-bold text-slate-800 text-right break-all">
@@ -409,25 +455,6 @@ const OrdersTab = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="p-5 sm:px-8 border-t border-slate-200 bg-white flex flex-wrap gap-4 justify-end">
-                {selectedOrder.status === 'Pending Payment' && (
-                  <Button 
-                    onClick={() => handleRetryPayment(selectedOrder.orderId)} 
-                    variant="primary" 
-                    className="px-8 shadow-md flex items-center gap-2"
-                    disabled={retryingOrderId === selectedOrder.orderId}
-                  >
-                    {retryingOrderId === selectedOrder.orderId ? <Loader2 size={18} className="animate-spin" /> : <CreditCard size={18} />} 
-                    {t('dashboard.orders.payNowBtn', 'Pay Now')}
-                  </Button>
-                )}
-                {selectedOrder.payment?.status === 'Success' && (
-                  <Button onClick={() => downloadInvoice(selectedOrder)} variant="secondary" className="bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200 flex items-center gap-2">
-                    <Download size={18} /> {t('dashboard.orders.downloadInvoice', 'Download Invoice')}
-                  </Button>
-                )}
               </div>
 
             </motion.div>
